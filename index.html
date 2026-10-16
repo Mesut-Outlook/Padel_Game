@@ -22,6 +22,8 @@
   .tabular, .pl-stat-val, .pl-rstat b, .pl-tab-num, #hud .pts { font-variant-numeric: tabular-nums; }
 
   /* Broadcast Night-Session Menu */
+  /* legacy form card: keeps the source-of-truth controls in the DOM, never shown (menu.js builds the real menu) */
+  #menu > .card { display: none; }
   .panel {
     position: fixed;
     inset: 0;
