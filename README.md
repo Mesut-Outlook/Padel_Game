@@ -16,7 +16,7 @@ npm test           # kurallar, fizik, AI, replay testleri
 ## Tarayıcıda oyna (GitHub Pages)
 
 `main` dalına her yüklemede `.github/workflows/pages.yml` testleri çalıştırır, oyunu derler ve GitHub Pages'te yayınlar:
-**https://mesut-dev.github.io/Padel_Game/** — kurulum gerekmez, linki paylaşmak yeterli.
+**https://mesut-outlook.github.io/Padel_Game/** — kurulum gerekmez, linki paylaşmak yeterli.
 
 İlk kez açmak için depoda **Settings → Pages → Build and deployment → Source: GitHub Actions** seçilmeli.
 Pages sürümünde bilgisayara karşı maç, eğitim, menü ve kol desteği çalışır; **online mod** bir oyun sunucusu
