@@ -206,13 +206,16 @@ function kitMaterial(base, ch) {
     uShoes: { value: new THREE.Color(ch.outfit.shoes) },
     uSkin: { value: new THREE.Color(ch.skinTone).multiply(new THREE.Color(1 / TEX_SKIN.r, 1 / TEX_SKIN.g, 1 / TEX_SKIN.b)) },
     uFemale: { value: ch.gender === 'f' ? 1 : 0 },
+    uBeard: { value: new THREE.Color(ch.beardColor || ch.hairColor || '#2b1d14') },
+    uBeardMode: { value: { stubble: 1, goatee: 2 }[ch.beard] || 0 },
+    uMakeup: { value: ch.makeup ? 1 : 0 },
   };
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, u);
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vRest;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = position;');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
-varying vec3 vRest; uniform vec3 uShirt, uShorts, uShoes, uSkin; uniform float uFemale;`)
+varying vec3 vRest; uniform vec3 uShirt, uShorts, uShoes, uSkin, uBeard; uniform float uFemale, uBeardMode, uMakeup;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
   float y = vRest.y, ax = abs(vRest.x), z = vRest.z;
@@ -223,6 +226,19 @@ varying vec3 vRest; uniform vec3 uShirt, uShorts, uShoes, uSkin; uniform float u
   if (y < 0.24 && y > 0.1) col = vec3(0.93) * shade;           // socks
   if (y < 0.095) discard;                                       // bare foot: hidden inside the shoe mesh
   if (ax > 0.62 && ax < 0.68 && y > 1.3) col = uShirt * shade;  // wristband
+  // face (rest pose, measured: male nose tip 1.657, mouth ~1.62, chin ~1.59; female nose 1.617, mouth ~1.58)
+  bool lips = y > 1.613 && y < 1.632 && ax < 0.022 && z > 0.085;
+  if (uBeardMode > 0.5 && uBeardMode < 1.5 && y > 1.575 && y < 1.648 && z > 0.025 && ax < 0.078 && !lips)
+    col = mix(col, uBeard * shade, 0.6);                                                    // light stubble
+  if (uBeardMode > 1.5 && !lips && ((y > 1.578 && y < 1.612 && ax < 0.03 && z > 0.05)       // goatee: chin
+      || (y > 1.632 && y < 1.646 && ax < 0.032 && z > 0.08)                                 //         moustache
+      || (y > 1.605 && y < 1.64 && ax > 0.02 && ax < 0.034 && z > 0.07)))                  //         around the mouth
+    col = mix(col, uBeard * shade, 0.85);
+  if (uMakeup > 0.5) {
+    if (y > 1.57 && y < 1.594 && ax < 0.024 && z > 0.074) col = mix(col, vec3(0.62, 0.12, 0.2), 0.85);     // lipstick
+    if (y > 1.59 && y < 1.615 && ax > 0.035 && ax < 0.062 && z > 0.05) col = mix(col, vec3(0.9, 0.45, 0.5), 0.22);  // blush
+    if (y > 1.652 && y < 1.668 && ax > 0.015 && ax < 0.052 && z > 0.06) col = mix(col, vec3(0.42, 0.26, 0.42), 0.5);  // eyeshadow
+  }
   diffuseColor.rgb = col;
 }`);
   };
@@ -238,9 +254,10 @@ function shapeBody(bones, ch) {
   const b = ch.body || { height: 1, width: 1 }, f = ch.gender === 'f', w = Math.min(b.width || 1, 1.15);
   const k = b.type === 'muscular' ? 1.07 : b.type === 'stocky' ? 1.04 : 1;  // build on top of width
   const set = (n, x, y, z) => bones[n]?.scale.set(x, y, z);
-  const torso = w * k * (f ? 0.86 : 0.85);
-  set('spine_02', torso, 1, torso);
-  set('neck_01', 1 / torso, 1, 1 / torso);
+  const torso = w * k * (f ? 0.86 : 0.85), shoulders = b.shoulders || 1;  // shoulders > 1: broader upper body
+  set('spine_02', torso * shoulders, 1, torso);
+  set('neck_01', 1 / (torso * shoulders), 1, 1 / torso);
+  if (ch.face?.width) set('Head', ch.face.width, 1, 1);  // chubby cheeks > 1, narrow face < 1
   const arm = k * (f ? 0.8 : 0.78), fore = 0.9;
   const thighX = w * k * (f ? 0.8 : 0.84), thighZ = w * k * (f ? 0.84 : 0.88), calf = f ? 0.9 : 0.92;
   for (const s of ['l', 'r']) {
@@ -256,9 +273,12 @@ function hash(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCod
 
 export async function createAvatar(scene, ch, racketColor = '#e63946', racketShape = 'round') {
   const g = ch.gender === 'f' ? 'f' : 'm';
-  const hairName = ch.hair || HAIR[g][hash(ch.id) % HAIR[g].length];
-  const [gltf, anim, hair, brows] = await Promise.all([
-    load(BODY[g]), clips(), load(`assets/ubc/${hairName}.gltf`), load(`assets/ubc/Eyebrows_${g === 'f' ? 'Female' : 'Regular'}.gltf`),
+  // hair: 'none' (bald), one mesh name or a list; a full beard adds the beard mesh in its own colour
+  const hairList = ch.hair === 'none' ? [] : [].concat(ch.hair || HAIR[g][hash(ch.id) % HAIR[g].length]);
+  if (ch.beard === 'full' && !hairList.includes('Hair_Beard')) hairList.push('Hair_Beard');
+  const [gltf, anim, brows, ...hairs] = await Promise.all([
+    load(BODY[g]), clips(), load(`assets/ubc/Eyebrows_${g === 'f' ? 'Female' : 'Regular'}.gltf`),
+    ...hairList.map(n => load(`assets/ubc/${n}.gltf`)),
   ]);
   const root = SkeletonUtils.clone(gltf.scene);
   const bones = {};
@@ -275,11 +295,14 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
   }
   // hair/eyebrows are skinned to the same 65-bone rig: rebind them onto our skeleton by bone name
   const hairColor = new THREE.Color(ch.hairColor || HAIR_COLORS[hash(ch.id + 'h') % HAIR_COLORS.length]);
-  for (const part of [hair, brows]) {
+  const beardColor = new THREE.Color(ch.beardColor || ch.hairColor || '#2b1d14');
+  const parts = [{ gltf: brows, color: hairColor }, ...hairs.map((h, i) => hairList[i] === 'Hair_Beard'
+    ? { gltf: h, color: beardColor } : { gltf: h, color: hairColor, cut: ch.hairCut, opacity: ch.hairOpacity })];
+  for (const part of parts) {
     const meshes = [];
-    SkeletonUtils.clone(part.scene).traverse(o => { if (o.isSkinnedMesh) meshes.push(o); });
+    SkeletonUtils.clone(part.gltf.scene).traverse(o => { if (o.isSkinnedMesh) meshes.push(o); });
     for (const o of meshes) {
-      o.material = o.material.clone(); o.material.color = hairColor; o.castShadow = true; o.frustumCulled = false;
+      o.material = hairMaterial(o.material, part.color, part.cut, part.opacity); o.castShadow = true; o.frustumCulled = false;
       o.bind(new THREE.Skeleton(o.skeleton.bones.map(b => bones[b.name] || b), o.skeleton.boneInverses), o.bindMatrix);
       root.add(o);
     }
@@ -403,6 +426,23 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
   };
 }
 
+// Hair look: colour, an optional cut height (rest-pose metres, e.g. a chin-length bob) and thinning (opacity < 1).
+function hairMaterial(base, color, cut, opacity = 1) {
+  const m = base.clone();
+  m.color = color;
+  if (opacity < 1) { m.transparent = true; m.opacity = opacity; m.depthWrite = false; }
+  if (cut) {
+    m.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vRestY;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRestY = position.y;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vRestY;')
+        .replace('void main() {', `void main() {\n  if (vRestY < ${cut.toFixed(3)}) discard;`);
+    };
+    m.customProgramCacheKey = () => 'hair-cut' + cut;
+  }
+  return m;
+}
+
 // Ponytail, headband or visor, placed around the rest-pose head (measured: crown 1.78 m, forehead z +0.10,
 // back of the head z -0.12 for height 1) and then parented to the Head bone so they follow every move.
 function addHeadwear(head, root, ch, hairColor) {
@@ -414,6 +454,23 @@ function addHeadwear(head, root, ch, hairColor) {
     const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.008, 0.22, 10).translate(0, -0.11, 0), lam(hairColor));
     tail.position.set(0, 1.715, -0.125); tail.rotation.x = -0.3;  // tipped toward the neck: the ready stance pitches the head forward, so it hangs straight down
     parts.push(tail);
+  }
+  if (ch.topknot) {  // samurai bun on the crown
+    const bun = new THREE.Mesh(new THREE.SphereGeometry(0.034, 12, 10), lam(hairColor));
+    bun.scale.set(1, 0.9, 1.1); bun.position.set(0, ch.gender === 'f' ? 1.775 : 1.818, -0.045); parts.push(bun);
+    const tie = new THREE.Mesh(new THREE.TorusGeometry(0.02, 0.006, 6, 12), lam('#222222'));
+    tie.rotation.x = Math.PI / 2; tie.position.set(0, ch.gender === 'f' ? 1.755 : 1.798, -0.045); parts.push(tie);
+  }
+  if (ch.glasses) {  // frames in front of the eyes (eyes: female ~1.655, male ~1.695)
+    const gy = ch.gender === 'f' ? 1.656 : 1.695, frame = lam(ch.glasses === true ? '#1b1b1b' : ch.glasses);
+    for (const sx of [-1, 1]) {
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.02, 0.0028, 6, 18), frame);
+      rim.position.set(sx * 0.031, gy, 0.097); parts.push(rim);
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.004, 0.1), frame);
+      arm.position.set(sx * 0.07, gy + 0.003, 0.05); arm.rotation.y = sx * 0.25; parts.push(arm);
+    }
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.004, 0.004), frame);
+    bridge.position.set(0, gy + 0.005, 0.099); parts.push(bridge);
   }
   if (ch.headwear) {
     const c = ch.headwear.color;

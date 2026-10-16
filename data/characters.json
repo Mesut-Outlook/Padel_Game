@@ -26,7 +26,11 @@
       "type": "tall",
       "height": 1.08,
       "width": 0.97
-    }
+    },
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#77716a",
+    "beard": "full",
+    "beardColor": "#6f6a64"
   },
   {
     "id": "p02",
@@ -55,6 +59,13 @@
       "type": "stocky",
       "height": 0.95,
       "width": 1.2
+    },
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#9c5236",
+    "beard": "full",
+    "beardColor": "#94603f",
+    "face": {
+      "width": 1.1
     }
   },
   {
@@ -143,8 +154,9 @@
       "height": 1.03,
       "width": 0.9
     },
-    "hair": "Hair_Buns",
-    "hairColor": "#7a5230"
+    "hair": "Hair_Long",
+    "hairColor": "#141414",
+    "hairCut": 1.56
   },
   {
     "id": "p07",
@@ -211,10 +223,13 @@
       "width": 0.95
     },
     "hair": "Hair_Long",
-    "hairColor": "#d8b46a",
+    "hairColor": "#8a5a33",
     "headwear": {
       "type": "headband",
       "color": "#1d3557"
+    },
+    "face": {
+      "width": 0.93
     }
   },
   {
@@ -244,7 +259,10 @@
       "type": "athletic",
       "height": 1,
       "width": 1
-    }
+    },
+    "hair": "none",
+    "beard": "full",
+    "beardColor": "#2b1d14"
   },
   {
     "id": "p09",
@@ -302,7 +320,9 @@
       "type": "tall",
       "height": 1.08,
       "width": 0.97
-    }
+    },
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#a9a9a9"
   },
   {
     "id": "p11",
@@ -331,7 +351,9 @@
       "type": "stocky",
       "height": 0.95,
       "width": 1.2
-    }
+    },
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#a0a0a0"
   },
   {
     "id": "p12",
@@ -357,11 +379,11 @@
     },
     "aiLevel": "club",
     "body": {
-      "type": "athletic",
-      "height": 1.02,
-      "width": 1
+      "type": "petite",
+      "height": 0.95,
+      "width": 0.92
     },
-    "hair": "Hair_SimpleParted",
+    "hair": "Hair_Buzzed",
     "hairColor": "#2b1d14"
   },
   {
@@ -388,12 +410,12 @@
     },
     "aiLevel": "club",
     "body": {
-      "type": "muscular",
-      "height": 1,
-      "width": 1.1
+      "type": "athletic",
+      "height": 1.02,
+      "width": 1
     },
-    "hair": "Hair_Buzzed",
-    "hairColor": "#111111"
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#d6b46a"
   },
   {
     "id": "p25",
@@ -423,8 +445,43 @@
       "height": 1.02,
       "width": 0.92
     },
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#2b1d14"
+  },
+  {
+    "id": "p26",
+    "name": "Mesut",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#D9A679",
+    "outfit": {
+      "shirt": "#6B7078",
+      "shorts": "#3D4148",
+      "shoes": "#111111"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 7,
+      "power": 8,
+      "control": 8,
+      "volley": 7,
+      "smash": 8,
+      "stamina": 7
+    },
+    "aiLevel": "pro",
+    "body": {
+      "type": "athletic",
+      "height": 1.02,
+      "width": 1.05,
+      "shoulders": 1.12
+    },
     "hair": "Hair_Buzzed",
-    "hairColor": "#3b2416"
+    "hairColor": "#3b2416",
+    "hairOpacity": 0.6,
+    "beard": "stubble",
+    "beardColor": "#2b1d14"
   },
   {
     "id": "p14",
@@ -485,8 +542,11 @@
       "height": 0.98,
       "width": 1.15
     },
-    "hair": "Hair_Beard",
-    "hairColor": "#3b2416"
+    "hair": "Hair_Buzzed",
+    "hairColor": "#151515",
+    "topknot": true,
+    "beard": "full",
+    "beardColor": "#151515"
   },
   {
     "id": "p15",
@@ -517,11 +577,12 @@
       "width": 0.95
     },
     "hair": "Hair_Long",
-    "hairColor": "#2b1d14",
+    "hairColor": "#e0c27a",
     "headwear": {
       "type": "headband",
-      "color": "#D8F53A"
-    }
+      "color": "#FFFFFF"
+    },
+    "makeup": true
   },
   {
     "id": "p16",
@@ -547,12 +608,13 @@
     },
     "aiLevel": "club",
     "body": {
-      "type": "tall",
-      "height": 1.06,
-      "width": 0.97
+      "type": "slim",
+      "height": 1,
+      "width": 0.82
     },
     "hair": "Hair_Buzzed",
-    "hairColor": "#4a2f1d"
+    "hairColor": "#b5b5b5",
+    "hairOpacity": 0.45
   },
   {
     "id": "p17",
@@ -578,12 +640,13 @@
     },
     "aiLevel": "club",
     "body": {
-      "type": "slim",
+      "type": "athletic",
       "height": 1.01,
-      "width": 0.9
+      "width": 1
     },
-    "hair": "Hair_SimpleParted",
-    "hairColor": "#2b1d14"
+    "hair": "Hair_Buzzed",
+    "hairColor": "#2b1d14",
+    "glasses": true
   },
   {
     "id": "p20",
@@ -609,12 +672,14 @@
     },
     "aiLevel": "club",
     "body": {
-      "type": "petite",
-      "height": 0.96,
-      "width": 0.95
+      "type": "slim",
+      "height": 0.99,
+      "width": 0.82
     },
     "hair": "Hair_SimpleParted",
-    "hairColor": "#4a2f1d"
+    "hairColor": "#3b2416",
+    "beard": "stubble",
+    "beardColor": "#2b1d14"
   },
   {
     "id": "p19",
@@ -644,8 +709,10 @@
       "height": 1.05,
       "width": 1
     },
-    "hair": "Hair_Beard",
-    "hairColor": "#7a5230"
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#b0b0b0",
+    "beard": "stubble",
+    "beardColor": "#8a8a8a"
   },
   {
     "id": "p22",
@@ -671,12 +738,13 @@
     },
     "aiLevel": "club",
     "body": {
-      "type": "stocky",
-      "height": 0.99,
-      "width": 1.12
+      "type": "petite",
+      "height": 0.95,
+      "width": 0.84
     },
-    "hair": "Hair_Beard",
-    "hairColor": "#2b1d14"
+    "hair": "Hair_Buzzed",
+    "hairColor": "#2b1d14",
+    "hairOpacity": 0.45
   },
   {
     "id": "p23",
@@ -702,12 +770,12 @@
     },
     "aiLevel": "club",
     "body": {
-      "type": "tall",
+      "type": "athletic",
       "height": 1.07,
-      "width": 0.98
+      "width": 1
     },
     "hair": "Hair_SimpleParted",
-    "hairColor": "#8e3b1f"
+    "hairColor": "#2b1d14"
   },
   {
     "id": "p21",
@@ -734,11 +802,11 @@
     "aiLevel": "club",
     "body": {
       "type": "athletic",
-      "height": 1.03,
-      "width": 1
+      "height": 1.06,
+      "width": 0.9
     },
-    "hair": "Hair_Buzzed",
-    "hairColor": "#c9a15e"
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#a5a5a5"
   },
   {
     "id": "p24",
@@ -768,7 +836,9 @@
       "height": 1,
       "width": 1.08
     },
-    "hair": "Hair_Beard",
-    "hairColor": "#111111"
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#e2e2e2",
+    "beard": "goatee",
+    "beardColor": "#e2e2e2"
   }
 ]
