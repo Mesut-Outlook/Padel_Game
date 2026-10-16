@@ -710,7 +710,7 @@
       "width": 1
     },
     "hair": "Hair_SimpleParted",
-    "hairColor": "#b0b0b0",
+    "hairColor": "#8f8f8f",
     "beard": "stubble",
     "beardColor": "#8a8a8a"
   },
@@ -742,9 +742,8 @@
       "height": 0.95,
       "width": 0.84
     },
-    "hair": "Hair_Buzzed",
-    "hairColor": "#2b1d14",
-    "hairOpacity": 0.45
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#2b1d14"
   },
   {
     "id": "p23",
