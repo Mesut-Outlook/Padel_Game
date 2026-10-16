@@ -348,7 +348,7 @@ export function initMenu() {
       <div class="pl-char-header">
         <div class="pl-char-title-wrap">
           <span class="pl-char-flag">${flag}</span>
-          <h2 class="pl-char-name" lang="en">${ch.name}</h2>
+          <h2 class="pl-char-name" lang="tr">${ch.name}</h2>
         </div>
         <div class="pl-char-tags">
           <span class="pl-meta-pill">${gText}</span>
@@ -405,7 +405,7 @@ export function initMenu() {
         </div>
         <div class="pl-char-card-meta">
           <span class="pl-char-card-flag">${countryFlag(ch.countryCode)}</span>
-          <div class="pl-char-card-name" lang="en">${ch.name}</div>
+          <div class="pl-char-card-name" lang="tr">${ch.name}</div>
         </div>
         <span class="pl-check">✓</span>
       `;
