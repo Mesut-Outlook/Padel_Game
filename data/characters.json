@@ -147,41 +147,6 @@
     "hairColor": "#7a5230"
   },
   {
-    "id": "p06",
-    "name": "Burçe",
-    "gender": "f",
-    "country": "Türkiye",
-    "countryCode": "TR",
-    "skinTone": "#F1C27D",
-    "outfit": {
-      "shirt": "#4D96FF",
-      "shorts": "#FFFFFF",
-      "shoes": "#1B1B1E"
-    },
-    "hand": "left",
-    "position": "drive",
-    "stats": {
-      "speed": 6,
-      "power": 7,
-      "control": 6,
-      "volley": 8,
-      "smash": 7,
-      "stamina": 6
-    },
-    "aiLevel": "club",
-    "body": {
-      "type": "petite",
-      "height": 0.93,
-      "width": 0.95
-    },
-    "hair": "Hair_Long",
-    "hairColor": "#d8b46a",
-    "headwear": {
-      "type": "headband",
-      "color": "#1d3557"
-    }
-  },
-  {
     "id": "p07",
     "name": "Burcu",
     "gender": "f",
@@ -216,6 +181,41 @@
       "color": "#e63946"
     },
     "ponytail": true
+  },
+  {
+    "id": "p06",
+    "name": "Burçe",
+    "gender": "f",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#F1C27D",
+    "outfit": {
+      "shirt": "#4D96FF",
+      "shorts": "#FFFFFF",
+      "shoes": "#1B1B1E"
+    },
+    "hand": "left",
+    "position": "drive",
+    "stats": {
+      "speed": 6,
+      "power": 7,
+      "control": 6,
+      "volley": 8,
+      "smash": 7,
+      "stamina": 6
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "petite",
+      "height": 0.93,
+      "width": 0.95
+    },
+    "hair": "Hair_Long",
+    "hairColor": "#d8b46a",
+    "headwear": {
+      "type": "headband",
+      "color": "#1d3557"
+    }
   },
   {
     "id": "p08",
@@ -363,5 +363,412 @@
     },
     "hair": "Hair_SimpleParted",
     "hairColor": "#2b1d14"
+  },
+  {
+    "id": "p18",
+    "name": "Kerim",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#8D5524",
+    "outfit": {
+      "shirt": "#C0392B",
+      "shorts": "#F2F3F4",
+      "shoes": "#C0392B"
+    },
+    "hand": "right",
+    "position": "revés",
+    "stats": {
+      "speed": 6,
+      "power": 9,
+      "control": 5,
+      "volley": 6,
+      "smash": 9,
+      "stamina": 7
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "muscular",
+      "height": 1,
+      "width": 1.1
+    },
+    "hair": "Hair_Buzzed",
+    "hairColor": "#111111"
+  },
+  {
+    "id": "p25",
+    "name": "Mehmet",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#B07A4F",
+    "outfit": {
+      "shirt": "#7D3C98",
+      "shorts": "#F7DC6F",
+      "shoes": "#FFFFFF"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 8,
+      "power": 6,
+      "control": 7,
+      "volley": 8,
+      "smash": 6,
+      "stamina": 8
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "slim",
+      "height": 1.02,
+      "width": 0.92
+    },
+    "hair": "Hair_Buzzed",
+    "hairColor": "#3b2416"
+  },
+  {
+    "id": "p14",
+    "name": "Murat",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#E0AC69",
+    "outfit": {
+      "shirt": "#E67E22",
+      "shorts": "#1B2631",
+      "shoes": "#F4F6F7"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 7,
+      "power": 7,
+      "control": 7,
+      "volley": 7,
+      "smash": 7,
+      "stamina": 7
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "athletic",
+      "height": 1.02,
+      "width": 1
+    },
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#111111"
+  },
+  {
+    "id": "p13",
+    "name": "Mümtaz",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#C68642",
+    "outfit": {
+      "shirt": "#8E44AD",
+      "shorts": "#2C3E50",
+      "shoes": "#FFFFFF"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 5,
+      "power": 8,
+      "control": 7,
+      "volley": 6,
+      "smash": 8,
+      "stamina": 6
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "stocky",
+      "height": 0.98,
+      "width": 1.15
+    },
+    "hair": "Hair_Beard",
+    "hairColor": "#3b2416"
+  },
+  {
+    "id": "p15",
+    "name": "Nilüfer",
+    "gender": "f",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#F1C27D",
+    "outfit": {
+      "shirt": "#FF4F8B",
+      "shorts": "#22223B",
+      "shoes": "#FFFFFF"
+    },
+    "hand": "right",
+    "position": "revés",
+    "stats": {
+      "speed": 8,
+      "power": 5,
+      "control": 8,
+      "volley": 7,
+      "smash": 5,
+      "stamina": 8
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "athletic",
+      "height": 1,
+      "width": 0.95
+    },
+    "hair": "Hair_Long",
+    "hairColor": "#2b1d14",
+    "headwear": {
+      "type": "headband",
+      "color": "#D8F53A"
+    }
+  },
+  {
+    "id": "p16",
+    "name": "Okan",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#D9A679",
+    "outfit": {
+      "shirt": "#1ABC9C",
+      "shorts": "#0B3D2E",
+      "shoes": "#FFFFFF"
+    },
+    "hand": "left",
+    "position": "revés",
+    "stats": {
+      "speed": 6,
+      "power": 8,
+      "control": 6,
+      "volley": 7,
+      "smash": 9,
+      "stamina": 6
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "tall",
+      "height": 1.06,
+      "width": 0.97
+    },
+    "hair": "Hair_Buzzed",
+    "hairColor": "#4a2f1d"
+  },
+  {
+    "id": "p17",
+    "name": "Ömer",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#B07A4F",
+    "outfit": {
+      "shirt": "#F1C40F",
+      "shorts": "#283747",
+      "shoes": "#000000"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 9,
+      "power": 5,
+      "control": 7,
+      "volley": 6,
+      "smash": 5,
+      "stamina": 8
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "slim",
+      "height": 1.01,
+      "width": 0.9
+    },
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#2b1d14"
+  },
+  {
+    "id": "p20",
+    "name": "Serhat",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#C68642",
+    "outfit": {
+      "shirt": "#2ECC71",
+      "shorts": "#145A32",
+      "shoes": "#FFFFFF"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 9,
+      "power": 5,
+      "control": 8,
+      "volley": 7,
+      "smash": 5,
+      "stamina": 9
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "petite",
+      "height": 0.96,
+      "width": 0.95
+    },
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#4a2f1d"
+  },
+  {
+    "id": "p19",
+    "name": "Serkan",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#E5B88C",
+    "outfit": {
+      "shirt": "#34495E",
+      "shorts": "#ECF0F1",
+      "shoes": "#34495E"
+    },
+    "hand": "right",
+    "position": "revés",
+    "stats": {
+      "speed": 6,
+      "power": 7,
+      "control": 8,
+      "volley": 8,
+      "smash": 6,
+      "stamina": 6
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "tall",
+      "height": 1.05,
+      "width": 1
+    },
+    "hair": "Hair_Beard",
+    "hairColor": "#7a5230"
+  },
+  {
+    "id": "p22",
+    "name": "Sezgin",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#A0653B",
+    "outfit": {
+      "shirt": "#D35400",
+      "shorts": "#1C2833",
+      "shoes": "#F0B27A"
+    },
+    "hand": "left",
+    "position": "revés",
+    "stats": {
+      "speed": 5,
+      "power": 8,
+      "control": 8,
+      "volley": 7,
+      "smash": 7,
+      "stamina": 6
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "stocky",
+      "height": 0.99,
+      "width": 1.12
+    },
+    "hair": "Hair_Beard",
+    "hairColor": "#2b1d14"
+  },
+  {
+    "id": "p23",
+    "name": "Tuğhan",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#E0AC69",
+    "outfit": {
+      "shirt": "#00B4D8",
+      "shorts": "#03045E",
+      "shoes": "#FFFFFF"
+    },
+    "hand": "right",
+    "position": "revés",
+    "stats": {
+      "speed": 7,
+      "power": 8,
+      "control": 6,
+      "volley": 6,
+      "smash": 8,
+      "stamina": 7
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "tall",
+      "height": 1.07,
+      "width": 0.98
+    },
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#8e3b1f"
+  },
+  {
+    "id": "p21",
+    "name": "Uğur",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#F1C27D",
+    "outfit": {
+      "shirt": "#3498DB",
+      "shorts": "#FDFEFE",
+      "shoes": "#1F618D"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 7,
+      "power": 7,
+      "control": 6,
+      "volley": 8,
+      "smash": 7,
+      "stamina": 7
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "athletic",
+      "height": 1.03,
+      "width": 1
+    },
+    "hair": "Hair_Buzzed",
+    "hairColor": "#c9a15e"
+  },
+  {
+    "id": "p24",
+    "name": "Zafer",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#D9A679",
+    "outfit": {
+      "shirt": "#F5F5F5",
+      "shorts": "#B03A2E",
+      "shoes": "#B03A2E"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 6,
+      "power": 8,
+      "control": 7,
+      "volley": 7,
+      "smash": 8,
+      "stamina": 6
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "muscular",
+      "height": 1,
+      "width": 1.08
+    },
+    "hair": "Hair_Beard",
+    "hairColor": "#111111"
   }
 ]

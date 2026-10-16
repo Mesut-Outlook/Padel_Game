@@ -67,7 +67,7 @@ Kolun tarayıcıda nasıl göründüğünü test etmek için: http://localhost:5
 - **His** (`src/audio.js`, `src/main.js`): smaçta vurucunun arkasından alçak açı + yavaş çekim, hızlı topta hız izi ve yanından geçerken "vuuş" sesi; dosyasız WebAudio sesleri (raket, zemin, cam, tel, file, alkış), vuruşta kısa duraklama, smaçta kamera sarsıntısı, oyuncuların kısa sözleri (konuşma balonu + tarayıcı sesi).
 - **AI** (`src/ai.js`): 4 seviye (çaylak → efsane), çiftlerde birlikte fileye çıkma/çekilme, top tahmini, vuruş seçimi, boşluğa nişan.
 - **Karakterler** (`src/player.js`): kadın/erkek ince-atletik tenisçi gövdesi, 6 vücut tipi (ince, atletik, kaslı, iri, uzun, minyon), ten rengi, her karaktere özel saç (uzun, topuz, at kuyruğu) ve renk, saç bandı / vizör, gerçek forma ve şort (vücutla hareket eden, yuvarlak yakalı, şeritli kumaş modelleri; kumaş vücut hatlarını göstermez), padel ayakkabısı, elde raket (yüzü önde, sap avuçta), solak/sağlak.
-- **İçerik** (`data/`): 10 ülke/mekan, 12 karakter, 12 raket (yuvarlak/gözyaşı/elmas), turnuva formatları (Americano, Mexicano, King of the Court, lig, eleme) ve amatörden Premier Finals'a kariyer basamakları.
+- **İçerik** (`data/`): 10 ülke/mekan, 25 karakter, 12 raket (yuvarlak/gözyaşı/elmas), turnuva formatları (Americano, Mexicano, King of the Court, lig, eleme) ve amatörden Premier Finals'a kariyer basamakları.
 
 Geliştirici ve ana sponsor: **Mesut** (kort reklamları, file bandı, menü, skor tabelası).
 
