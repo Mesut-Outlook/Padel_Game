@@ -37,3 +37,15 @@ test('singles legend vs rookie: rallies happen and legend wins more points', () 
   assert.ok(s.avgRally >= 3, `avg hits per point ${s.avgRally}`);
   assert.ok(s.pts[0] > s.pts[1], `legend ${s.pts[0]} vs rookie ${s.pts[1]}`);
 });
+
+test('doubles AI partner shifts to cover center when teammate is drawn wide', () => {
+  const w = newWorld();
+  w.state = 'play';
+  Object.assign(w.match.rally, { phase: 'rally', lastHitTeam: 1, bouncesSinceHit: 1 });
+  w.players[0].p = [3.5, 6.0];
+  w.players[1].p = [-2.5, 8.5];
+  Object.assign(w.ball, { p: [3.8, 1.2, 5.5], v: [0, 0, 0], live: true });
+  const input1 = aiInput(w, 1, 'pro');
+  assert.ok(input1.move[0] > -0.2, `partner shifts to cover center, move[0]=${input1.move[0]}`);
+});
+

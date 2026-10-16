@@ -26,7 +26,9 @@
       "type": "slim",
       "height": 1.03,
       "width": 0.9
-    }
+    },
+    "hair": "Hair_Buns",
+    "hairColor": "#7a5230"
   },
   {
     "id": "f02",
@@ -55,7 +57,14 @@
       "type": "athletic",
       "height": 1,
       "width": 1
-    }
+    },
+    "hair": "Hair_BuzzedFemale",
+    "hairColor": "#111111",
+    "headwear": {
+      "type": "visor",
+      "color": "#ffffff"
+    },
+    "ponytail": true
   },
   {
     "id": "f03",
@@ -84,6 +93,12 @@
       "type": "petite",
       "height": 0.93,
       "width": 0.95
+    },
+    "hair": "Hair_Long",
+    "hairColor": "#d8b46a",
+    "headwear": {
+      "type": "headband",
+      "color": "#1d3557"
     }
   },
   {
@@ -113,7 +128,9 @@
       "type": "tall",
       "height": 1.08,
       "width": 0.97
-    }
+    },
+    "hair": "Hair_Long",
+    "hairColor": "#2b1d14"
   },
   {
     "id": "f05",
@@ -142,7 +159,14 @@
       "type": "stocky",
       "height": 0.95,
       "width": 1.2
-    }
+    },
+    "hair": "Hair_BuzzedFemale",
+    "hairColor": "#4a2f1d",
+    "headwear": {
+      "type": "headband",
+      "color": "#e63946"
+    },
+    "ponytail": true
   },
   {
     "id": "f06",
@@ -171,6 +195,12 @@
       "type": "muscular",
       "height": 1,
       "width": 1.15
+    },
+    "hair": "Hair_Buns",
+    "hairColor": "#111111",
+    "headwear": {
+      "type": "visor",
+      "color": "#f4a261"
     }
   },
   {
@@ -200,6 +230,12 @@
       "type": "slim",
       "height": 1.03,
       "width": 0.9
+    },
+    "hair": "Hair_Long",
+    "hairColor": "#3b2416",
+    "headwear": {
+      "type": "headband",
+      "color": "#ffffff"
     }
   },
   {
@@ -229,7 +265,14 @@
       "type": "athletic",
       "height": 1,
       "width": 1
-    }
+    },
+    "hair": "Hair_BuzzedFemale",
+    "hairColor": "#8e3b1f",
+    "headwear": {
+      "type": "visor",
+      "color": "#2a9d8f"
+    },
+    "ponytail": true
   },
   {
     "id": "m01",

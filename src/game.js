@@ -1,5 +1,5 @@
 // Shared match simulation (client offline + authoritative server). No rendering here.
-import { newBall, stepBall, aimVelocity, predict } from './physics.js';
+import { newBall, stepBall, aimVelocity, predict, contraVelocity } from './physics.js';
 import { newMatch, onHit, onContact, servePosition, serviceBox, serverId } from './rules.js';
 
 export const REACH = 1.35, MAX_HIT_H = 2.9, SPEED = 5.2;
@@ -7,6 +7,7 @@ export const REACH = 1.35, MAX_HIT_H = 2.9, SPEED = 5.2;
 // depth = metres from net on opponent side, t = flight time to first bounce, spin = topspin(+)/slice(-) rad/s
 export const SHOTS = {
   serve:    { depth: 5.6, t: 0.85, spin: -25, anim: 'serve' },
+  serveSlice: { depth: 5.2, t: 0.95, spin: -60, side: 30, anim: 'serve' },  // low, skidding, curls away
   drive:    { depth: 7.4, t: 0.75, spin: 45,  anim: 'forehand' },
   volley:   { depth: 6.2, t: 0.6,  spin: -30, anim: 'volley' },
   lob:      { depth: 9.0, t: 1.75, spin: 20,  anim: 'forehand' },
@@ -14,6 +15,9 @@ export const SHOTS = {
   bandeja:  { depth: 7.8, t: 0.95, spin: -45, anim: 'overhead' },
   vibora:   { depth: 7.0, t: 0.75, spin: -60, side: 35, anim: 'overhead' },
   smash:    { depth: 6.5, t: 0.38, spin: 10,  anim: 'smash' },
+  bajada:   { depth: 8.0, t: 0.50, spin: 40,  anim: 'smash' },      // aggressive smash from high back glass rebound
+  contra:   { depth: 6.0, t: 1.4,  spin: 0,   anim: 'forehand' },   // contrapared: off your own back/side glass (falls back to a lob)
+  rulo:     { depth: 4.8, t: 0.85, spin: -35, side: 40, anim: 'overhead' }, // hooked topspin/slice towards side mesh
 };
 
 export function newWorld(opts = {}) {
@@ -45,30 +49,53 @@ function resetPositions(w) {
   }
   const s = w.players[sid];
   w.ball = newBall();
-  w.ball.p = [s.p[0] + 0.35, 1.0, s.p[1]];
+  w.ball.p = serveBall(s);
   w.state = 'serve'; w.timer = 0; w.rally = 0;
 }
+
+// server holds the ball up in front, on the court-centre side (right of them when serving from the left, and vice versa)
+// 0.6 m in front so the dropped ball clears the front foot of the side-on stance
+const serveBall = (s) => [s.p[0] - Math.sign(s.p[0]) * 0.35, 1.2, s.p[1] - Math.sign(s.p[1]) * 0.6];
 
 const reachable = (pl, b) => b.live && b.p[1] > 0.22 && b.p[1] < MAX_HIT_H && Math.hypot(b.p[0] - pl.p[0], b.p[2] - pl.p[1]) < REACH;
 
 function autoShot(w, pl) {
-  const b = w.ball, nearNet = Math.abs(pl.p[1]) < 4.5;
-  if (b.p[1] > 1.9) return nearNet ? 'smash' : 'bandeja';
-  if (w.match.rally.bouncesSinceHit === 0 && nearNet) return 'volley';
+  const b = w.ball, nearNet = Math.abs(pl.p[1]) < 4.5, r = w.match.rally;
+  if (b.p[1] > 1.9) {
+    if (r?.bouncesSinceHit === 1 && Math.abs(pl.p[1]) > 6.0) return 'bajada';
+    return nearNet ? 'smash' : 'bandeja';
+  }
+  if (r?.bouncesSinceHit === 0 && nearNet) return 'volley';
   return 'drive';
 }
 
 function gauss() { return (Math.random() + Math.random() + Math.random() - 1.5) / 1.5; }
 
 function strike(w, pl, kind, aimX = 0) {
-  const b = w.ball, s = SHOTS[kind];
+  const b = w.ball, s = SHOTS[kind === 'serve' && pl.want === 'slice' ? 'serveSlice' : kind];
   const dir = pl.team === 0 ? -1 : 1;               // team 0 hits toward -z
   const ctl = (pl.stats.control + pl.racket.control) / 20;
   const pow = (pl.stats.power + pl.racket.power) / 20;
+
+  // racket sweet-spot and hit distance evaluation: optimal hit distance is ~0.85m
+  const hitD = Math.hypot(b.p[0] - pl.p[0], b.p[2] - pl.p[1]);
+  const sweet = (pl.racket.sweetSpot || 6) / 10;
+  const sweetTol = 0.22 + sweet * 0.12;
+  const dDiff = Math.abs(hitD - 0.85);
+  let quality = 'good';
+  if (dDiff < sweetTol && b.p[1] >= 0.55 && b.p[1] <= 2.2) quality = 'perfect';
+  else if (hitD > 1.15) quality = 'late';
+  else if (hitD < 0.55) quality = 'early';
+
   let depth = s.depth, t = s.t;
-  if (kind === 'smash') t *= 1.25 - pow * 0.5;
+  if (kind === 'smash' || kind === 'bajada') t *= 1.25 - pow * 0.5;
   if (kind === 'drive') t *= 1.15 - pow * 0.3;
-  const err = (1 - ctl) * 1.4;
+  if (quality === 'perfect') t *= 0.92;
+
+  let err = (1 - ctl) * 1.4;
+  if (quality === 'perfect') err *= 0.6;
+  else if (quality !== 'good') err *= 1.35;
+
   let tx, tz;
   if (kind === 'serve') {
     const box = serviceBox(w.match);
@@ -85,23 +112,29 @@ function strike(w, pl, kind, aimX = 0) {
     if (Math.random() < (1 - ctl) * (w.match.rally.fault ? 0.05 : 0.2)) mistake = Math.random() < 0.5 ? 'net' : 'long';
   } else {
     const inSpeed = Math.hypot(...b.v), reach = Math.hypot(b.p[0] - pl.p[0], b.p[2] - pl.p[1]) / REACH;
-    const awkward = b.p[1] < 0.45 || (b.p[1] > 1.6 && !['smash', 'bandeja', 'vibora'].includes(kind)) ? 0.06 : 0;
-    const risky = { smash: 0.05, vibora: 0.04, chiquita: 0.03 }[kind] || 0;
-    const pErr = (1 - ctl) * 0.12 + Math.max(0, inSpeed - 14) * 0.006 + reach * reach * 0.05 + awkward + risky;
+    const awkward = b.p[1] < 0.45 || (b.p[1] > 1.6 && !['smash', 'bandeja', 'vibora', 'bajada', 'rulo'].includes(kind)) ? 0.06 : 0;
+    const risky = { smash: 0.05, vibora: 0.04, chiquita: 0.03, bajada: 0.05, rulo: 0.04 }[kind] || 0;
+    let pErr = (1 - ctl) * 0.12 + Math.max(0, inSpeed - 14) * 0.006 + reach * reach * 0.05 + awkward + risky;
+    if (quality === 'perfect') pErr *= 0.5;
+    else if (quality !== 'good') pErr += 0.06;
     if (Math.random() < pErr) mistake = Math.random() < 0.5 ? 'net' : 'long';
   }
   if (mistake === 'long') tz = dir * (kind === 'serve' ? 7.2 + Math.random() * 0.8 : 10.6 + Math.random()); // past service line / into back glass
   if (mistake === 'net') t *= 0.55;                                       // flat and low into the net
-  const spinMag = s.spin * (0.6 + pl.racket.spin / 15);
+  const spinMag = s.spin * (0.6 + pl.racket.spin / 15) * (quality === 'perfect' ? 1.15 : 1.0);
   const wv = [Math.sign(dir) * spinMag, (s.side || 0) * -dir, 0];
   b.w = wv;
   b.live = true;
   b.v = aimVelocity(b.p, [tx, tz], t, wv, mistake !== 'net');
+  if (kind === 'contra') {  // aim left/right picks that side glass, centre the back glass
+    const cv = contraVelocity(b.p, pl.team, Math.abs(aimX) > 0.3 ? Math.sign(aimX) : 0);
+    if (cv) { b.v = cv.map(x => x + gauss() * err * 0.25); b.w = [0, 0, 0]; }
+  }
   if (kind === 'serve') w.state = 'play';
   pl.swing = { kind, t: 0, anim: s.anim, backhand: (b.p[0] - pl.p[0]) * (pl.team === 0 ? -1 : 1) < 0 };
   pl.want = null;
   w.rally++;
-  w.events.push({ type: 'hit', pid: pl.id, shot: kind, t: w.t, mistake });
+  w.events.push({ type: 'hit', pid: pl.id, shot: kind, t: w.t, mistake, speed: Math.hypot(...b.v), quality });
   const r = onHit(w.match, pl.id);
   if (r?.point != null) endPoint(w, r);
   else if (r?.let) { w.events.push({ type: 'let', why: r.why, t: w.t }); w.state = 'dead'; w.timer = 1.0; }
@@ -120,11 +153,13 @@ export function stepWorld(w, inputs, dt) {
     if (!pl.active) continue;
     const inp = inputs[pl.id] || {};
     if (pl.swing) { pl.swing.t += dt; if (pl.swing.t > 0.55) pl.swing = null; }
-    // movement (server stands still until serving)
+    // movement (server may shuffle within the serving zone before serving)
     const mv = inp.move || [0, 0];
     const len = Math.min(1, Math.hypot(mv[0], mv[1]));
-    const spd = SPEED * (0.75 + pl.stats.speed / 24) * (pl.swing ? 0.35 : 1);
-    if (!(w.state === 'serve' && pl.id === serverId(w.match)) && len > 0.05) {
+    // feet planted while a stroke is pending or under way: aiming with the move keys must not walk you off the ball
+    const spd = SPEED * (0.75 + pl.stats.speed / 24) * (pl.swing || pl.want ? 0.35 : 1);
+    const tossing = w.state === 'toss' && pl.id === serverId(w.match);
+    if (len > 0.05 && !tossing) {
       pl.p[0] += mv[0] / Math.hypot(...mv) * len * spd * dt;
       pl.p[1] += mv[1] / Math.hypot(...mv) * len * spd * dt;
       pl.anim = len > 0.6 ? 'run' : 'walk';
@@ -132,9 +167,14 @@ export function stepWorld(w, inputs, dt) {
     const zs = pl.team === 0 ? 1 : -1;
     pl.p[0] = Math.max(-4.8, Math.min(4.8, pl.p[0]));
     pl.p[1] = zs * Math.max(0.4, Math.min(9.8, pl.p[1] * zs));
+    if (w.state === 'serve' && pl.id === serverId(w.match)) {  // behind the service line, in own half
+      const xs = Math.sign(servePosition(w.match)[0]);
+      pl.p[0] = xs * Math.max(0.3, Math.min(4.6, pl.p[0] * xs));
+      pl.p[1] = zs * Math.max(7.3, pl.p[1] * zs);
+    }
     // face the ball
     const b = w.ball;
-    if (w.state !== 'serve') pl.f = Math.atan2(b.p[0] - pl.p[0], b.p[2] - pl.p[1]);
+    if (w.state !== 'serve' && !tossing) pl.f = Math.atan2(b.p[0] - pl.p[0], b.p[2] - pl.p[1]);
     if (inp.swing) { pl.want = inp.swing; pl.wantT = 0.3; pl.aim = inp.aim || 0; }
     if (pl.want) pl.wantT -= dt;
     if (pl.wantT <= 0) pl.want = null;
@@ -142,8 +182,25 @@ export function stepWorld(w, inputs, dt) {
 
   if (w.state === 'serve') {
     const s = w.players[serverId(w.match)];
-    w.ball.p = [s.p[0] + (s.team === 0 ? -0.35 : 0.35), 0.75, s.p[1]];
-    if (s.want) strike(w, s, 'serve', s.aim);
+    w.ball.p = serveBall(s);
+    s.anim = 'serveReady';
+    if (s.want) {  // let go of the ball: a padel serve is struck after it bounces, below the waist
+      w.state = 'toss'; w.toss = { want: s.want, aim: s.aim, bounced: false, t: 0 };
+      Object.assign(w.ball, { v: [0, 0, 0], w: [0, 0, 0], live: true });
+      s.want = null; s.anim = 'serveToss';
+    }
+    return w;
+  }
+  if (w.state === 'toss') {
+    const s = w.players[serverId(w.match)], b = w.ball, vy = b.v[1], tz = w.toss;
+    s.anim = 'serveToss'; s.want = null;
+    stepBall(b, dt);  // contact events ignored: the dropped ball is not in play yet
+    tz.t += dt;
+    if (vy < 0 && b.v[1] > 0) tz.bounced = true;
+    if ((tz.bounced && b.v[1] <= 0.3) || tz.t > 2) {  // strike near the top of the bounce
+      s.want = tz.want; w.toss = null;
+      strike(w, s, 'serve', tz.aim);
+    }
     return w;
   }
   if (w.state === 'dead' || w.state === 'over') {
@@ -164,7 +221,7 @@ export function stepWorld(w, inputs, dt) {
     const r = w.match.rally;
     const notMine = r.bouncesSinceHit === 0 && (r.lastHitTeam === pl.team || r.phase === 'serveFlight'); // never volley the serve
     const now = d < 0.8 || !closing || pl.wantT < 0.05 || (b.v[1] < 0 && b.p[1] < 0.45);
-    if (onSide && !notMine && reachable(pl, b) && now) strike(w, pl, pl.want === 'auto' ? autoShot(w, pl) : pl.want, pl.aim);
+    if (onSide && !notMine && reachable(pl, b) && now) strike(w, pl, SHOTS[pl.want] ? pl.want : autoShot(w, pl), pl.aim);
   }
   stepBallEvents(w, dt);
   return w;

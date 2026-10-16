@@ -9,9 +9,14 @@ import { createAvatar } from './player.js';
 import { createCameraRig } from './camera.js';
 import { createReplay } from './replay.js';
 import { aiInput } from './ai.js';
-import { readKeyboard, readGamepad, consumePressed } from './input.js';
+import { readLocal, readGamepad, consumePressed, clearPressed } from './input.js';
 import { connect } from './net.js';
 import { predict } from './physics.js';
+import { createFx } from './fx.js';
+import { unlockAudio, toggleMute, sfxHit, sfxContact, sfxCrowd, sfxWhoosh, callout } from './audio.js';
+import { initMenu } from './menu.js';
+import { createTutorial } from './tutorial.js';
+import { mountKeyHelp } from './helpkeys.js';
 
 const $ = (id) => document.getElementById(id);
 const matchOpts = () => ({ sets: parseInt($('sets').value), superTiebreak: $('sets').value === '3s', goldenPoint: $('golden').value === '1', starPoint: $('golden').value === 'star' });
@@ -19,6 +24,8 @@ const fill = (sel, items, label) => { sel.innerHTML = items.map((x, i) => `<opti
 fill($('char'), characters, c => `${c.name} (${c.countryCode}, ${c.gender === 'f' ? 'K' : 'E'})`);
 fill($('venue'), venues, v => `${v.name} — ${v.city}`);
 fill($('racket'), rackets, r => `${r.name} · ${r.shape} · G${r.stats.power}/K${r.stats.control}`);
+initMenu();
+mountKeyHelp($('help'));
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25));
@@ -31,7 +38,7 @@ camera.position.set(0, 7, 17);
 const resize = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
 addEventListener('resize', resize); resize();
 
-window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorld, inputs });
+window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorld, inputs , tut });
 const rig = createCameraRig(camera, renderer.domElement);
 const replay = createReplay(15, 60);
 let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, msgTimer = 0, net = null, marker;
@@ -42,19 +49,27 @@ async function setupScene(venue, ids, roster, rk) {
   scene.clear();
   venueGroup = buildVenue(scene, venue);
   ballView = buildBall(scene);
+  fx = createFx(scene);
   marker = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.17, 24), new THREE.MeshBasicMaterial({ color: 0xd8f53a, transparent: true, opacity: 0.8 }));
   marker.rotation.x = -Math.PI / 2; scene.add(marker);
   avatars = [];
-  for (const id of ids) avatars[id] = await createAvatar(scene, roster[id], rk[id].color);
+  for (const id of ids) avatars[id] = await createAvatar(scene, roster[id], rk[id].color, rk[id].shape);
   const name = (t) => ids.filter(id => (id < 2 ? 0 : 1) === t).map(id => roster[id].name.split(' ').pop()).join(' / ');
   $('t0').textContent = name(0); $('t1').textContent = name(1);
   for (const id of ['hud', 'cam', 'help']) $(id).hidden = false;
   $('msg').textContent = '';
   last = performance.now();
-  requestAnimationFrame(loop);
+  if (!looping) { looping = true; requestAnimationFrame(loop); }  // a restart reuses the running loop
 }
 
 $('online').onclick = () => {
+  unlockAudio();
+  control = $('control').value;
+  // the static GitHub Pages build has no game server; ?server=wss://... points it at one
+  if (!new URLSearchParams(location.search).get('server') && location.hostname.endsWith('github.io')) {
+    $('lobby').textContent = 'Online mod bir oyun sunucusu ister; bu web sürümünde yok. Bilgisayara karşı oynayabilirsin.';
+    return;
+  }
   const code = $('room').value.trim().toUpperCase();
   if (!code) { $('lobby').textContent = 'Önce bir oda kodu yaz.'; return; }
   const me = +$('char').value, players = +$('mode').value;
@@ -79,14 +94,18 @@ $('online').onclick = () => {
 
 $('start').onclick = async () => {
   if (net) { net.start(); return; }
-  const players = +$('mode').value;
-  const nHumans = Math.min(+$('humans').value, players);
-  aiLevel = $('ai').value;
+  const tutorial = $('start').dataset.tutorial === '1';  // training mode: singles, you vs the ball machine
+  const players = tutorial ? 2 : +$('mode').value;
+  const nHumans = tutorial ? 1 : Math.min(+$('humans').value, players);
+  aiLevel = tutorial ? 'rookie' : $('ai').value;
+  gameSpeed = +$('speed').value;
+  control = $('control').value;
+  unlockAudio();
   const me = characters[+$('char').value];
   const venue = venues[+$('venue').value];
   const myRacket = rackets[+$('racket').value];
 
-  // roster: humans first fill team 0 then team 1 (P1 keyboard, others gamepads)
+  // roster: humans first fill team 0 then team 1 (P1 per menu choice, the others take the remaining pads)
   const ids = players === 2 ? [0, 2] : [0, 2, 1, 3];
   humans = ids.slice(0, nHumans);
   const others = characters.filter(c => c !== me).sort(() => Math.random() - 0.5);
@@ -104,20 +123,90 @@ $('start').onclick = async () => {
   });
 
   await setupScene(venue, ids, roster, rk);
+  if (tutorial) {
+    tut = createTutorial({ world, scene, hand: roster[0].hand, camName: () => rig.name, replaying: () => replay.playing, consumePressed, onExit: () => location.reload() });
+  }
 };
 
 function flash(text, sec = 1.8) { $('msg').textContent = text; msgTimer = sec; }
 
 const STEP = 1 / 60;
 let last = 0, acc = 0, rallyFlags = {};
+// game feel: slower-than-real default pace, a short hit-stop on contact, camera kick on smashes
+// pace follows the chosen level and creeps up as the match goes on; low levels also get a positioning assist
+// (when you are not steering, your player drifts to where the AI would stand — you still choose every shot)
+const LEVEL_PACE = { rookie: 0.85, club: 0.95, pro: 1.0, legend: 1.08 };
+const ASSIST = { rookie: 0.8, club: 0.5, pro: 0.25, legend: 0 };
+const pace = () => {
+  const games = world.match.sets.reduce((n, s) => n + s[0] + s[1], 0);
+  return Math.min(1.05, gameSpeed * (LEVEL_PACE[aiLevel] || 1) * (1 + Math.min(0.12, games * 0.015)));
+};
+let fx = null, tut = null, looping = false;
+let control = 'auto', gameSpeed = 0.85, freeze = 0, shake = 0, lastHitter = null;
+const shakeOff = new THREE.Vector3(), ballHold = new THREE.Vector3(), tmpV = new THREE.Vector3();
+// smash: brief slow motion + smash cam (for your own smashes, or every smash when only AIs play)
+let slow = 0, punchPid = null;
+// whoosh when the ball flies past the focus player
+const prevB = new THREE.Vector3();
+let lastD = Infinity, nearD = Infinity;
+
+// Shot coach (offline, for your player). An overhead you can take inside the service line slows the ball's
+// approach and shows it from behind your player; every overhead / glass rebound / lob chance gets key hints.
+const SHOT_KEYS = { kb: { smash: 'L', vibora: 'I', bandeja: 'Space', bajada: 'Space', lob: 'K' }, pad: { smash: 'Y', vibora: 'RB', bandeja: 'A', bajada: 'A', lob: 'B' } };
+const SHOT_NAME = { smash: 'SMAÇ', vibora: 'VÍBORA', bandeja: 'BANDEJA', bajada: 'BAJADA', lob: 'LOB' };
+let device = 'kb', approach = 0, armed = true, hintKey = '';  // armed: the next overhead chance may start a slow approach
+addEventListener('keydown', () => { device = 'kb'; });
+function showHint(list, title = '') {
+  const key = device + title + list.join();
+  if (key === hintKey) return;
+  hintKey = key;
+  const el = $('shotHint');
+  el.hidden = !list.length;
+  if (list.length) el.innerHTML = `<span class="sh-t">${title}</span>` + list.map((s, i) => `<span class="sh${i ? '' : ' best'}">${SHOT_NAME[s]} <kbd>${SHOT_KEYS[device][s]}</kbd></span>`).join('');
+}
+function coach(dt) {
+  if (approach > 0) approach -= dt;
+  const pid = humans[0];
+  if (!world || net || pid == null || replay.playing || world.state !== 'play') { approach = 0; armed = true; return showHint([]); }
+  const me = world.players[pid], b = world.ball, r = world.match.rally, zs = me.team === 0 ? 1 : -1;
+  if (!b.live || r.lastHitTeam === me.team) { approach = 0; armed = true; return showHint([]); }
+  // came off your back glass and is rising toward you: attack it
+  if (r.bouncesSinceHit === 1 && b.p[2] * zs > 7 && b.v[2] * zs < 0 && b.p[1] > 1.5) return showHint(['bajada'], 'Camdan dönen top');
+  if (r.bouncesSinceHit !== 0) return showHint([]);
+  // where will the ball be high and within reach, before it bounces on your side?
+  const { pts, contacts } = predict(b, 1.6);
+  const land = contacts.find(c => c.kind === 'floor' && c.p[2] * zs > 0), tEnd = land ? land.t : 1.6;
+  const hit = pts.find(q => q.t < tEnd && q.p[2] * zs > 0 && q.p[1] > 1.8 && q.p[1] < 2.9 && Math.hypot(q.p[0] - me.p[0], q.p[2] - me.p[1]) < 2.2);
+  if (!hit) {
+    const opps = world.players.filter(p => p.active && p.team !== me.team);
+    if (opps.length && opps.every(o => Math.abs(o.p[1]) < 4.5) && Math.abs(me.p[1]) > 5) return showHint(['lob'], 'Rakipler filede');
+    return showHint([]);
+  }
+  const dist = (p) => Math.hypot(hit.p[0] - p.p[0], hit.p[2] - p.p[1]);
+  if (world.players.some(p => p.active && p.team === me.team && p !== me && dist(p) < dist(me) - 0.3)) return showHint([]);  // partner's ball
+  const depth = Math.abs(hit.p[2]);
+  if (depth >= 6.95) return showHint(['bandeja', 'vibora', 'lob'], 'Yüksek top');
+  if (armed) { armed = false; approach = 1.6; rig.pov(1.6); }  // once per incoming ball
+  showHint(depth < 4.5 ? ['smash', 'vibora', 'bandeja'] : ['vibora', 'bandeja', 'smash'], depth < 4.5 ? 'SMAÇ FIRSATI' : 'Üstten vur');
+}
+const teamOf = (pid) => (pid < 2 ? 0 : 1);
+const speak = (pid, good) => { const a = avatars[pid]; if (a) a.say(callout(a.ch, good)); };
+
+// human not steering -> borrow the AI's positioning, scaled by the level's assist
+function assisted(pl, inp) {
+  const k = tut ? 0 : ASSIST[aiLevel] || 0;  // no help in training: the lessons test you
+  if (!k || inp.move[0] || inp.move[1]) return inp;
+  const m = aiInput(world, pl.id, aiLevel).move;
+  return { ...inp, move: [m[0] * k, m[1] * k] };
+}
 
 function inputs() {
   const inp = {};
   for (const pl of world.players) {
     if (!pl.active) continue;
     const h = humans.indexOf(pl.id);
-    if (h === 0) inp[pl.id] = readKeyboard(pl.team);
-    else if (h > 0) inp[pl.id] = readGamepad(h - 1, pl.team) || aiInput(world, pl.id, aiLevel);
+    if (h === 0) inp[pl.id] = assisted(pl, readLocal(pl.team, control));
+    else if (h > 0) { const pad = readGamepad(control === 'kb' ? h - 1 : h, pl.team); inp[pl.id] = pad ? assisted(pl, pad) : aiInput(world, pl.id, aiLevel); }
     else inp[pl.id] = aiInput(world, pl.id, aiLevel);
   }
   return inp;
@@ -127,25 +216,104 @@ function handleEvents(events, score, winner) {
   for (const e of events) {
     if (e.type === 'hit') {
       rallyFlags.bounced = false;
-      if (e.shot === 'smash' || e.shot === 'vibora') { rallyFlags.smash = true; replay.mark(e.shot); }
-    } else if (e.type === 'contact' && e.kind === 'floor') rallyFlags.bounced = true;
-    else if (e.type === 'contact' && e.kind === 'glass' && rallyFlags.bounced) rallyFlags.glass = true;
+      const power = e.speed ? (e.speed - 6) / 22 : e.shot === 'smash' ? 1 : 0.5;
+      sfxHit(power);
+      if (world) fx?.impact(world.ball.p, power, e.quality === 'perfect');
+      sfxWhoosh(0.25 + 0.4 * power, 0, 0.18);  // racket swing through the air
+      freeze = power > 0.7 ? 0.08 : 0.03;
+      lastHitter = e.pid;
+      if (humans.includes(e.pid)) {  // your stroke ends the slow approach; overheads get the smash cam treatment
+        approach = 0; rig.pov(0);
+        if (['smash', 'vibora', 'bandeja', 'bajada'].includes(e.shot)) { punchPid = e.pid; slow = 0.9; shake = 0.25; }
+      }
+      if (e.shot === 'smash' || e.shot === 'vibora') {
+        rallyFlags.smash = true; replay.mark(e.shot); shake = 0.25;
+        if (e.shot === 'smash' && !humans.length) { punchPid = e.pid; slow = 0.9; }
+        if (Math.random() < 0.4) speak(e.pid, true);
+      }
+    } else if (e.type === 'contact') {
+      sfxContact(e.kind, world?.ball ? Math.hypot(...world.ball.v) : 8);
+      if (e.kind === 'floor') rallyFlags.bounced = true;
+      else if (e.kind === 'glass' && rallyFlags.bounced) rallyFlags.glass = true;
+    }
     else if (e.type === 'fault') flash('SERVİS HATASI', 1);
     else if (e.type === 'let') flash('LET', 1);
     else if (e.type === 'point') {
+      sfxCrowd(Math.min(1, 0.3 + e.rally / 10));
+      // last hitter reacts: celebrates a winner, groans at an error
+      if (lastHitter != null && Math.random() < 0.75) speak(lastHitter, teamOf(lastHitter) === e.team);
+      lastHitter = null;
       const team = e.team === 0 ? $('t0').textContent : $('t1').textContent;
       const WHY = { 'double bounce': 'iki sekme', 'bounced own side': 'kendi sahasında sekti', 'hit own mesh': 'kendi teline', 'hit opponent wall directly': 'doğrudan cama', 'double fault': 'çift hata', out: 'dışarı', 'volleyed serve': 'servis vole', 'double hit': 'çift vuruş' };
-      flash(`${team}\n${WHY[e.why] || e.why}`);
+      if (!tut) flash(`${team}\n${WHY[e.why] || e.why}`);
       // auto highlight: long rally, smash, or a ball played off the glass
-      if (e.rally >= 8 || rallyFlags.smash || rallyFlags.glass) setTimeout(() => startReplay(true), 900);
+      if (!tut && (e.rally >= 8 || rallyFlags.smash || rallyFlags.glass)) setTimeout(() => startReplay(true), 900);
       rallyFlags = {};
-      if (winner != null) flash(`🏆 ${team} KAZANDI!\nEnter: ana menü`, 999);
+      if (!tut && winner != null) flash(`🏆 ${team} KAZANDI!\nEnter / Start: ana menü`, 999);
     }
   }
   events.length = 0;
   const s = score;
   if (!s) return;
-  $('setsHud').textContent = s.sets; $('pts').textContent = s.pts;
+  renderHud(s);
+}
+
+// score board: rows per team with games per set, the current point and a ball marking the server
+let hudKey = '';
+function renderHud(s) {
+  $('setsHud').textContent = s.sets; $('pts').textContent = s.pts;  // plain text kept for flashes and tools
+  const b = s.board;
+  if (!b) return;
+  const names = [$('t0').textContent, $('t1').textContent], key = JSON.stringify(b) + names;
+  if (key === hudKey) return;
+  hudKey = key;
+  const n = b.sets.length, cur = (i) => (i === n - 1 ? ' cur' : '');
+  const c = (t, cls = '') => `<span class="${cls}">${t}</span>`;
+  let h = c('') + c('') + b.sets.map((_, i) => c('SET ' + (i + 1), 'hd' + cur(i))).join('') + c('PUAN', 'hd');
+  for (const t of [0, 1]) {
+    h += c(b.server === t ? '●' : '', 'srv') + c(names[t], 'nm')
+      + b.sets.map((st, i) => c(st[t], 'g' + cur(i) + (i < n - 1 && st[t] > st[1 - t] ? ' won' : ''))).join('')
+      + c(b.pts[t], 'pt');
+  }
+  const grid = $('hudGrid');
+  grid.style.gridTemplateColumns = `14px auto repeat(${n}, 34px) 48px`;
+  grid.innerHTML = h;
+  $('hudLabel').textContent = `SET ${b.setNo}` + (b.label ? ' · ' + b.label : '');
+}
+
+// Pause menu: P, Esc (when no replay is running) or pad Start. Freezes the match; online games keep running.
+let paused = false, pauseSel = 0;
+const padPrev = {};
+function pauseItems() {
+  const items = [['Devam et', () => setPaused(false)]];
+  if (tut) items.push(['Dersi atla', () => { setPaused(false); tut.skip(); }]);
+  else if (!net) items.push(['Maçı yeniden başlat', () => { setPaused(false); if (replay.playing) endReplay(); $('start').onclick(); }]);
+  items.push(['Ana menüye dön', () => location.reload()]);
+  return items;
+}
+function drawPause() {
+  const box = $('pzItems');
+  box.innerHTML = pauseItems().map(([t], i) => `<button class="pz-item${i === pauseSel ? ' sel' : ''}" data-i="${i}">${t}</button>`).join('');
+  box.querySelectorAll('button').forEach(b => {
+    b.onclick = () => pauseItems()[+b.dataset.i][1]();
+    b.onmouseenter = () => { pauseSel = +b.dataset.i; drawPause(); };
+  });
+  $('pzNote').textContent = net ? 'Online maç arka planda sürüyor.' : '';
+}
+function setPaused(on) { paused = on; pauseSel = 0; $('pause').hidden = !on; if (on) drawPause(); clearPressed(); }
+function padEdge(i) {  // fresh press of one pad button (menu navigation while paused)
+  const gp = [...(navigator.getGamepads?.() || [])].find(Boolean), on = !!gp?.buttons[i]?.pressed;
+  const edge = on && !padPrev[i]; padPrev[i] = on; return edge;
+}
+function pauseInput() {
+  const n = pauseItems().length;
+  const up = consumePressed('ArrowUp') | consumePressed('KeyW') | padEdge(12);
+  const down = consumePressed('ArrowDown') | consumePressed('KeyS') | padEdge(13);
+  const pick = consumePressed('Enter') | consumePressed('Space') | padEdge(0);
+  const back = consumePressed('KeyP') | consumePressed('Escape') | consumePressed('Pause') | padEdge(1);
+  if (up || down) { pauseSel = (pauseSel + (down ? 1 : n - 1)) % n; drawPause(); }
+  if (pick) pauseItems()[pauseSel][1]();
+  else if (back) setPaused(false);
 }
 
 let replayCamBefore = null;
@@ -156,29 +324,51 @@ function startReplay(auto) {
   replay.play({ speed: auto ? 0.5 : 0.6 });
   $('replayTag').hidden = false;
 }
-function endReplay() { replay.stop(); $('replayTag').hidden = true; if (replayCamBefore) rig.set(replayCamBefore); replayCamBefore = null; }
+function endReplay() { replay.stop(); $('replayTag').hidden = true; if (replayCamBefore) rig.set(replayCamBefore); replayCamBefore = null; clearPressed(); }
+// any key or pad button skips a replay (H = key help and M = mute keep their own job)
+let skipReplay = false, padWasDown = false;
+addEventListener('keydown', (e) => { if (replay.playing && !e.repeat && !['KeyH', 'KeyM', 'ShiftLeft', 'ShiftRight'].includes(e.code)) skipReplay = true; });
+function padButtonDown() {
+  const pads = [...(navigator.getGamepads?.() || [])];
+  const down = pads.some(gp => gp?.buttons.some(b => b.pressed));
+  if (down || pads.some(gp => gp?.axes.some(a => Math.abs(a) > 0.5))) device = 'pad';
+  const edge = down && !padWasDown; padWasDown = down; return edge;
+}
 
 function loop(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (paused) {
+    pauseInput();
+    // offline the world freezes; an online match can't be stopped, so it keeps running behind the menu
+    if (paused && !net) { renderer.render(scene, camera); requestAnimationFrame(loop); return; }
+  }
+  const over = world?.match.winner != null || net?.winner != null;
+  if (consumePressed('KeyP') | consumePressed('Pause') | (!replay.playing && consumePressed('Escape'))) {
+    if (over && !tut) { location.reload(); return; }  // Start / P on the final score: back to the menu
+    setPaused(true); requestAnimationFrame(loop); return;
+  }
+  // skip first, so the press that starts a replay (R / R3) can't also end it
+  if (padButtonDown() || skipReplay) { if (replay.playing) endReplay(); skipReplay = false; }
   if (consumePressed('KeyC')) $('cam').textContent = '🎥 ' + rig.next();
   if (consumePressed('KeyR')) startReplay(false);
-  if (consumePressed('Escape') && replay.playing) endReplay();
-  if (consumePressed('Enter') && (world?.match.winner != null || net?.winner != null)) { location.reload(); return; }
+  if (consumePressed('KeyM')) flash(toggleMute() ? '🔇 SES KAPALI' : '🔊 SES AÇIK', 1);
+  if (!tut && consumePressed('Enter') && (world?.match.winner != null || net?.winner != null)) { location.reload(); return; }
   let view;
   if (replay.playing) {
     view = replay.update(dt);
     if (!view) { endReplay(); view = snapshot(world); }
   } else if (net) {
     const pl = net.seat < 2 ? 0 : 1;
-    const inp = readKeyboard(pl);
+    const inp = readLocal(pl, control);
     net.send(inp);
     view = net.view();
     if (!view) { requestAnimationFrame(loop); return; }
     replay.record(view);
     handleEvents(net.events, net.score, net.winner);
   } else {
-    acc += dt;
-    while (acc >= STEP) { stepWorld(world, inputs(), STEP); replay.record(snapshot(world)); handleEvents(world.events, scoreText(world.match), world.match.winner); acc -= STEP; }
+    if (freeze > 0) freeze -= dt; else acc += dt * pace() * (slow > 0 ? 0.35 : approach > 0 ? 0.45 : 1);
+    if (slow > 0) slow -= dt;
+    while (acc >= STEP) { stepWorld(world, inputs(), STEP); tut?.onStep(); replay.record(snapshot(world)); handleEvents(world.events, scoreText(world.match), world.match.winner); acc -= STEP; }
     view = snapshot(world);
   }
   // landing marker: where the ball will bounce next (offline only; online uses ball shadow)
@@ -186,12 +376,34 @@ function loop(now) {
     const c = predict(world.ball, 2).contacts.find(c => c.kind === 'floor');
     marker.visible = !!c; if (c) marker.position.set(c.p[0], 0.01, c.p[2]);
   } else if (marker) marker.visible = false;
-  ballView.set(view.b);
-  view.pl.forEach((s, id) => avatars[id]?.update(dt, s));
+  view.pl.forEach((s, id) => { avatars[id]?.update(dt, s, view.b); if (avatars[id]) fx.trail(id, avatars[id], !!s[4]); });
+  fx.update(dt);
+  tut?.onFrame(dt);
+  // serve: the ball sits in the server's hand, then eases onto the simulated drop
+  const srv = view.pl.findIndex(s => s[3] === 'serveReady');
+  if (view.s === 'serve' && avatars[srv]) avatars[srv].ballHand(ballHold).sub(tmpV.set(...view.b));
+  else if (view.s === 'toss') ballHold.multiplyScalar(Math.exp(-dt / 0.08));
+  else ballHold.set(0, 0, 0);
+  ballView.set([view.b[0] + ballHold.x, view.b[1] + ballHold.y, view.b[2] + ballHold.z]);
   const focus = humans[0] ?? 0;
+  coach(dt);
+  if (punchPid != null) { const h = view.pl[punchPid]; if (h) rig.punch([h[0], h[1]], punchPid < 2 ? 0 : 1, 1.0); punchPid = null; }
+  // ball flying past "you": fire a whoosh at the closest approach, louder when faster and nearer, panned to its side
+  const sp = prevB.distanceTo(tmpV.set(...view.b)) / dt; prevB.copy(tmpV);
+  const fp = view.pl[focus];
+  if (fp && !replay.playing && sp < 60) {
+    const d = Math.hypot(tmpV.x - fp[0], tmpV.y - 1.3, tmpV.z - fp[1]);
+    if (d < lastD) nearD = d;
+    else if (nearD < 3.5) { if (sp > 8) sfxWhoosh(Math.min(1, sp / 25) * (1 - nearD / 3.5), tmpV.project(camera).x); nearD = Infinity; }
+    lastD = d;
+  }
   rig.update(dt, { ball: view.b, players: view.pl.map(s => ({ p: [s[0], s[1]], f: s[2] })), focus, team: focus < 2 ? 0 : 1 });
   if ($('cam').textContent === '') $('cam').textContent = '🎥 ' + rig.name;
   if (msgTimer > 0 && (msgTimer -= dt) <= 0) $('msg').textContent = '';
+  shakeOff.set(0, 0, 0);
+  if (shake > 0) { shake -= dt; shakeOff.set(Math.random() - 0.5, Math.random() - 0.5, 0).multiplyScalar(shake * 0.5); }
+  camera.position.add(shakeOff);
   renderer.render(scene, camera);
+  camera.position.sub(shakeOff);
   requestAnimationFrame(loop);
 }

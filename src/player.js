@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 const loader = new GLTFLoader();
 const cache = {};
@@ -12,8 +13,8 @@ const HAIR = { m: ['Hair_SimpleParted', 'Hair_Buzzed', 'Hair_Beard'], f: ['Hair_
 const HAIR_COLORS = ['#2b1d14', '#4a2f1d', '#7a5230', '#c9a15e', '#111111', '#8e3b1f'];
 const TEX_SKIN = new THREE.Color(0.61, 0.43, 0.31); // average of the base skin texture
 
-// locomotion + swing clips; quaternion tracks only so body-shape bone scales survive
-const CLIPS = { idle: 'Sword_Idle', walk: 'Walk_Loop', run: 'Jog_Fwd_Loop', swing: 'Sword_Attack' };
+// locomotion clips; quaternion tracks only so body-shape bone scales survive. Strokes are procedural poses (below).
+const CLIPS = { idle: 'Sword_Idle', walk: 'Walk_Loop', run: 'Jog_Fwd_Loop' };
 let clipsP;
 const clips = () => (clipsP ||= load('assets/anims/UAL1_Standard.glb').then(g => {
   const out = {};
@@ -24,16 +25,62 @@ const clips = () => (clipsP ||= load('assets/anims/UAL1_Standard.glb').then(g =>
   return out;
 }));
 
-// grip in UE hand space; tuned visually
-export const GRIP = { pos: [0.07, 0.03, 0], rot: [0, 0, Math.PI / 2] };
+// grip in UE hand space, tuned visually: head out of the thumb side, butt just past the little finger, face forward
+// The handle runs through the fist: along hand-local z (index knuckle +0.036 -> little finger -0.034), centred in
+// the gap between palm and curled fingers (measured x -0.025, y 0.06 in hand_r; x is mirrored in hand_l). The head
+// comes out past the thumb, the butt just below the little finger, and the face lies in the palm plane.
+// basis = hand-local direction of the racket's x (face width), y (handle -> head) and z (face normal).
+export const GRIP = {
+  r: { fist: [-0.025, 0.06], basis: [[0, 1, 0], [0, 0, 1], [1, 0, 0]] },
+  l: { fist: [0.025, 0.06], basis: [[0, -1, 0], [0, 0, 1], [-1, 0, 0]] },
+  butt: -0.055,  // metres from the fist centre to the end of the handle
+};
 
-function makeRacket(color) {
+let holeTex;
+function racketFaceTex() {
+  if (holeTex || typeof document === 'undefined') return holeTex;
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d');
+  x.fillStyle = '#ffffff'; x.fillRect(0, 0, 128, 128);
+  x.fillStyle = '#252525';
+  for (let r = -3; r <= 3; r++) for (let k = -3; k <= 3; k++) {
+    if (Math.hypot(r, k) > 3.2 || (r === 0 && k === 0)) continue;
+    x.beginPath(); x.arc(64 + k * 13, 64 + r * 13, 3.2, 0, Math.PI * 2); x.fill();
+  }
+  return (holeTex = new THREE.CanvasTexture(c));
+}
+
+function shapeWidth(s, shape) {
+  if (shape === 'teardrop') return s < 0.25 ? 0.56 + 0.54 * ((s + 1) / 1.25) : 1.10 - 0.10 * ((s - 0.25) / 0.75);
+  if (shape === 'diamond') return s < 0.45 ? 0.42 + 0.84 * Math.pow((s + 1) / 1.45, 1.15) : 1.26 - 0.36 * ((s - 0.45) / 0.55);
+  return 1;
+}
+
+function deformHead(geo, shape) {
+  if (shape === 'round') return geo;
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const s = Math.max(-1, Math.min(1, pos.getY(i) / 0.1456));
+    pos.setX(i, pos.getX(i) * shapeWidth(s, shape));
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+export function makeRacket(color, shape = 'round') {
   // padel racket: solid face, thick frame, short handle (45.5 cm long, 26 cm wide)
   const g = new THREE.Group();
-  const face = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.036, 24), new THREE.MeshStandardMaterial({ color, roughness: 0.5 }));
-  face.scale.set(1, 1, 1.12); face.rotation.x = Math.PI / 2; face.position.y = 0.32;
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.012, 6, 24), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-  rim.scale.set(1, 1.12, 1.6); rim.position.y = 0.32;
+  const faceGeo = deformHead(new THREE.CylinderGeometry(0.13, 0.13, 0.036, 32).rotateX(Math.PI / 2).scale(1, 1.12, 1), shape);
+  const face = new THREE.Mesh(faceGeo, new THREE.MeshStandardMaterial({ color, map: racketFaceTex(), roughness: 0.45 }));
+  face.position.y = 0.32;
+  const rimGeo = deformHead(new THREE.TorusGeometry(0.13, 0.012, 8, 32).scale(1, 1.12, 1.6), shape);
+  const rimMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.55 });
+  const rim = new THREE.Mesh(rimGeo, rimMat);
+  rim.position.y = 0.32;
+  for (const s of [-1, 1]) {
+    const bridge = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.009, 0.055, 6), rimMat);
+    bridge.position.set(s * 0.018, 0.175, 0); bridge.rotation.z = -s * 0.36; g.add(bridge);
+  }
   const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.019, 0.17, 8), new THREE.MeshStandardMaterial({ color: 0x1b1b1b, roughness: 0.9 }));
   handle.position.y = 0.09;
   g.add(face, rim, handle);
@@ -42,11 +89,118 @@ function makeRacket(color) {
 }
 
 // Paint padel kit + skin tone. Regions use bind-pose (T-pose) coordinates in metres.
-function kitMaterial(base, ch) {
-  const m = base.clone();
+function kitColors(ch) {
   // a shirt close to the skin tone reads as bare skin: swap it for white
   const shirt = new THREE.Color(ch.outfit.shirt), skin = new THREE.Color(ch.skinTone);
-  if (Math.hypot(shirt.r - skin.r, shirt.g - skin.g, shirt.b - skin.b) < 0.35) shirt.set('#f4f4f4');
+  const a = shirt.clone().convertLinearToSRGB(), b = skin.clone().convertLinearToSRGB();  // compare as seen on screen
+  if (Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b) < 0.35) shirt.set('#f4f4f4');
+  return { shirt, shorts: new THREE.Color(ch.outfit.shorts) };
+}
+
+// Kit regions in rest-pose (T-pose) metres, as GLSL over (y, ax, z); shared by the painted body underneath and the
+// cloth meshes on top. The JS twins pick triangles; the GLSL clips them so the hems are smooth lines.
+// Jersey: up over the shoulders (measured shoulder tops: f 1.47, m 1.54) with a round crew neck around the neck
+// (neck base: f 1.485, m 1.52), scooped 2 cm lower at the front.
+const NECK = { f: [1.455, 0.058], m: [1.49, 0.066] }, TOP = { f: 1.5, m: 1.575 };
+const SHIRT_GLSL = (f) => { const [ny, nr] = NECK[f ? 'f' : 'm'];
+  return `(y > 0.9 && y < ${TOP[f ? 'f' : 'm']} && ax < ${f ? '0.2' : '0.34'} && !(y > ${ny} - (z > 0.0 ? 0.02 : 0.0) && ax < ${nr}) && (ax < 0.2 || y > 1.3))`; };
+const SHORTS_GLSL = (f) => `(y > ${f ? '0.7' : '0.66'} && y <= 0.98 && ax < 0.26)`;
+const SHIRT = (x, y, z, f) => { const ax = Math.abs(x), [ny, nr] = NECK[f ? 'f' : 'm'];
+  return y > 0.9 && y < TOP[f ? 'f' : 'm'] && ax < (f ? 0.2 : 0.34) && !(y > ny - (z > 0 ? 0.02 : 0) && ax < nr) && (ax < 0.2 || y > 1.3); };
+const SHORTS = (x, y, z, f) => y > (f ? 0.7 : 0.66) && y <= 0.98 && Math.abs(x) < 0.26;
+
+// Real clothes: the body surface inside a kit region, copied and pushed out along the normals (looser toward the
+// hems) and skinned to the same skeleton, so the jersey and shorts have volume and move with the player.
+function makeGarment(body, region, regionGlsl, female, offset, color, trim, trimTest, minGap = () => 0.006) {
+  const src = body.geometry, pos = src.attributes.position, nor = src.attributes.normal, idx = src.index.array;
+  const keep = [];
+  for (let t = 0; t < idx.length; t += 3) {
+    const a = idx[t], b = idx[t + 1], c = idx[t + 2];
+    const inside = (i) => region(pos.getX(i), pos.getY(i), pos.getZ(i), female);
+    if (inside(a) || inside(b) || inside(c)) keep.push(a, b, c);  // generous cut; the shader trims the exact edge
+  }
+  const p = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), k = offset(x, y);
+    p[i * 3] = x + nor.getX(i) * k; p[i * 3 + 1] = y + nor.getY(i) * k; p[i * 3 + 2] = z + nor.getZ(i) * k;
+  }
+  smoothShell(p, pos, nor, keep, minGap, 12);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  geo.setAttribute('normal', nor);
+  geo.setAttribute('skinIndex', src.attributes.skinIndex);
+  geo.setAttribute('skinWeight', src.attributes.skinWeight);
+  geo.setAttribute('aRest', pos);  // the skin point under each cloth vertex: hems and trims follow the painted kit exactly
+  geo.setIndex(keep);
+  const mat = new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide });  // double-sided: hems show the inside
+  mat.onBeforeCompile = (sh) => {  // trim bands (collar, sleeve and hem, shorts side stripe) from rest-pose position
+    sh.uniforms.uTrim = { value: trim };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 aRest; varying vec3 vRest;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = aRest;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vRest; uniform vec3 uTrim;')
+      .replace('#include <color_fragment>', `#include <color_fragment>\n{ float y = vRest.y, ax = abs(vRest.x), z = vRest.z; if (!${regionGlsl}) discard; if (${trimTest}) diffuseColor.rgb = uTrim; }`);
+  };
+  mat.customProgramCacheKey = () => 'garment:' + regionGlsl + trimTest;
+  const m = new THREE.SkinnedMesh(geo, mat);
+  m.bind(body.skeleton, body.bindMatrix);
+  m.castShadow = true; m.frustumCulled = false;
+  return m;
+}
+
+// Cloth should not show every muscle: Laplacian-smooth the garment shell so it bridges the body's hollows, but
+// never let it come closer than `min` to the skin. Seam duplicates (same position, other UVs) are welded so the
+// cloth does not tear along UV seams.
+function smoothShell(p, pos, nor, tris, minGap, iters) {
+  const weld = new Int32Array(pos.count).fill(-1), first = new Map();
+  for (const i of tris) if (weld[i] < 0) {
+    const key = `${Math.round(pos.getX(i) * 1e4)},${Math.round(pos.getY(i) * 1e4)},${Math.round(pos.getZ(i) * 1e4)}`;
+    if (!first.has(key)) first.set(key, i);
+    weld[i] = first.get(key);
+  }
+  const nb = new Map(), link = (a, b) => { if (!nb.has(a)) nb.set(a, new Set()); nb.get(a).add(b); };
+  const edgeUse = new Map();  // edges used by one triangle only are the hems: pin them so sleeves don't shrink
+  for (let t = 0; t < tris.length; t += 3) for (let e = 0; e < 3; e++) {
+    const a = weld[tris[t + e]], b = weld[tris[t + (e + 1) % 3]];
+    link(a, b); link(b, a);
+    const k = a < b ? a + ':' + b : b + ':' + a; edgeUse.set(k, (edgeUse.get(k) || 0) + 1);
+  }
+  const hem = new Set();
+  for (const [k, n] of edgeUse) if (n === 1) for (const v of k.split(':')) hem.add(+v);
+  const reps = [...nb.keys()].filter(r => !hem.has(r)), q = new Float32Array(p.length);
+  for (let it = 0; it < iters; it++) {
+    for (const r of reps) {
+      const s = nb.get(r); let x = 0, y = 0, z = 0;
+      for (const n of s) { x += p[n * 3]; y += p[n * 3 + 1]; z += p[n * 3 + 2]; }
+      q[r * 3] = (p[r * 3] + x / s.size) / 2; q[r * 3 + 1] = (p[r * 3 + 1] + y / s.size) / 2; q[r * 3 + 2] = (p[r * 3 + 2] + z / s.size) / 2;
+    }
+    for (const r of reps) {  // stay outside the skin along its normal
+      const nx = nor.getX(r), ny = nor.getY(r), nz = nor.getZ(r);
+      const d = (q[r * 3] - pos.getX(r)) * nx + (q[r * 3 + 1] - pos.getY(r)) * ny + (q[r * 3 + 2] - pos.getZ(r)) * nz;
+      const min = minGap(pos.getY(r)), push = d < min ? min - d : 0;
+      p[r * 3] = q[r * 3] + nx * push; p[r * 3 + 1] = q[r * 3 + 1] + ny * push; p[r * 3 + 2] = q[r * 3 + 2] + nz * push;
+    }
+  }
+  for (const i of tris) { const r = weld[i]; if (r !== i) { p[i * 3] = p[r * 3]; p[i * 3 + 1] = p[r * 3 + 1]; p[i * 3 + 2] = p[r * 3 + 2]; } }
+}
+
+function makeKit(body, ch) {
+  const f = ch.gender === 'f', { shirt, shorts } = kitColors(ch), sleeve = f ? 0.2 : 0.34;
+  const near = (a, b) => Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b) < 0.15;
+  const trimShirt = near(shirt, shorts) ? new THREE.Color('#f4f4f4') : shorts;
+  return [
+    // jersey: 8 mm off the skin, ~1.4 cm at the hem; sleeves open up toward the cuff
+    makeGarment(body, SHIRT, SHIRT_GLSL(f), f, (x, y) => 0.008 + Math.max(0, 1.0 - y) * 0.06 + (Math.abs(x) > 0.2 ? (Math.abs(x) - 0.2) * 0.08 : 0),
+      shirt, trimShirt, `y < 0.925 || (y > ${NECK[f ? 'f' : 'm'][0] - 0.045} && ax < ${NECK[f ? 'f' : 'm'][1] + 0.022}) || (ax > ${(sleeve - 0.025).toFixed(3)} && y > 1.3)`,
+      (y) => (y < 1.0 ? 0.02 : 0.006)),  // over the waistband the jersey must stay outside the shorts
+    // shorts: 1 cm off the skin, wider at the leg openings, side stripe in the shirt colour
+    makeGarment(body, SHORTS, SHORTS_GLSL(f), f, (x, y) => 0.01 + Math.max(0, 0.8 - y) * 0.1,
+      shorts, shirt, 'ax > 0.178 && ax < 0.192 && abs(vRest.z + 0.03) < 0.05'),
+  ];
+}
+
+function kitMaterial(base, ch) {
+  const m = base.clone(), f = ch.gender === 'f';
+  const { shirt } = kitColors(ch);
   const u = {
     uShirt: { value: shirt }, uShorts: { value: new THREE.Color(ch.outfit.shorts) },
     uShoes: { value: new THREE.Color(ch.outfit.shoes) },
@@ -61,41 +215,46 @@ function kitMaterial(base, ch) {
 varying vec3 vRest; uniform vec3 uShirt, uShorts, uShoes, uSkin; uniform float uFemale;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
-  float y = vRest.y, ax = abs(vRest.x);
+  float y = vRest.y, ax = abs(vRest.x), z = vRest.z;
   float shade = 0.55 + 0.9 * dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
   vec3 col = diffuseColor.rgb * uSkin;
-  float sleeve = mix(0.34, 0.2, uFemale);                       // t-shirt vs tank top
-  bool neck = y > 1.38 && ax < 0.07 && vRest.z > 0.0;
-  if (y > 0.9 && y < 1.47 && ax < sleeve && !neck && (ax < 0.2 || y > 1.3)) col = uShirt * shade;
-  if (y > mix(0.66, 0.7, uFemale) && y <= 0.98 && ax < 0.26) col = uShorts * shade;
+  if (${SHIRT_GLSL(f)}) col = uShirt * shade;    // same regions as the cloth meshes
+  if (${SHORTS_GLSL(f)}) col = uShorts * shade;
   if (y < 0.24 && y > 0.1) col = vec3(0.93) * shade;           // socks
-  if (y <= 0.1) col = uShoes * shade;                           // shoes
+  if (y < 0.095) discard;                                       // bare foot: hidden inside the shoe mesh
   if (ax > 0.62 && ax < 0.68 && y > 1.3) col = uShirt * shade;  // wristband
   diffuseColor.rgb = col;
 }`);
   };
-  m.customProgramCacheKey = () => 'kit';
+  m.customProgramCacheKey = () => 'kit' + (f ? 'f' : 'm');
   return m;
 }
 
 // Body form via bone scales (UE rig: y along bone, x/z thickness). Base mesh is "superhero", so slim by default.
 // ponytail: scaling one base mesh; true morphs need the paid source pack (regular/teen bodies).
+// The base is a bodybuilder, these are tennis players: everything is slimmed toward a lean athletic build;
+// 'muscular' / 'stocky' types stay a little broader. Scales inherit down the chain (thigh -> calf -> foot).
 function shapeBody(bones, ch) {
-  const b = ch.body || { height: 1, width: 1 }, f = ch.gender === 'f', w = b.width;
+  const b = ch.body || { height: 1, width: 1 }, f = ch.gender === 'f', w = Math.min(b.width || 1, 1.15);
+  const k = b.type === 'muscular' ? 1.07 : b.type === 'stocky' ? 1.04 : 1;  // build on top of width
   const set = (n, x, y, z) => bones[n]?.scale.set(x, y, z);
-  const torso = w * (b.type === 'muscular' ? 1.04 : 0.92);
+  const torso = w * k * (f ? 0.86 : 0.85);
   set('spine_02', torso, 1, torso);
   set('neck_01', 1 / torso, 1, 1 / torso);
+  const arm = k * (f ? 0.8 : 0.78), fore = 0.9;
+  const thighX = w * k * (f ? 0.8 : 0.84), thighZ = w * k * (f ? 0.84 : 0.88), calf = f ? 0.9 : 0.92;
   for (const s of ['l', 'r']) {
-    set('upperarm_' + s, b.type === 'muscular' ? 1.05 : 0.9, 1, b.type === 'muscular' ? 1.05 : 0.9);
-    set('thigh_' + s, (f ? 1.04 : 0.98) * w, 1, w);
+    set('upperarm_' + s, arm, 1, arm);
+    set('lowerarm_' + s, fore, 1, fore);
+    set('thigh_' + s, thighX, 1, thighZ);
+    set('calf_' + s, calf, 1, calf);
   }
-  set('pelvis', f ? 1.05 : 1, 1, 1);
+  set('pelvis', f ? 0.98 : 0.95, 1, 1);
 }
 
 function hash(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); }
 
-export async function createAvatar(scene, ch, racketColor = '#e63946') {
+export async function createAvatar(scene, ch, racketColor = '#e63946', racketShape = 'round') {
   const g = ch.gender === 'f' ? 'f' : 'm';
   const hairName = ch.hair || HAIR[g][hash(ch.id) % HAIR[g].length];
   const [gltf, anim, hair, brows] = await Promise.all([
@@ -104,13 +263,18 @@ export async function createAvatar(scene, ch, racketColor = '#e63946') {
   const root = SkeletonUtils.clone(gltf.scene);
   const bones = {};
   root.traverse(o => { if (o.isBone) bones[o.name] = o; });
+  let body = null;
   root.traverse(o => {
     if (!o.isMesh) return;
     o.castShadow = true; o.frustumCulled = false;
-    if (/Superhero/.test(o.material.name)) o.material = kitMaterial(o.material, ch);
+    if (/Superhero/.test(o.material.name)) { o.material = kitMaterial(o.material, ch); body = o; }
   });
+  if (body) for (const g of makeKit(body, ch)) {  // sibling of the body with the same transform, same skeleton
+    g.position.copy(body.position); g.quaternion.copy(body.quaternion); g.scale.copy(body.scale);
+    body.parent.add(g);
+  }
   // hair/eyebrows are skinned to the same 65-bone rig: rebind them onto our skeleton by bone name
-  const hairColor = new THREE.Color(HAIR_COLORS[hash(ch.id + 'h') % HAIR_COLORS.length]);
+  const hairColor = new THREE.Color(ch.hairColor || HAIR_COLORS[hash(ch.id + 'h') % HAIR_COLORS.length]);
   for (const part of [hair, brows]) {
     const meshes = [];
     SkeletonUtils.clone(part.scene).traverse(o => { if (o.isSkinnedMesh) meshes.push(o); });
@@ -123,56 +287,217 @@ export async function createAvatar(scene, ch, racketColor = '#e63946') {
   shapeBody(bones, ch);
   root.scale.setScalar(ch.body?.height || 1);
   root.updateMatrixWorld(true);
-
-  const racket = makeRacket(racketColor);
-  const hand = bones[ch.hand === 'left' ? 'hand_l' : 'hand_r'];
-  if (hand) {
-    hand.add(racket);
-    const ws = hand.getWorldScale(new THREE.Vector3());
-    racket.scale.set(1 / ws.x, 1 / ws.y, 1 / ws.z);
-    racket.position.set(...GRIP.pos);
-    racket.rotation.set(...GRIP.rot);
+  // clips are rotation-only (no pelvis drop), so bent-knee poses would lift the feet: pin the lowest foot to the floor
+  const feet = ['foot_l', 'foot_r', 'ball_l', 'ball_r'].map(n => bones[n]).filter(Boolean);
+  const fv = new THREE.Vector3();
+  const lowestFoot = () => Math.min(...feet.map(b => b.getWorldPosition(fv).y));
+  const restFoot = lowestFoot();
+  if (bones.Head) addHeadwear(bones.Head, root, ch, hairColor);
+  // padel shoes, built around each foot in the rest pose and then parented to the foot bone
+  for (const sd of ['l', 'r']) {
+    const v = new THREE.Vector3(), foot = bones['foot_' + sd].getWorldPosition(v).clone(), toe = bones['ball_' + sd].getWorldPosition(v).clone();
+    const heelZ = foot.z - 0.065, toeZ = toe.z + 0.08, k = ch.body?.height || 1;
+    const shoe = makeShoe(ch.outfit.shoes, ch.outfit.shirt);
+    shoe.position.set(foot.x, 0, (heelZ + toeZ) / 2); shoe.scale.set(k, k, (toeZ - heelZ) / SHOE_LEN);
+    root.updateMatrixWorld(true); bones['foot_' + sd].attach(shoe);
   }
+
+  let racket;
+  const hand = bones[ch.hand === 'left' ? 'hand_l' : 'hand_r'];
+  const attachRacket = (col, shp = 'round') => {
+    if (racket && hand) hand.remove(racket);
+    racket = makeRacket(col, shp);
+    if (hand) {
+      hand.add(racket);
+      const g = GRIP[ch.hand === 'left' ? 'l' : 'r'], ws = hand.getWorldScale(new THREE.Vector3());
+      const axes = g.basis.map(v => new THREE.Vector3(...v));
+      racket.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(...axes));
+      // slimmed arms leave the hand non-uniformly scaled: undo it along the hand axis each racket axis lies on
+      const along = (v) => Math.abs(v.x) * ws.x + Math.abs(v.y) * ws.y + Math.abs(v.z) * ws.z;
+      racket.scale.set(1 / along(axes[0]), 1 / along(axes[1]), 1 / along(axes[2]));
+      racket.position.set(g.fist[0], g.fist[1], GRIP.butt / ws.z);
+    }
+  };
+  attachRacket(racketColor, racketShape);
 
   const holder = new THREE.Group();
   holder.add(root);
   scene.add(holder);
   const label = makeLabel(ch.name, ch.countryCode);
   label.position.y = 2.15; holder.add(label);
+  const bubble = makeBubble(); bubble.sprite.position.y = 2.6; holder.add(bubble.sprite);
+  let bubbleT = 0;
 
   const mixer = new THREE.AnimationMixer(root);
   const actions = {};
   for (const k in anim) actions[k] = mixer.clipAction(anim[k]);
-  actions.swing.setLoop(THREE.LoopOnce); actions.swing.clampWhenFinished = true;
   actions.idle.play();
-  let cur = 'idle', swinging = false;
+  let cur = 'idle';
 
+  // racket (R) / ball (B) arm bones; poses are authored right-handed and mirrored for lefties
+  const lefty = ch.hand === 'left', R = lefty ? 'l' : 'r', B = lefty ? 'r' : 'l', m = lefty ? -1 : 1;
+  let tossT = 0, prepW = 0, prepKey = 'forehand', lastBallD = Infinity, swingKey = null;
+  // which stroke the ball calls for: overhead when high, otherwise forehand on the racket-hand side
+  const strokeFor = (s, ball) => {
+    if (ball[1] > 1.8) return 'overhead';
+    const right = -Math.cos(s[2]) * (ball[0] - s[0]) + Math.sin(s[2]) * (ball[2] - s[1]);  // + = player's right
+    return right * m > -0.1 ? 'forehand' : 'backhand';
+  };
   const q = new THREE.Quaternion(), e = new THREE.Euler();
   const add = (bone, x, y, z) => { if (!bone) return; q.setFromEuler(e.set(x, y, z)); bone.quaternion.multiply(q); };
 
   return {
     holder, ch, mixer, actions, bones,
-    update(dt, s) { // s = [x, z, facing, anim, swingAnim, swingT, backhand]
+    setRacket: attachRacket,
+    ballHand: (v) => bones['hand_' + B].getWorldPosition(v),
+    racketEdge: (tip, throat) => { racket.localToWorld(tip.set(0, 0.46, 0)); racket.localToWorld(throat.set(0, 0.2, 0)); },
+    say(text) { bubble.draw(text); bubble.sprite.visible = true; bubbleT = 1.6; },
+    update(dt, s, ball) { // s = [x, z, facing, anim, swingAnim, swingT, backhand]; ball = [x, y, z] for stroke prep
+      if (bubbleT > 0 && (bubbleT -= dt) <= 0) bubble.sprite.visible = false;
       holder.position.set(s[0], 0, s[1]);
       holder.rotation.y = s[2];
       const a = actions[s[3]] ? s[3] : 'idle';
       if (a !== cur) { actions[cur].fadeOut(0.18); actions[a].reset().fadeIn(0.18).play(); cur = a; }
       const sw = s[4], t = s[5];
-      if (sw && !swinging) {
-        swinging = true;
-        const sa = actions.swing;
-        sa.reset(); sa.timeScale = sa.getClip().duration / 0.7; sa.fadeIn(0.05).play();
-      } else if (!sw && swinging) { swinging = false; actions.swing.fadeOut(0.2); }
       mixer.update(dt);
-      if (!sw) return;
-      // shot accents on top of the swing clip
-      const arc = Math.sin(Math.min(1, t / 0.45) * Math.PI);
-      if (sw === 'overhead' || sw === 'smash') add(bones.upperarm_r, 0, 0, -1.2 * arc);
-      if (sw === 'serve') add(bones.spine_02, 0.35 * arc, 0, 0);
-      if (s[6]) add(bones.spine_02, 0, 0.9 * arc, 0);
+      root.position.y = 0;
+      root.position.y = restFoot - lowestFoot();
+      // ready grip: with the handle through the fist, the idle clip would rest the racket against the neck; turn the
+      // wrist so the head stands up and forward, clear of the body (tuned visually, mirrored for left-handers)
+      add(bones['hand_' + R], 0, 0.9 * m, 0); add(bones['lowerarm_' + R], 0, 0, 0.3 * m);
+      tossT = s[3] === 'serveToss' ? tossT + dt : 0;
+      // stroke preparation: blend into the right stance as the ball comes within ~3 m
+      let prep = null;
+      if (ball && !sw) {
+        // timed like a real stroke: the backswing starts ~0.75 s before contact and is set by ~0.3 s
+        const d = Math.hypot(ball[0] - s[0], ball[2] - s[1]), closing = (lastBallD - d) / Math.max(dt, 1e-3);
+        const coming = closing > 0.5 && closing < 60 && ball[1] > 0.1, tt = (d - 0.8) / closing;
+        lastBallD = d;
+        if (coming && tt < 0.9) prepKey = strokeFor(s, ball);
+        const want = coming ? Math.min(1, Math.max(0, (0.75 - tt) / 0.45)) : 0;
+        prepW += (want - prepW) * (1 - Math.exp(-dt / 0.08));
+        if (prepW > 0.02) {
+          prep = lerpPose(P({}), PREP[prepKey], prepW);
+          if (ball[1] < 0.6) prep.spine[0] += 0.4 * prepW;  // get down to low balls
+        }
+      }
+      if (!sw) swingKey = null;
+      else if (sw !== 'serve' && !swingKey) {
+        const side = prepKey === 'overhead' ? 'forehand' : prepKey;
+        swingKey = sw === 'smash' || sw === 'overhead' ? sw : sw === 'volley' ? (side === 'backhand' ? 'volleyB' : 'volleyF') : side;
+        prepW = 0;
+      }
+      const pose = sw === 'serve' ? track(SERVE_SWING, t)
+        : sw ? track(SWINGS[swingKey], t)
+        : s[3] === 'serveToss' ? lerpPose(SERVE_READY, SERVE_BACK, Math.min(1, tossT / 0.45))
+        : s[3] === 'serveReady' ? SERVE_READY : prep;
+      if (pose) {
+        holder.rotation.y = s[2] + pose.yaw * m;
+        const arm = (bone, [x, y, z]) => add(bones[bone], x, y * m, z * m);
+        add(bones.spine_02, ...pose.spine);
+        arm('upperarm_' + R, pose.rUp); arm('lowerarm_' + R, pose.rLow); arm('hand_' + R, pose.rHand);
+        arm('upperarm_' + B, pose.bUp); arm('lowerarm_' + B, pose.bLow);
+      }
     },
     dispose() { scene.remove(holder); },
   };
+}
+
+// Ponytail, headband or visor, placed around the rest-pose head (measured: crown 1.78 m, forehead z +0.10,
+// back of the head z -0.12 for height 1) and then parented to the Head bone so they follow every move.
+function addHeadwear(head, root, ch, hairColor) {
+  const k = ch.body?.height || 1, parts = [];
+  const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
+  if (ch.ponytail) {
+    const tie = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.008, 6, 12), lam(ch.headwear?.color || '#222222'));
+    tie.position.set(0, 1.71, -0.115); parts.push(tie);
+    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.008, 0.22, 10).translate(0, -0.11, 0), lam(hairColor));
+    tail.position.set(0, 1.715, -0.125); tail.rotation.x = -0.3;  // tipped toward the neck: the ready stance pitches the head forward, so it hangs straight down
+    parts.push(tail);
+  }
+  if (ch.headwear) {
+    const c = ch.headwear.color;
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.01, 6, 28), lam(c));
+    band.rotation.x = Math.PI / 2 + 0.12; band.scale.set(1, 1.18, 1);  // oval like the head, lower at the front
+    band.position.set(0, 1.695, -0.008); parts.push(band);
+    if (ch.headwear.type === 'visor') {
+      const brim = new THREE.Mesh(new THREE.CircleGeometry(0.085, 18, 0, Math.PI), lam(c));
+      brim.material.side = THREE.DoubleSide;
+      brim.rotation.x = -Math.PI / 2 + 0.2; brim.scale.set(1, 0.85, 1);  // flat, tipped down a little
+      brim.position.set(0, 1.69, 0.085); parts.push(brim);
+    }
+  }
+  root.updateMatrixWorld(true);
+  for (const p of parts) {
+    p.castShadow = true;
+    p.position.multiplyScalar(k); p.scale.multiplyScalar(k);
+    head.attach(p);
+  }
+}
+
+// Low-poly padel shoe (one draw call): white rubber sole, coloured upper and heel collar, accent stripes.
+const SHOE_LEN = 0.275;
+function makeShoe(upper, accent) {
+  const part = (geo, color, x, y, z, sx = 1, sy = 1, sz = 1) => {
+    geo = geo.toNonIndexed().scale(sx, sy, sz).translate(x, y, z);
+    const c = new THREE.Color(color), col = new Float32Array(geo.attributes.position.count * 3);
+    for (let i = 0; i < col.length; i += 3) { col[i] = c.r; col[i + 1] = c.g; col[i + 2] = c.b; }
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    return geo;
+  };
+  const geo = mergeGeometries([
+    part(new THREE.CylinderGeometry(1, 1, 1, 18), '#f1f1ee', 0, 0.013, 0, 0.056, 0.026, SHOE_LEN / 2),                // oval sole
+    part(new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), upper, 0, 0.024, 0, 0.051, 0.085, 0.13), // upper
+    part(new THREE.CylinderGeometry(0.048, 0.054, 0.09, 12), upper, 0, 0.07, -0.07),                                   // heel collar
+    part(new THREE.BoxGeometry(0.006, 0.02, 0.12), accent, 0.049, 0.05, 0.01),                                         // stripes
+    part(new THREE.BoxGeometry(0.006, 0.02, 0.12), accent, -0.049, 0.05, 0.01),
+    part(new THREE.BoxGeometry(0.03, 0.008, 0.07), '#ffffff', 0, 0.108, 0.02),                                          // laces
+  ]);
+  const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  m.castShadow = true;
+  return m;
+}
+
+// Serve poses, tuned visually: Euler XYZ offsets added on top of the idle clip (rUp/rLow/rHand = racket arm,
+// bUp/bLow = ball arm, yaw = body turn). Ready mirrors the classic side-on stance with the racket cocked behind
+// the head; the ball is then dropped, the racket falls low, and the ball is struck underhand after the bounce.
+const P = (o) => ({ yaw: 0, spine: [0, 0, 0], rUp: [0, 0, 0], rLow: [0, 0, 0], rHand: [0, 0, 0], bUp: [0, 0, 0], bLow: [0, 0, 0], ...o });
+const SERVE_READY = P({ yaw: -1.2, rUp: [0, 0.6, -1.3], rLow: [0, 0, -1.7], bUp: [-0.7, 0, 1.1], bLow: [0, 0, 0.1] });
+const SERVE_BACK = P({ yaw: -0.5, spine: [0.3, 0, 0], rUp: [-1.0, 0, 0] });
+const SERVE_SWING = [  // t = seconds since contact
+  [0, SERVE_BACK],
+  [0.08, P({ yaw: -0.2, spine: [0.3, 0, 0], rUp: [0.8, 0, 0], rHand: [0.8, 0, 0] })],
+  [0.4, P({ spine: [0.15, 0, 0], rUp: [1.6, 0, 0] })],
+  [0.55, P({})],
+];
+// Strokes, tuned visually. PREP = stance while the ball approaches; each swing runs prep -> contact -> follow-through.
+const PREP = {
+  forehand: P({ yaw: -0.7, rUp: [-0.9, 0, -0.5], rLow: [0, 0, -0.4], bUp: [0.6, 0, 0.5] }),   // racket back, shoulder turned
+  backhand: P({ yaw: 0.9, rUp: [0.5, 0, 0.9], rLow: [0, 0, -0.6], bUp: [0.5, 0, -0.2] }),     // racket across the body
+  overhead: P({ yaw: -1.0, rUp: [0, 0.6, -1.6], rLow: [0, 0, -1.8], bUp: [0.3, 0, 1.6] }),    // side-on, free hand points at the ball
+};
+const half = (k) => lerpPose(P({}), PREP[k], 0.5);
+const SWINGS = {
+  forehand: [[0, PREP.forehand], [0.06, P({ spine: [0.15, 0, 0], rUp: [0.3, 0, -0.6] })], [0.3, P({ yaw: 0.5, rUp: [1.2, 0, 0.4], rLow: [0, 0, -0.9] })], [0.55, P({})]],
+  backhand: [[0, PREP.backhand], [0.06, P({ yaw: 0.25, spine: [0.15, 0, 0], rUp: [0.45, 0, -0.3] })], [0.3, P({ yaw: -0.3, rUp: [0.2, 0, -1.4], rLow: [0, 0, -0.4] })], [0.55, P({})]],
+  overhead: [[0, PREP.overhead], [0.07, P({ yaw: -0.3, rUp: [0.5, 0, -2.5] })], [0.3, P({ yaw: 0.3, spine: [0.35, 0, 0], rUp: [1.1, 0, 0.2] })], [0.55, P({})]],
+  smash: [[0, PREP.overhead], [0.06, P({ yaw: -0.2, rUp: [0.6, 0, -2.6] })], [0.28, P({ yaw: 0.6, spine: [0.55, 0, 0], rUp: [1.3, 0, 0.4] })], [0.55, P({})]],
+  volleyF: [[0, half('forehand')], [0.05, P({ spine: [0.1, 0, 0], rUp: [0.5, 0, -0.5] })], [0.25, P({ rUp: [0.7, 0, -0.3] })], [0.45, P({})]],
+  volleyB: [[0, half('backhand')], [0.05, P({ yaw: 0.2, spine: [0.1, 0, 0], rUp: [0.5, 0, 0.1] })], [0.25, P({ rUp: [0.4, 0, -0.6] })], [0.45, P({})]],
+};
+
+function lerpPose(A, B, u) {
+  u = u * u * (3 - 2 * u);
+  const o = {};
+  for (const k in A) o[k] = k === 'yaw' ? A.yaw + (B.yaw - A.yaw) * u : A[k].map((v, i) => v + (B[k][i] - v) * u);
+  return o;
+}
+function track(keys, t) {
+  const n = keys.findIndex(k => k[0] > t);
+  if (n < 0) return keys[keys.length - 1][1];
+  if (n === 0) return keys[0][1];
+  const [ta, A] = keys[n - 1], [tb, B] = keys[n];
+  return lerpPose(A, B, (t - ta) / (tb - ta));
 }
 
 function makeLabel(name, cc) {
@@ -181,7 +506,25 @@ function makeLabel(name, cc) {
   x.fillStyle = 'rgba(0,0,0,0.55)'; x.fillRect(0, 0, 256, 48);
   x.fillStyle = '#fff'; x.font = 'bold 24px system-ui'; x.textAlign = 'center';
   x.fillText(`${name}  ${cc}`, 128, 32);
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
-  s.scale.set(1.2, 0.22, 1);
+  // constant on-screen size: readable far away, never fills the screen in close-up cameras
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, sizeAttenuation: false }));
+  s.scale.set(0.11, 0.02, 1);
   return s;
+}
+
+function makeBubble() {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+  const x = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, sizeAttenuation: false }));
+  sprite.scale.set(0.12, 0.03, 1); sprite.visible = false;
+  return {
+    sprite,
+    draw(text) {
+      x.clearRect(0, 0, 256, 64);
+      x.fillStyle = '#fff'; x.beginPath(); x.roundRect(4, 4, 248, 46, 20); x.fill();
+      x.beginPath(); x.moveTo(118, 49); x.lineTo(128, 62); x.lineTo(138, 49); x.fill();  // tail
+      x.fillStyle = '#111'; x.font = 'bold 28px system-ui'; x.textAlign = 'center'; x.fillText(text, 128, 37);
+      tex.needsUpdate = true;
+    },
+  };
 }

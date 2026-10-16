@@ -8,7 +8,7 @@ export function newMatch(opts = {}) {
     // starPoint (FIP 2026): advantage twice, third deuce is one deciding point. superTiebreak: 3rd set = tie-break to 10.
     opts: { sets: 3, goldenPoint: true, starPoint: false, superTiebreak: false, players: 4, ...opts },
     sets: [[0, 0]], games: [0, 0], points: [0, 0], tiebreak: false, tbTo: 7, tbStart: 0, deuces: 0,
-    server: 0, serveOrder: [0, 2, 1, 3], serveIdx: 0, gamesPlayed: 0,
+    server: 0, serveOrder: [0, 2, 1, 3], serveIdx: 0, gamesPlayed: 0, changeEnds: false,
     rally: newRally(), winner: null, log: [],
   };
 }
@@ -115,10 +115,12 @@ export function point(m, team, why) {
   else gameWon = p[team] >= 4 && (sudden || p[team] - p[o] >= 2);
   if (!m.tiebreak && !gameWon && p[team] === 4 && p[o] === 4) { p[0] = p[1] = 3; }
   if (!m.tiebreak && !gameWon && p[0] === 3 && p[1] === 3) m.deuces++;
+  m.changeEnds = false;
   if (m.tiebreak && (p[0] + p[1]) % 2 === 1) m.serveIdx++; // tiebreak: change after 1st then every 2
+  if (m.tiebreak && (p[0] + p[1]) % 6 === 0) m.changeEnds = true; // tiebreak: change ends every 6 points
   if (gameWon) game(m, team);
   m.rally = newRally();
-  return { point: team, why };
+  return { point: team, why, changeEnds: m.changeEnds };
 }
 
 function game(m, team) {
@@ -129,6 +131,8 @@ function game(m, team) {
   m.serveIdx = m.tiebreak ? m.tbStart + 1 : m.serveIdx + 1; // after a tie-break, its first receiver serves
   const setWon = m.tiebreak || (s[team] >= 6 && s[team] - s[o] >= 2);
   m.tiebreak = false;
+  const totalGames = s[0] + s[1];
+  if (totalGames % 2 === 1) m.changeEnds = true; // FIP: change ends on odd total games
   if (setWon) {
     const won = m.sets.filter(x => x[team] > x[1 - team]).length;
     if (won > m.opts.sets / 2) { m.winner = team; return; }
@@ -144,5 +148,18 @@ export function scoreText(m) {
   if (m.tiebreak) pts = p.join('-');
   else if (p[0] >= 3 && p[1] >= 3) pts = p[0] === p[1] ? (m.opts.starPoint ? (m.deuces >= 3 ? 'STAR POINT' : 'DEUCE') : m.opts.goldenPoint ? 'GOLDEN' : 'DEUCE') : (p[0] > p[1] ? 'AD-' : '-AD');
   else pts = PTS[Math.min(p[0], 3)] + '-' + PTS[Math.min(p[1], 3)];
-  return { sets, pts };
+  return { sets, pts, board: scoreBoard(m) };
+}
+
+// Structured score for the on-screen board: games per set, each team's point, who serves and a state label.
+export function scoreBoard(m) {
+  const p = m.points, deuce = !m.tiebreak && p[0] >= 3 && p[1] >= 3;
+  let pts, label = '';
+  if (m.tiebreak) { pts = [String(p[0]), String(p[1])]; label = 'TIE-BREAK'; }
+  else if (deuce && p[0] !== p[1]) { pts = p[0] > p[1] ? ['AD', '40'] : ['40', 'AD']; label = 'AVANTAJ'; }
+  else {
+    pts = [PTS[Math.min(p[0], 3)], PTS[Math.min(p[1], 3)]];
+    if (deuce) label = m.opts.starPoint ? (m.deuces >= 3 ? 'STAR POINT' : 'DEUCE') : m.opts.goldenPoint ? 'ALTIN SAYI' : 'DEUCE';
+  }
+  return { sets: m.sets.map(s => [...s]), pts, server: teamOf(serverId(m)), label, setNo: m.sets.length };
 }

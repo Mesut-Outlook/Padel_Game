@@ -76,3 +76,25 @@ test('FIP ball bounce test: dropped from 2.54m rebounds between 1.35m and 1.45m'
   }
   assert.ok(maxH >= 1.35 && maxH <= 1.45, `FIP rebound must be 1.35-1.45m, got ${maxH.toFixed(4)}m`);
 });
+
+test('ball through side door opening goes out; above the door it hits mesh', () => {
+  const b = newBall(); b.p = [4.5, 1, 0.6]; b.v = [10, 0, 0]; b.live = true;
+  assert.equal(predict(b, 0.2).contacts[0]?.kind, 'out');
+  b.p = [4.5, 2.5, 0.6];
+  assert.equal(predict(b, 0.2).contacts[0]?.kind, 'mesh');
+  b.p = [4.5, 1, 1.5]; // outside door opening (z > 1.08) hits mesh
+  assert.equal(predict(b, 0.2).contacts[0]?.kind, 'mesh');
+});
+
+test('contrapared: ball off own back glass or side glass lands in the opposite court', async () => {
+  const { contraVelocity } = await import('../src/physics.js');
+  for (const [p, wall] of [[[0.5, 0.9, 9.2], 0], [[3.6, 0.9, 7.8], 1], [[-3.6, 0.9, 7.8], -1]]) {
+    const v = contraVelocity(p, 0, wall);
+    assert.ok(v, `found a contrapared from ${p} wall ${wall}`);
+    const c = predict({ p: [...p], v, w: [0, 0, 0], live: true }, 3).contacts;
+    assert.equal(c[0].kind, 'glass'); assert.equal(c[0].side, 0);
+    const land = c.find(x => x.kind === 'floor');
+    assert.equal(land.side, 1, JSON.stringify(c.map(x => x.kind + x.side)));
+    if (wall) assert.ok(Math.sign(c[0].p[0]) === wall, 'hit the chosen side glass');
+  }
+});

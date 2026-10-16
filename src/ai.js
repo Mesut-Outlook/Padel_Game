@@ -101,19 +101,37 @@ function formation(w, s, pl) {
   const T = pl.team, zs = T === 0 ? 1 : -1, tm = s.team[T], net = tm.posture === 'net', bx = w.ball.p[0];
   if (w.match.opts.players === 2) return [clamp(bx * 0.4, -2.5, 2.5), zs * (net ? 4.5 : 7.8)];
   const side = tm.side[pl.id] || (pl.p[0] >= 0 ? 1 : -1);
-  return [side * X_SPLIT + clamp(bx * 0.25, -1.2, 1.2), zs * (net ? Z_NET : Z_BACK)];
+  const partner = w.players.find(p => p.team === T && p.id !== pl.id && p.active);
+  // tandem coverage: if partner steps wide to hit, shift slightly to cover the center channel
+  let shiftX = 0;
+  if (partner && tm.taker === partner.id && Math.abs(partner.p[0]) > 2.0) {
+    shiftX = -Math.sign(partner.p[0]) * 0.8;
+  }
+  const partnerZ = partner ? Math.abs(partner.p[1]) : (net ? Z_NET : Z_BACK);
+  const targetZ = net ? Math.min(Z_NET + 0.4, partnerZ + 0.6) : Math.max(Z_BACK - 0.4, partnerZ - 0.6);
+  return [side * X_SPLIT + clamp(bx * 0.25, -1.2, 1.2) + shiftX, zs * targetZ];
 }
 
 function chooseShot(w, pl, L) {
-  const y = w.ball.p[1], pre = w.match.rally.bouncesSinceHit === 0, my = Math.abs(pl.p[1]);
+  const y = w.ball.p[1], r = w.match.rally, pre = r?.bouncesSinceHit === 0, my = Math.abs(pl.p[1]);
   const opps = w.players.filter(p => p.team !== pl.team && p.active);
   const atNet = opps.filter(p => Math.abs(p.p[1]) < 5).length, good = rnd() < L.q;
+
+  // back glass high rebound: aggressive bajada de pared
+  if (my > 6.0 && r?.bouncesSinceHit === 1 && y > 1.7 && good) {
+    return rnd() < 0.65 ? 'bajada' : 'bandeja';
+  }
+
   if (y > 1.9 && (pre || y > 2.2)) {                                   // overhead zone
-    if (my < 5.5) return rnd() < L.smash ? 'smash' : (good && rnd() < 0.5 ? 'vibora' : 'bandeja');
+    if (my < 5.5) {
+      if (good && rnd() < 0.25) return 'rulo';                          // spiral hook toward side wall mesh
+      return rnd() < L.smash ? 'smash' : (good && rnd() < 0.5 ? 'vibora' : 'bandeja');
+    }
     return good ? 'bandeja' : 'lob';
   }
   if (my < 4.8) {                                                      // at the net
     if (atNet === 0 && y < 1.3 && good && rnd() < 0.55) return 'chiquita'; // drop at their feet
+    if (good && rnd() < 0.2) return 'rulo';
     return pre ? 'volley' : 'drive';
   }
   if (atNet > 0 && good && rnd() < 0.75) return 'lob';                 // over the net pair
@@ -127,7 +145,10 @@ function aimFor(w, pl, L) {
   let best = 0, bs = -Infinity;
   for (let a = -0.9; a <= 0.91; a += 0.3) {
     const tx = a * 3.8;
+    // distance to nearest opponent
     let sc = Math.min(...opps.map(o => Math.abs(tx - o.p[0]))) - (Math.abs(tx) > 3.2 ? 0.6 : 0) + rnd() * 0.3;
+    // bonus for drilling the middle gap between opponents in doubles
+    if (opps.length > 1 && Math.abs(tx) < 1.0) sc += 0.45;
     if (sc > bs) { bs = sc; best = a; }
   }
   if (rnd() > L.q) best = rnd() * 1.6 - 0.8;
@@ -158,7 +179,7 @@ export function aiInput(w, pid, level = 'club') {
     if (pid !== srv.id) return out;
     if (st.serveAt == null) st.serveAt = w.t + L.serve[0] + rnd() * (L.serve[1] - L.serve[0]);
     if (w.t >= st.serveAt) {
-      out.swing = 'serve';
+      out.swing = rnd() < 0.3 ? 'slice' : 'serve';
       out.aim = clamp((L.q >= 0.85 ? (rnd() < 0.5 ? 0.9 : -0.4) : rnd() * 1.2 - 0.4) + gauss() * L.aim * 0.3, -0.5, 1);
     }
     return out;
@@ -190,6 +211,10 @@ export function aiInput(w, pid, level = 'club') {
         && !(r.phase === 'serveFlight' && r.bouncesSinceHit === 0)) {
       out.swing = chooseShot(w, pl, L);
       out.aim = aimFor(w, pl, L);
+      // ball got past them, deep and low: save it with a contrapared off their own back or nearest side glass
+      if (zs * b.p[2] > 8.6 && b.p[1] < 1.1 && r.bouncesSinceHit === 1 && rnd() < 0.12) {  // rare, like real padel
+        out.swing = 'contra'; out.aim = rnd() < 0.5 ? 0 : Math.sign(pl.p[0] || 1) * 0.8;
+      }
       if (rnd() < L.q) tm.posture = out.swing === 'drive' && Math.abs(pl.p[1]) > 5 ? 'back' : 'net';
     }
   } else tgt = formation(w, s, pl);

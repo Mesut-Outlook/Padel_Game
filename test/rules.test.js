@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newMatch, onHit, onContact, point, scoreText, serviceBox, servePosition } from '../src/rules.js';
+import { newMatch, onHit, onContact, point, scoreText, scoreBoard, serviceBox, servePosition } from '../src/rules.js';
 
 const fl = (side, x, z) => ({ kind: 'floor', side, p: [x, 0.03, z] });
 
@@ -123,4 +123,38 @@ test('after a tie-break the team that received first serves the next set', () =>
   const tbFirst = m.serveOrder[m.serveIdx % 4];
   for (let i = 0; i < 7; i++) point(m, 0, 't');
   assert.notEqual(m.serveOrder[m.serveIdx % 4] < 2, tbFirst < 2);
+});
+
+test('change ends triggers on odd total games and every 6 tie-break points', () => {
+  const m = newMatch();
+  const win = (match, t) => { for (let i = 0; i < 4; i++) point(match, t, 't'); };
+  win(m, 0); // game 1 -> total 1 game (odd) -> change ends
+  assert.equal(m.changeEnds, true);
+  win(m, 1); // game 2 -> total 2 games (even) -> do not change ends
+  assert.equal(m.changeEnds, false);
+  win(m, 0); // game 3 -> total 3 games (odd) -> change ends
+  assert.equal(m.changeEnds, true);
+
+  // Tie-break 6 points test:
+  const mtb = newMatch();
+  for (let i = 0; i < 6; i++) { win(mtb, 0); win(mtb, 1); } // 6-6 -> tiebreak
+  assert.equal(mtb.tiebreak, true);
+  for (let i = 0; i < 5; i++) point(mtb, 0, 'tb');
+  assert.equal(mtb.changeEnds, false);
+  point(mtb, 0, 'tb'); // 6th point in tiebreak -> change ends!
+  assert.equal(mtb.changeEnds, true);
+});
+
+
+test('score board: per-team points, advantage, golden point label and server', () => {
+  const m = newMatch({ goldenPoint: true });
+  point(m, 0); point(m, 0); point(m, 1);
+  let b = scoreBoard(m);
+  assert.deepEqual(b.pts, ['30', '15']); assert.equal(b.label, ''); assert.equal(b.server, 0); assert.deepEqual(b.sets, [[0, 0]]);
+  point(m, 1); point(m, 0); point(m, 1);  // 40-40 with golden point
+  b = scoreBoard(m);
+  assert.deepEqual(b.pts, ['40', '40']); assert.equal(b.label, 'ALTIN SAYI');
+  const a = newMatch({ goldenPoint: false });
+  for (const t of [0, 0, 0, 1, 1, 1, 0]) point(a, t);  // deuce then advantage team 0
+  assert.deepEqual(scoreBoard(a).pts, ['AD', '40']); assert.equal(scoreBoard(a).label, 'AVANTAJ');
 });

@@ -3,6 +3,8 @@
 // ponytail: constants from FIP court specs + real ball aerodynamics; tune against docs/re-findings.md once rea data lands.
 
 export const COURT = { halfW: 5, halfL: 10, netH: 0.88, serviceLine: 6.95, backGlassH: 3, backMeshH: 4 };
+// side-wall door openings, flanking the net on both side walls (FIP: 0.72–1.05 m wide, ≥2 m high)
+export const DOOR = { z0: 0.08, z1: 1.08, h: 2.2 };
 export const BALL_R = 0.033;
 
 export const K = {
@@ -21,7 +23,7 @@ export function wallAt(x, z) {
   if (Math.abs(x) >= COURT.halfW) {
     if (az > 8) return { kind: 'glass', h: 3, meshH: 4 };
     if (az > 6) return { kind: 'glass', h: 2, meshH: 3 };
-    return { kind: 'mesh', h: 3 };
+    return { kind: 'mesh', h: 3, door: az >= DOOR.z0 && az <= DOOR.z1 ? DOOR.h : 0 };
   }
   if (az >= COURT.halfL) return { kind: 'glass', h: COURT.backGlassH, meshH: COURT.backMeshH };
   return null;
@@ -96,10 +98,9 @@ export function stepBall(b, dt) {
     if (Math.abs(b.p[axis]) <= lim[i] || b.v[axis] * b.p[axis] <= 0) continue;
     const w = wallAt(axis === 0 ? Math.sign(b.p[0]) * COURT.halfW : b.p[0], axis === 2 ? Math.sign(b.p[2]) * COURT.halfL : b.p[2]);
     let kind = w.kind;
-    if (b.p[1] > w.h) {
-      if (w.meshH && b.p[1] <= w.meshH) kind = 'mesh';
-      else { b.live = false; ev.push({ kind: 'out', side, p: [...b.p] }); return ev; }
-    }
+    // leaves the court through a door gap or over the top of the wall
+    if (b.p[1] < w.door || (b.p[1] > w.h && !(b.p[1] <= w.meshH))) { b.live = false; ev.push({ kind: 'out', side, p: [...b.p] }); return ev; }
+    if (b.p[1] > w.h) kind = 'mesh';
     const s = K[kind];
     b.p[axis] = Math.sign(b.p[axis]) * lim[i];
     b.v[axis] *= -s.e;
@@ -153,4 +154,30 @@ export function predict(b, seconds, dt = 1 / 120) {
     pts.push({ t, p: [...c.p] });
   }
   return { pts, contacts };
+}
+
+// Contrapared: a velocity that sends the ball into the hitter's OWN glass — back wall (wall 0) or a side wall
+// (wall -1/+1 = world -x/+x) — so it rebounds over the net and lands in the opposite court. Random search over
+// simulated flights; returns null when nothing works from this spot.
+// ponytail: brute-force search (~160 short sims per shot); cache or solve analytically if the server gets busy.
+export function contraVelocity(p, team, wall = 0, tries = 240) {
+  const zs = team === 0 ? 1 : -1;
+  let best = null, bestScore = Infinity;
+  for (let i = 0; i < tries; i++) {
+    const tgt = wall === 0
+      ? [(Math.random() * 2 - 1) * 3.5, 1.0 + Math.random() * 1.8, zs * COURT.halfL]
+      : [wall * COURT.halfW, 0.6 + Math.random() * 1.2, zs * (6.2 + Math.random() * 3.6)];
+    const speed = 9 + Math.random() * 11;
+    const d = [tgt[0] - p[0], tgt[1] - p[1], tgt[2] - p[2]], L = Math.hypot(...d);
+    if (L < 0.3) continue;
+    const v = d.map(x => x / L * speed);
+    v[1] += 0.5 * K.g * (L / speed) + Math.random() * 3;  // lift: counter the drop on the way to the glass
+    const { contacts } = predict({ p: [...p], v, w: [0, 0, 0], live: true }, 3);
+    const land = contacts.findIndex(c => c.kind === 'floor');
+    if (land < 1 || contacts[land].side === team) continue;                       // glass first, then land over the net
+    if (!contacts.slice(0, land).every(c => c.kind === 'glass' && c.side === team)) continue;  // no mesh/net/out on the way
+    const score = Math.abs(Math.abs(contacts[land].p[2]) - 6.5) + Math.abs(contacts[land].p[0]) * 0.2;
+    if (score < bestScore) { bestScore = score; best = v; }
+  }
+  return best;
 }

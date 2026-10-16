@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Padel Legends · Kontroller</title>
+<style>
+  :root { --bg: #0b1520; --panel: #12202e; --line: #ffffff1a; --text: #fff; --mut: #9fb3c8; --acc: #d8f53a;
+          --move: #4ea8ff; --hit: #d8f53a; --shot: #ff9f43; --sys: #b8c4d0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, sans-serif; padding: 24px 16px 48px; }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  h1 { margin: 0; font: 900 34px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 1px; } h1 b { color: var(--acc); }
+  h2 { font: 800 20px 'Barlow Condensed', 'Oswald', system-ui; text-transform: uppercase; letter-spacing: 1px; margin: 32px 0 10px; }
+  .sub { color: var(--mut); margin: 4px 0 20px; }
+  a { color: var(--acc); }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; color: var(--mut); font-size: 13px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+  /* keyboard */
+  .kb { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; overflow-x: auto; }
+  .kb-inner { display: flex; gap: 28px; min-width: 760px; }
+  .rows { display: flex; flex-direction: column; gap: 6px; }
+  .row { display: flex; gap: 6px; }
+  .key { width: 52px; height: 52px; border-radius: 8px; background: #1a2b3c; border: 1px solid #ffffff14; color: #5d7286;
+         display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;
+         position: relative; transition: transform .08s, box-shadow .08s; user-select: none; }
+  .key small { font-size: 9px; font-weight: 600; line-height: 1.1; margin-top: 2px; text-align: center; max-width: 48px; }
+  .key.used { color: #0b1520; cursor: pointer; }
+  .key.move { background: var(--move); } .key.hit { background: var(--hit); } .key.shot { background: var(--shot); } .key.sys { background: var(--sys); }
+  .key.on { transform: translateY(2px) scale(.96); box-shadow: 0 0 0 3px #fff, 0 0 18px #ffffffaa; }
+  .w15 { width: 80px; } .w2 { width: 110px; } .space { width: 340px; }
+  .arrows { display: grid; grid-template-columns: repeat(3, 52px); grid-template-rows: 52px 52px; gap: 6px; align-self: flex-end; }
+  .arrows .up { grid-column: 2; grid-row: 1; } .arrows .lf { grid-column: 1; grid-row: 2; } .arrows .dn { grid-column: 2; grid-row: 2; } .arrows .rt { grid-column: 3; grid-row: 2; }
+  .detail { margin-top: 14px; min-height: 52px; background: #0d1a26; border: 1px dashed var(--line); border-radius: 10px; padding: 12px 14px; color: var(--mut); }
+  .detail b { color: var(--text); font-size: 17px; }
+
+  /* tables */
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .card h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--mut); }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 6px 0; border-top: 1px solid #ffffff0d; vertical-align: top; }
+  td:first-child { width: 38%; padding-right: 10px; }
+  kbd { display: inline-block; min-width: 26px; padding: 2px 7px; border-radius: 5px; background: #23384c; border-bottom: 2px solid #0a1520;
+        font: 700 13px system-ui; text-align: center; color: #fff; margin: 1px 0; }
+  .tip { color: var(--mut); font-size: 13px; }
+  footer { margin-top: 30px; color: var(--mut); font-size: 13px; }
+  @media (prefers-reduced-motion: reduce) { .key { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>PADEL <b>LEGENDS</b> · Kontroller</h1>
+  <div class="sub">Klavyede bir tuşa bas ya da tuşun üstüne gel: ne yaptığı aşağıda yazar. <a href="./">← Oyuna dön</a></div>
+
+  <div class="legend">
+    <span><i style="background:var(--move)"></i>Hareket</span>
+    <span><i style="background:var(--hit)"></i>Vuruş</span>
+    <span><i style="background:var(--shot)"></i>Özel vuruşlar</span>
+    <span><i style="background:var(--sys)"></i>Kamera ve oyun</span>
+  </div>
+
+  <div class="kb">
+    <div class="kb-inner">
+      <div class="rows" id="rows"></div>
+      <div class="arrows" id="arrows"></div>
+    </div>
+    <div class="detail" id="detail">Bir tuşun üstüne gel ya da klavyende bas.</div>
+  </div>
+
+  <h2>Maç sırasında</h2>
+  <div class="cols">
+    <div class="card"><h3>Hareket</h3><table>
+      <tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td>Koş: W fileye doğru, S geriye, A sola, D sağa</td></tr>
+      <tr><td><kbd>↑</kbd> <kbd>←</kbd> <kbd>↓</kbd> <kbd>→</kbd></td><td>Aynı işi ok tuşları da yapar</td></tr>
+    </table></div>
+    <div class="card"><h3>Vuruş</h3><table>
+      <tr><td><kbd>Space</kbd> veya <kbd>J</kbd></td><td>Akıllı vuruş: duruma göre drive, vole, bandeja ya da smaç</td></tr>
+      <tr><td><kbd>A</kbd> / <kbd>D</kbd> + vuruş</td><td>Topu sola / sağa yönlendir (tuşu vuruşla aynı anda bas)</td></tr>
+    </table></div>
+    <div class="card"><h3>Özel vuruşlar</h3><table>
+      <tr><td><kbd>K</kbd></td><td>Lob (globo): rakibin üstünden derine</td></tr>
+      <tr><td><kbd>L</kbd></td><td>Smaç: yüksek topa sert vuruş</td></tr>
+      <tr><td><kbd>U</kbd></td><td>Chiquita: filenin dibine yumuşak top</td></tr>
+      <tr><td><kbd>I</kbd> <span class="tip">(Türkçe klavyede ı)</span></td><td>Víbora: yandan kesik, kıvrılan smaç</td></tr>
+      <tr><td><kbd>O</kbd></td><td>Contrapared: kendi camına vur, sekip karşıya geçsin (A/D basılıysa yan cam)</td></tr>
+    </table></div>
+    <div class="card"><h3>Servis</h3><table>
+      <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> (atmadan önce)</td><td>Servis yerini kaydır: kendi yarında, servis çizgisinin gerisinde</td></tr>
+      <tr><td><kbd>Space</kbd></td><td>Servis: top bırakılır, seker, alttan vurulur</td></tr>
+      <tr><td><kbd>F</kbd></td><td>Slice servis: alçak gider, yana kıvrılır</td></tr>
+      <tr><td><kbd>A</kbd> / <kbd>D</kbd> + servis</td><td>Servis kutusunun içinde yön ver</td></tr>
+    </table></div>
+    <div class="card"><h3>Kamera ve oyun</h3><table>
+      <tr><td><kbd>C</kbd></td><td>Kamera: TV, oyuncu arkası, yan, tepe, top, drone, serbest</td></tr>
+      <tr><td><kbd>R</kbd></td><td>Son sayının tekrarı</td></tr>
+      <tr><td>Herhangi bir tuş</td><td>Tekrarı geç (Esc dahil)</td></tr>
+      <tr><td><kbd>M</kbd></td><td>Sesi aç / kapat</td></tr>
+      <tr><td><kbd>H</kbd></td><td>Ekrandaki tuş yardımını gizle / göster</td></tr>
+      <tr><td><kbd>Shift</kbd> + <kbd>H</kbd></td><td>Tuş yardımını başka köşeye taşı (kutudaki ↖ ↗ ↙ ↘ ile de olur)</td></tr>
+      <tr><td><kbd>Enter</kbd></td><td>Maç bitince ana menü · eğitimde dersi atla</td></tr>
+    </table></div>
+    <div class="card"><h3>İpuçları</h3><table>
+      <tr><td>Erken bas</td><td>Vuruş tuşuna top gelmeden biraz önce bas: oyuncu topun en yakın geldiği anda vurur.</td></tr>
+      <tr><td>Ayak sabit</td><td>Vuruş tuşuna bastıktan sonra oyuncu ayaklarını sabitler; yön tuşu onu topun yanından uzaklaştırmaz.</td></tr>
+      <tr><td>Cam</td><td>Arka cama giden topu hemen vurma: camdan dönmesini bekle.</td></tr>
+    </table></div>
+  </div>
+
+  <h2>Xbox kolu</h2>
+  <div class="cols">
+    <div class="card"><h3>Maç</h3><table>
+      <tr><td>Sol çubuk</td><td>Hareket · vururken yön</td></tr>
+      <tr><td><kbd>A</kbd></td><td>Akıllı vuruş · servis</td></tr>
+      <tr><td><kbd>B</kbd></td><td>Lob · tekrarı geç</td></tr>
+      <tr><td><kbd>X</kbd></td><td>Chiquita</td></tr>
+      <tr><td><kbd>Y</kbd></td><td>Smaç</td></tr>
+      <tr><td><kbd>RB</kbd></td><td>Víbora</td></tr>
+      <tr><td><kbd>LB</kbd></td><td>Slice servis</td></tr>
+      <tr><td><kbd>RT</kbd></td><td>Contrapared</td></tr>
+      <tr><td><kbd>View</kbd></td><td>Kamera</td></tr>
+      <tr><td><kbd>R3</kbd> (sağ çubuğa bas)</td><td>Tekrar</td></tr>
+      <tr><td><kbd>Start</kbd></td><td>Ana menü (maç bitince) · eğitimde dersi atla</td></tr>
+    </table></div>
+    <div class="card"><h3>Menü</h3><table>
+      <tr><td>D-pad / sol çubuk</td><td>Kartlar arasında gezin</td></tr>
+      <tr><td><kbd>A</kbd></td><td>Seç</td></tr>
+      <tr><td><kbd>B</kbd></td><td>Önceki sekme</td></tr>
+      <tr><td><kbd>LB</kbd> / <kbd>RB</kbd></td><td>Sekme değiştir</td></tr>
+      <tr><td><kbd>Start</kbd></td><td>Maça başla</td></tr>
+    </table>
+    <p class="tip">Menüdeki <b>Kontrol</b> ayarından klavye, kol ya da ikisi birden seçilebilir. Kolun bilgisayarda doğru göründüğünü <a href="tools/padtest.html">kol testi</a> sayfasında deneyebilirsin.</p>
+    </div>
+  </div>
+
+  <footer>Bütün tuşları adım adım öğrenmek için menüdeki <b>🎓 EĞİTİM</b> serisini oyna. · Geliştirici: Mesut</footer>
+</div>
+
+<script>
+// key code -> [label, category, short caption, full description]; mirrors src/input.js and src/main.js
+const K = {
+  KeyW: ['W', 'move', 'ileri', 'Fileye doğru koş · servisten önce servis yerini kaydırır'],
+  KeyA: ['A', 'move', 'sol', 'Sola koş · vururken topu sola yönlendirir'],
+  KeyS: ['S', 'move', 'geri', 'Geriye koş'],
+  KeyD: ['D', 'move', 'sağ', 'Sağa koş · vururken topu sağa yönlendirir'],
+  ArrowUp: ['↑', 'move', '', 'Fileye doğru koş (W ile aynı)'], ArrowDown: ['↓', 'move', '', 'Geriye koş (S ile aynı)'],
+  ArrowLeft: ['←', 'move', '', 'Sola koş (A ile aynı)'], ArrowRight: ['→', 'move', '', 'Sağa koş (D ile aynı)'],
+  Space: ['Space', 'hit', 'vuruş · servis', 'Akıllı vuruş: drive, vole, bandeja ya da smaç; serviste servisi atar'],
+  KeyJ: ['J', 'hit', 'vuruş', 'Akıllı vuruş (Space ile aynı)'],
+  KeyK: ['K', 'shot', 'lob', 'Lob: rakibin üstünden derine'],
+  KeyL: ['L', 'shot', 'smaç', 'Smaç: yüksek topa sert vuruş'],
+  KeyU: ['U', 'shot', 'chiquita', 'Chiquita: filenin dibine yumuşak, kısa top'],
+  KeyI: ['I', 'shot', 'víbora', 'Víbora: yandan kesik, kıvrılan smaç (Türkçe klavyede ı tuşu)'],
+  KeyO: ['O', 'shot', 'contra', 'Contrapared: kendi camına vur, sekip karşıya geçsin; A/D basılıysa yan cama'],
+  KeyF: ['F', 'shot', 'slice', 'Slice servis: alçak gider, yana kıvrılır'],
+  KeyC: ['C', 'sys', 'kamera', 'Kamera açısını değiştir'],
+  KeyR: ['R', 'sys', 'tekrar', 'Son sayının tekrarını izle'],
+  KeyM: ['M', 'sys', 'ses', 'Sesi aç / kapat'],
+  KeyH: ['H', 'sys', 'yardım', 'Tuş yardımını gizle / göster · Shift+H başka köşeye taşır'],
+  Escape: ['Esc', 'sys', 'geç', 'Tekrarı geç (tekrar sırasında herhangi bir tuş da geçer)'],
+  Enter: ['Enter', 'sys', 'menü', 'Maç bitince ana menü · eğitimde dersi atla'],
+};
+const ROWS = [
+  ['Escape'],
+  ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP'],
+  ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyL', 'Enter'],
+  ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM'],
+  ['Space'],
+];
+const pad = { 1: 0, 2: 22, 3: 48, 4: 160 };  // stagger like a real keyboard
+const label = (code) => K[code]?.[0] ?? code.replace('Key', '');
+const els = {};
+function cap(code, extra = '') {
+  const d = K[code], el = document.createElement('div');
+  el.className = `key ${d ? 'used ' + d[1] : ''} ${extra}`;
+  el.innerHTML = `${label(code)}${d && d[2] ? `<small>${d[2]}</small>` : ''}`;
+  if (d) { el.tabIndex = 0; el.onmouseenter = el.onfocus = () => show(code); }
+  els[code] = el; return el;
+}
+const rowsEl = document.getElementById('rows');
+ROWS.forEach((r, i) => {
+  const row = document.createElement('div'); row.className = 'row'; row.style.paddingLeft = (pad[i] || 0) + 'px';
+  r.forEach(c => row.appendChild(cap(c, c === 'Space' ? 'space' : c === 'Enter' ? 'w15' : c === 'Escape' ? 'w15' : '')));
+  rowsEl.appendChild(row);
+});
+const ar = document.getElementById('arrows');
+ar.appendChild(cap('ArrowUp', 'up')); ar.appendChild(cap('ArrowLeft', 'lf')); ar.appendChild(cap('ArrowDown', 'dn')); ar.appendChild(cap('ArrowRight', 'rt'));
+
+const detail = document.getElementById('detail');
+function show(code) {
+  const d = K[code];
+  detail.innerHTML = d ? `<b>${d[0]}</b> — ${d[3]}` : `<b>${label(code)}</b> — bu tuşun oyunda bir görevi yok.`;
+}
+addEventListener('keydown', (e) => {
+  if (K[e.code] || els[e.code]) e.preventDefault();  // keep Space / arrows from scrolling the page
+  els[e.code]?.classList.add('on'); show(e.code);
+});
+addEventListener('keyup', (e) => els[e.code]?.classList.remove('on'));
+</script>
+</body>
+</html>
