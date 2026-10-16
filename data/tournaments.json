@@ -1,0 +1,21 @@
+{"formats":[
+{"id":"americano","name":"Americano","description":"Partners rotate every round and players score points per game toward a total.","players":16,"matchFormat":{"sets":1,"gamesPerSet":24,"goldenPoint":false}},
+{"id":"mexicano","name":"Mexicano","description":"Each round pairs players by current standings so stronger players face each other.","players":16,"matchFormat":{"sets":1,"gamesPerSet":24,"goldenPoint":false}},
+{"id":"king_of_the_court","name":"King of the Court","description":"Winners of each court move up and losers move down until one player holds the top court.","players":12,"matchFormat":{"sets":1,"gamesPerSet":6,"goldenPoint":true}},
+{"id":"round_robin_league","name":"Round Robin League","description":"Every team plays every other team once and the table ranks them by wins.","players":16,"matchFormat":{"sets":1,"gamesPerSet":6,"goldenPoint":false}},
+{"id":"knockout","name":"Knockout","description":"Losers are eliminated after each match until a single winner remains.","players":32,"matchFormat":{"sets":2,"gamesPerSet":6,"goldenPoint":true}},
+{"id":"mixed_doubles","name":"Mixed Doubles","description":"Each team has one male and one female player competing in a knockout bracket.","players":16,"matchFormat":{"sets":2,"gamesPerSet":6,"goldenPoint":false}}
+],
+"circuit":[
+{"id":"local_club_americano","name":"Local Club Americano","tier":"amateur","format":"americano","drawSize":16,"entryFee":0,"prizeMoney":100,"rankingPoints":10,"minRankingPoints":0,"venues":["v01"]},
+{"id":"club_league","name":"Club League","tier":"club","format":"round_robin_league","drawSize":16,"entryFee":150,"prizeMoney":400,"rankingPoints":40,"minRankingPoints":0,"venues":["v04","v10"]},
+{"id":"regional_open","name":"Regional Open","tier":"regional","format":"mexicano","drawSize":32,"entryFee":300,"prizeMoney":1000,"rankingPoints":100,"minRankingPoints":50,"venues":["v02","v03","v10"]},
+{"id":"fip_promotion","name":"FIP Promotion","tier":"regional","format":"knockout","drawSize":32,"entryFee":500,"prizeMoney":1500,"rankingPoints":150,"minRankingPoints":100,"venues":["v05","v06","v07"]},
+{"id":"fip_bronze","name":"FIP Bronze","tier":"pro","format":"knockout","drawSize":32,"entryFee":800,"prizeMoney":2500,"rankingPoints":250,"minRankingPoints":200,"venues":["v07","v09"]},
+{"id":"fip_silver","name":"FIP Silver","tier":"pro","format":"knockout","drawSize":32,"entryFee":1200,"prizeMoney":4000,"rankingPoints":400,"minRankingPoints":300,"venues":["v03","v09"]},
+{"id":"fip_gold","name":"FIP Gold","tier":"pro","format":"knockout","drawSize":32,"entryFee":1800,"prizeMoney":6000,"rankingPoints":600,"minRankingPoints":450,"venues":["v02","v05","v09"]},
+{"id":"premier_p2","name":"Premier P2","tier":"pro","format":"knockout","drawSize":32,"entryFee":2500,"prizeMoney":9000,"rankingPoints":800,"minRankingPoints":600,"venues":["v06","v08"]},
+{"id":"premier_p1","name":"Premier P1","tier":"pro","format":"knockout","drawSize":32,"entryFee":3000,"prizeMoney":12000,"rankingPoints":1000,"minRankingPoints":800,"venues":["v02","v08","v09"]},
+{"id":"premier_major","name":"Premier Major","tier":"elite","format":"knockout","drawSize":32,"entryFee":3000,"prizeMoney":25000,"rankingPoints":1500,"minRankingPoints":1000,"venues":["v05","v08"]},
+{"id":"premier_finals","name":"Premier Finals","tier":"elite","format":"knockout","drawSize":16,"entryFee":5000,"prizeMoney":50000,"rankingPoints":3000,"minRankingPoints":2000,"venues":["v08"]}
+]}

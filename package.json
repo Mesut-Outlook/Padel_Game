@@ -1,0 +1,19 @@
+{
+  "name": "padel-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "server": "node server/server.js",
+    "test": "node --test test/*.test.js",
+    "online": "vite build && node server/server.js 8080"
+  },
+  "dependencies": {
+    "three": "^0.170.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.11"
+  }
+}

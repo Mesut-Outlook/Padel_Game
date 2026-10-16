@@ -1,0 +1,466 @@
+[
+  {
+    "id": "f01",
+    "name": "Lucia Varela",
+    "gender": "f",
+    "country": "Spain",
+    "countryCode": "ES",
+    "skinTone": "#E0B58F",
+    "outfit": {
+      "shirt": "#E63946",
+      "shorts": "#1D3557",
+      "shoes": "#F1FAEE"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 7,
+      "power": 6,
+      "control": 8,
+      "volley": 7,
+      "smash": 6,
+      "stamina": 7
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "slim",
+      "height": 1.03,
+      "width": 0.9
+    }
+  },
+  {
+    "id": "f02",
+    "name": "Camila Roca",
+    "gender": "f",
+    "country": "Argentina",
+    "countryCode": "AR",
+    "skinTone": "#C68642",
+    "outfit": {
+      "shirt": "#F4A261",
+      "shorts": "#264653",
+      "shoes": "#2A9D8F"
+    },
+    "hand": "right",
+    "position": "reves",
+    "stats": {
+      "speed": 8,
+      "power": 5,
+      "control": 7,
+      "volley": 6,
+      "smash": 5,
+      "stamina": 8
+    },
+    "aiLevel": "rookie",
+    "body": {
+      "type": "athletic",
+      "height": 1,
+      "width": 1
+    }
+  },
+  {
+    "id": "f03",
+    "name": "Elin Strand",
+    "gender": "f",
+    "country": "Sweden",
+    "countryCode": "SE",
+    "skinTone": "#F1C27D",
+    "outfit": {
+      "shirt": "#4D96FF",
+      "shorts": "#FFFFFF",
+      "shoes": "#1B1B1E"
+    },
+    "hand": "left",
+    "position": "drive",
+    "stats": {
+      "speed": 6,
+      "power": 7,
+      "control": 6,
+      "volley": 8,
+      "smash": 7,
+      "stamina": 6
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "petite",
+      "height": 0.93,
+      "width": 0.95
+    }
+  },
+  {
+    "id": "f04",
+    "name": "Giulia Ferrante",
+    "gender": "f",
+    "country": "Italy",
+    "countryCode": "IT",
+    "skinTone": "#E5B88C",
+    "outfit": {
+      "shirt": "#FFFFFF",
+      "shorts": "#A8201A",
+      "shoes": "#D4AF37"
+    },
+    "hand": "right",
+    "position": "reves",
+    "stats": {
+      "speed": 7,
+      "power": 6,
+      "control": 9,
+      "volley": 8,
+      "smash": 5,
+      "stamina": 6
+    },
+    "aiLevel": "pro",
+    "body": {
+      "type": "tall",
+      "height": 1.08,
+      "width": 0.97
+    }
+  },
+  {
+    "id": "f05",
+    "name": "Defne Aksoy",
+    "gender": "f",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#D9A679",
+    "outfit": {
+      "shirt": "#2EC4B6",
+      "shorts": "#011627",
+      "shoes": "#FF9F1C"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 9,
+      "power": 7,
+      "control": 5,
+      "volley": 5,
+      "smash": 7,
+      "stamina": 8
+    },
+    "aiLevel": "rookie",
+    "body": {
+      "type": "stocky",
+      "height": 0.95,
+      "width": 1.2
+    }
+  },
+  {
+    "id": "f06",
+    "name": "Aaliyah Rahim",
+    "gender": "f",
+    "country": "Qatar",
+    "countryCode": "QA",
+    "skinTone": "#8D5524",
+    "outfit": {
+      "shirt": "#6A4C93",
+      "shorts": "#FFD166",
+      "shoes": "#EF476F"
+    },
+    "hand": "left",
+    "position": "reves",
+    "stats": {
+      "speed": 8,
+      "power": 6,
+      "control": 8,
+      "volley": 7,
+      "smash": 6,
+      "stamina": 7
+    },
+    "aiLevel": "pro",
+    "body": {
+      "type": "muscular",
+      "height": 1,
+      "width": 1.15
+    }
+  },
+  {
+    "id": "f07",
+    "name": "Sofia Ibarra",
+    "gender": "f",
+    "country": "Mexico",
+    "countryCode": "MX",
+    "skinTone": "#B07A4F",
+    "outfit": {
+      "shirt": "#06D6A0",
+      "shorts": "#073B4C",
+      "shoes": "#FFFFFF"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 6,
+      "power": 8,
+      "control": 6,
+      "volley": 6,
+      "smash": 8,
+      "stamina": 6
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "slim",
+      "height": 1.03,
+      "width": 0.9
+    }
+  },
+  {
+    "id": "f08",
+    "name": "Beatriz Lima",
+    "gender": "f",
+    "country": "Brazil",
+    "countryCode": "BR",
+    "skinTone": "#A0653B",
+    "outfit": {
+      "shirt": "#FFD700",
+      "shorts": "#009B3A",
+      "shoes": "#002776"
+    },
+    "hand": "right",
+    "position": "reves",
+    "stats": {
+      "speed": 9,
+      "power": 6,
+      "control": 7,
+      "volley": 8,
+      "smash": 6,
+      "stamina": 9
+    },
+    "aiLevel": "legend",
+    "body": {
+      "type": "athletic",
+      "height": 1,
+      "width": 1
+    }
+  },
+  {
+    "id": "m01",
+    "name": "Mathis Vidal",
+    "gender": "m",
+    "country": "France",
+    "countryCode": "FR",
+    "skinTone": "#F3D2B3",
+    "outfit": {
+      "shirt": "#0047AB",
+      "shorts": "#FFFFFF",
+      "shoes": "#1B1B1E"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 7,
+      "power": 8,
+      "control": 6,
+      "volley": 6,
+      "smash": 8,
+      "stamina": 7
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "tall",
+      "height": 1.08,
+      "width": 0.97
+    }
+  },
+  {
+    "id": "m02",
+    "name": "Daan Visser",
+    "gender": "m",
+    "country": "Netherlands",
+    "countryCode": "NL",
+    "skinTone": "#F6D7BC",
+    "outfit": {
+      "shirt": "#FF6B00",
+      "shorts": "#1B1B1E",
+      "shoes": "#FFFFFF"
+    },
+    "hand": "left",
+    "position": "reves",
+    "stats": {
+      "speed": 8,
+      "power": 6,
+      "control": 8,
+      "volley": 7,
+      "smash": 6,
+      "stamina": 7
+    },
+    "aiLevel": "rookie",
+    "body": {
+      "type": "stocky",
+      "height": 0.95,
+      "width": 1.2
+    }
+  },
+  {
+    "id": "m03",
+    "name": "Hugo Medina",
+    "gender": "m",
+    "country": "Spain",
+    "countryCode": "ES",
+    "skinTone": "#E8B896",
+    "outfit": {
+      "shirt": "#FFFFFF",
+      "shorts": "#C8102E",
+      "shoes": "#1D3557"
+    },
+    "hand": "right",
+    "position": "reves",
+    "stats": {
+      "speed": 6,
+      "power": 7,
+      "control": 8,
+      "volley": 8,
+      "smash": 6,
+      "stamina": 6
+    },
+    "aiLevel": "pro",
+    "body": {
+      "type": "muscular",
+      "height": 1,
+      "width": 1.15
+    }
+  },
+  {
+    "id": "m04",
+    "name": "Tomas Acosta",
+    "gender": "m",
+    "country": "Argentina",
+    "countryCode": "AR",
+    "skinTone": "#D2A679",
+    "outfit": {
+      "shirt": "#75AADB",
+      "shorts": "#FFFFFF",
+      "shoes": "#111111"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 7,
+      "power": 9,
+      "control": 5,
+      "volley": 5,
+      "smash": 9,
+      "stamina": 8
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "slim",
+      "height": 1.03,
+      "width": 0.9
+    }
+  },
+  {
+    "id": "m05",
+    "name": "Oskar Lind",
+    "gender": "m",
+    "country": "Sweden",
+    "countryCode": "SE",
+    "skinTone": "#F9DCC4",
+    "outfit": {
+      "shirt": "#005293",
+      "shorts": "#FECB00",
+      "shoes": "#2B2B2B"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 5,
+      "power": 8,
+      "control": 7,
+      "volley": 6,
+      "smash": 8,
+      "stamina": 8
+    },
+    "aiLevel": "rookie",
+    "body": {
+      "type": "athletic",
+      "height": 1,
+      "width": 1
+    }
+  },
+  {
+    "id": "m06",
+    "name": "Matteo Riva",
+    "gender": "m",
+    "country": "Italy",
+    "countryCode": "IT",
+    "skinTone": "#E0B088",
+    "outfit": {
+      "shirt": "#009246",
+      "shorts": "#FFFFFF",
+      "shoes": "#CE2B37"
+    },
+    "hand": "left",
+    "position": "reves",
+    "stats": {
+      "speed": 8,
+      "power": 7,
+      "control": 9,
+      "volley": 9,
+      "smash": 7,
+      "stamina": 7
+    },
+    "aiLevel": "legend",
+    "body": {
+      "type": "petite",
+      "height": 0.93,
+      "width": 0.95
+    }
+  },
+  {
+    "id": "m07",
+    "name": "Emre Yildiz",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#C68E5E",
+    "outfit": {
+      "shirt": "#E30A17",
+      "shorts": "#FFFFFF",
+      "shoes": "#2B2B2B"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 7,
+      "power": 9,
+      "control": 6,
+      "volley": 5,
+      "smash": 9,
+      "stamina": 7
+    },
+    "aiLevel": "pro",
+    "body": {
+      "type": "tall",
+      "height": 1.08,
+      "width": 0.97
+    }
+  },
+  {
+    "id": "m08",
+    "name": "Diego Ortega",
+    "gender": "m",
+    "country": "Mexico",
+    "countryCode": "MX",
+    "skinTone": "#A5714B",
+    "outfit": {
+      "shirt": "#006847",
+      "shorts": "#CE1126",
+      "shoes": "#FFFFFF"
+    },
+    "hand": "right",
+    "position": "reves",
+    "stats": {
+      "speed": 9,
+      "power": 7,
+      "control": 7,
+      "volley": 7,
+      "smash": 7,
+      "stamina": 9
+    },
+    "aiLevel": "legend",
+    "body": {
+      "type": "stocky",
+      "height": 0.95,
+      "width": 1.2
+    }
+  }
+]

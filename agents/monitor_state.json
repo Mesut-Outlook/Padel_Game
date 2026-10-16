@@ -1,0 +1,18 @@
+{
+  "interval_seconds": 600,
+  "interval_minutes": 10,
+  "empty_checks_count": 2,
+  "last_task_completed": "agy-01-research.md",
+  "last_checked_at": "2026-10-16T12:01:00+02:00",
+  "active_discussions": {
+    "topic": "Architecture challenge & physics/rules refactoring",
+    "status": "completed_and_verified",
+    "test_suite_status": "22/22 passing"
+  },
+  "rules": {
+    "base_interval_seconds": 600,
+    "tier_2_interval_seconds": 1200,
+    "tier_3_interval_seconds": 3600,
+    "max_tries_per_tier": 3
+  }
+}
