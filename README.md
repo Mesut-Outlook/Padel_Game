@@ -26,12 +26,13 @@ npm test           # kurallar, fizik, AI, replay testleri
 | A/D (vururken) | topun yönü | sol çubuk |
 | C | kamera: TV, oyuncu arkası, yan, tepe, top, drone, serbest | |
 | R / Esc | son sayının tekrarı / tekrarı geç | |
+| Enter (maç bitince) | ana menüye dön | |
 
 Uzun ralli, smaç veya camdan dönen toptan sonra yavaş çekim tekrar otomatik açılır.
 
 ## Özellikler
 
-- **Kurallar** (`src/rules.js`): FIP kortu, alttan çapraz servis, let, altın sayı / avantaj, tie-break, cam ve tel kuralları, servise vole yasağı.
+- **Kurallar** (`src/rules.js`): FIP kortu, alttan çapraz servis, let, altın sayı / avantaj / Star Point (FIP 2026), tie-break (sonraki seti ilk karşılayan açar), süper tie-break, cam ve tel kuralları, servise vole yasağı.
 - **Fizik** (`src/physics.js`): sürtünme, Magnus (topspin/slice), zemin/cam/tel ayrı sekme katsayıları, camda spin etkisi.
 - **AI** (`src/ai.js`): 4 seviye (çaylak → efsane), çiftlerde birlikte fileye çıkma/çekilme, top tahmini, vuruş seçimi, boşluğa nişan.
 - **Karakterler** (`src/player.js`): kadın/erkek gerçekçi gövde, 6 vücut tipi (ince, atletik, kaslı, iri, uzun, minyon), saç/ten rengi, shader ile padel kıyafeti, elde raket, solak/sağlak.

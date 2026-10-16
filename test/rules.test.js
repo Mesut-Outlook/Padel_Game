@@ -93,3 +93,34 @@ test('hitting own mesh loses point, hitting own glass stays in play', () => {
   assert.equal(r?.point, 0);
   assert.equal(r?.why, 'hit own mesh');
 });
+
+test('star point: two advantages, third deuce is sudden death', () => {
+  const m = newMatch({ goldenPoint: false, starPoint: true });
+  for (let i = 0; i < 3; i++) { point(m, 0, 't'); point(m, 1, 't'); } // deuce 1
+  point(m, 0, 't'); point(m, 1, 't');                                   // deuce 2
+  point(m, 1, 't'); point(m, 0, 't');                                   // deuce 3
+  assert.equal(scoreText(m).pts, 'STAR POINT');
+  point(m, 1, 't');
+  assert.deepEqual(m.sets[0], [0, 1]);
+});
+
+test('super tie-break to 10 replaces the third set', () => {
+  const m = newMatch({ superTiebreak: true });
+  const win = (t) => { for (let i = 0; i < 4; i++) point(m, t, 't'); };
+  for (let i = 0; i < 6; i++) win(0);
+  for (let i = 0; i < 6; i++) win(1);
+  assert.equal(m.tiebreak, true);
+  for (let i = 0; i < 9; i++) point(m, 0, 't');
+  assert.equal(m.winner, null);
+  point(m, 0, 't');
+  assert.equal(m.winner, 0);
+});
+
+test('after a tie-break the team that received first serves the next set', () => {
+  const m = newMatch();
+  const win = (t) => { for (let i = 0; i < 4; i++) point(m, t, 't'); };
+  for (let i = 0; i < 6; i++) { win(0); win(1); }
+  const tbFirst = m.serveOrder[m.serveIdx % 4];
+  for (let i = 0; i < 7; i++) point(m, 0, 't');
+  assert.notEqual(m.serveOrder[m.serveIdx % 4] < 2, tbFirst < 2);
+});

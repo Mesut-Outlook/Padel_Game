@@ -16,3 +16,20 @@ test('bot match progresses and scores', () => {
   assert.ok(points > 20, `points ${points} hits ${hits} log ${w.match.log.slice(-5)}`);
   assert.ok(hits > points, `rallies happen: hits ${hits} points ${points}`);
 });
+
+test('swing waits for the ball to come close instead of hitting at the edge of reach', () => {
+  const w = newWorld();
+  w.state = 'play';
+  Object.assign(w.match.rally, { phase: 'rally', lastHitTeam: 1, bouncesSinceHit: 1 });
+  const pl = w.players[0];
+  pl.p = [0, 6];
+  Object.assign(w.ball, { p: [1.3, 1.0, 6], v: [-8, 0, 0], w: [0, 0, 0], live: true });
+  let hitD = null;
+  for (let i = 0; i < 30 && hitD == null; i++) {
+    const bx = w.ball.p[0];
+    stepWorld(w, { 0: { move: [0, 0], swing: i === 0 ? 'drive' : null, aim: 0 } }, 1 / 60);
+    if (w.events.some(e => e.type === 'hit')) hitD = Math.abs(bx - pl.p[0]);
+    w.events.length = 0;
+  }
+  assert.ok(hitD != null && hitD < 0.85, `hit at distance ${hitD}`);
+});

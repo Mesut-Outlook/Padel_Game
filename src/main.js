@@ -14,6 +14,7 @@ import { connect } from './net.js';
 import { predict } from './physics.js';
 
 const $ = (id) => document.getElementById(id);
+const matchOpts = () => ({ sets: parseInt($('sets').value), superTiebreak: $('sets').value === '3s', goldenPoint: $('golden').value === '1', starPoint: $('golden').value === 'star' });
 const fill = (sel, items, label) => { sel.innerHTML = items.map((x, i) => `<option value="${i}">${label(x)}</option>`).join(''); };
 fill($('char'), characters, c => `${c.name} (${c.countryCode}, ${c.gender === 'f' ? 'K' : 'E'})`);
 fill($('venue'), venues, v => `${v.name} — ${v.city}`);
@@ -61,7 +62,7 @@ $('online').onclick = () => {
     (location.port === '5173' ? `ws://${location.hostname}:8080` : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
   net = connect({
     url, code, char: me, stats: characters[me].stats, racket: rackets[+$('racket').value].stats,
-    cfg: { players, sets: +$('sets').value, goldenPoint: $('golden').value === '1', ai: $('ai').value, venue: +$('venue').value },
+    cfg: { players, ...matchOpts(), ai: $('ai').value, venue: +$('venue').value },
     onError: (e) => { $('lobby').textContent = e; },
     onLobby: (l) => {
       $('lobby').innerHTML = `Oda <b>${l.code}</b> · koltuğun: ${net.seat} · oyuncular: ${l.taken.length}/${l.seats.length} (boşları AI)` +
@@ -97,7 +98,7 @@ $('start').onclick = async () => {
 
   world = newWorld({
     players,
-    match: { sets: +$('sets').value, goldenPoint: $('golden').value === '1' },
+    match: matchOpts(),
     stats: Object.fromEntries(ids.map(id => [id, roster[id].stats])),
     rackets: Object.fromEntries(ids.map(id => [id, rk[id].stats])),
   });
@@ -138,7 +139,7 @@ function handleEvents(events, score, winner) {
       // auto highlight: long rally, smash, or a ball played off the glass
       if (e.rally >= 8 || rallyFlags.smash || rallyFlags.glass) setTimeout(() => startReplay(true), 900);
       rallyFlags = {};
-      if (winner != null) flash(`🏆 ${team} KAZANDI!`, 999);
+      if (winner != null) flash(`🏆 ${team} KAZANDI!\nEnter: ana menü`, 999);
     }
   }
   events.length = 0;
@@ -162,6 +163,7 @@ function loop(now) {
   if (consumePressed('KeyC')) $('cam').textContent = '🎥 ' + rig.next();
   if (consumePressed('KeyR')) startReplay(false);
   if (consumePressed('Escape') && replay.playing) endReplay();
+  if (consumePressed('Enter') && (world?.match.winner != null || net?.winner != null)) { location.reload(); return; }
   let view;
   if (replay.playing) {
     view = replay.update(dt);

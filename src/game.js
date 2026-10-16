@@ -80,14 +80,17 @@ function strike(w, pl, kind, aimX = 0) {
   }
   // unforced errors: chance grows with poor control, fast incoming ball, awkward height, stretch for the ball
   let mistake = null;
-  if (kind !== 'serve') {
+  if (kind === 'serve') {
+    // first serve is riskier; second serve is played safe
+    if (Math.random() < (1 - ctl) * (w.match.rally.fault ? 0.05 : 0.2)) mistake = Math.random() < 0.5 ? 'net' : 'long';
+  } else {
     const inSpeed = Math.hypot(...b.v), reach = Math.hypot(b.p[0] - pl.p[0], b.p[2] - pl.p[1]) / REACH;
     const awkward = b.p[1] < 0.45 || (b.p[1] > 1.6 && !['smash', 'bandeja', 'vibora'].includes(kind)) ? 0.06 : 0;
     const risky = { smash: 0.05, vibora: 0.04, chiquita: 0.03 }[kind] || 0;
     const pErr = (1 - ctl) * 0.12 + Math.max(0, inSpeed - 14) * 0.006 + reach * reach * 0.05 + awkward + risky;
     if (Math.random() < pErr) mistake = Math.random() < 0.5 ? 'net' : 'long';
   }
-  if (mistake === 'long') tz = dir * (10.6 + Math.random());           // straight into opponent back glass
+  if (mistake === 'long') tz = dir * (kind === 'serve' ? 7.2 + Math.random() * 0.8 : 10.6 + Math.random()); // past service line / into back glass
   if (mistake === 'net') t *= 0.55;                                       // flat and low into the net
   const spinMag = s.spin * (0.6 + pl.racket.spin / 15);
   const wv = [Math.sign(dir) * spinMag, (s.side || 0) * -dir, 0];
@@ -152,11 +155,16 @@ export function stepWorld(w, inputs, dt) {
   // hits: anyone wanting to swing with ball in reach and on their side (or crossing)
   const b = w.ball;
   for (const pl of w.players) {
-    if (!pl.active || !pl.want || pl.swing) continue;
+    if (!pl.active) continue;
+    // swing at the ball's closest approach, not the first frame it enters reach (edge-of-reach hits err more)
+    const d = Math.hypot(b.p[0] - pl.p[0], b.p[2] - pl.p[1]), closing = d < (pl.lastD ?? Infinity) - 1e-4;
+    pl.lastD = d;
+    if (!pl.want || pl.swing) continue;
     const onSide = (pl.team === 0 ? b.p[2] > -0.3 : b.p[2] < 0.3);
     const r = w.match.rally;
     const notMine = r.bouncesSinceHit === 0 && (r.lastHitTeam === pl.team || r.phase === 'serveFlight'); // never volley the serve
-    if (onSide && !notMine && reachable(pl, b)) strike(w, pl, pl.want === 'auto' ? autoShot(w, pl) : pl.want, pl.aim);
+    const now = d < 0.8 || !closing || pl.wantT < 0.05 || (b.v[1] < 0 && b.p[1] < 0.45);
+    if (onSide && !notMine && reachable(pl, b) && now) strike(w, pl, pl.want === 'auto' ? autoShot(w, pl) : pl.want, pl.aim);
   }
   stepBallEvents(w, dt);
   return w;

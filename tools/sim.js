@@ -18,7 +18,7 @@ export function runSimulation(targetPoints = 500, level = 'club', seed = 12345) 
   Math.random = lcg;
 
   try {
-    const w = newWorld({ players: 4 });
+    let w = newWorld({ players: 4 });
     const dt = 1 / 60;
     const stats = {
       level,
@@ -58,7 +58,6 @@ export function runSimulation(targetPoints = 500, level = 'club', seed = 12345) 
           if (e.mistake) stats.totalMistakes++;
         } else if (e.type === 'fault') {
           stats.faultCount++;
-          if (e.why === 'double fault') stats.doubleFaultCount++;
         } else if (e.type === 'let') {
           stats.letCount++;
         } else if (e.type === 'point') {
@@ -66,6 +65,7 @@ export function runSimulation(targetPoints = 500, level = 'club', seed = 12345) 
           stats.rallies.push(e.rally);
           const why = e.why || 'unknown';
           stats.whyDistribution[why] = (stats.whyDistribution[why] || 0) + 1;
+          if (e.why === 'double fault') stats.doubleFaultCount++;
           if (e.team === 0) stats.t0Wins++;
           else stats.t1Wins++;
           pointStartTime = w.t;
@@ -73,15 +73,20 @@ export function runSimulation(targetPoints = 500, level = 'club', seed = 12345) 
       }
       w.events.length = 0;
 
+      // When match ends ('over'), advance timer and start a new match
+      if (w.state === 'over' && w.timer <= 0) {
+        w = newWorld({ players: 4 });
+        pointStartTime = w.t;
+      }
+
       // Stuck detection: > 60 sim seconds in single point
       if (w.t - pointStartTime > 60) {
         stats.stuckPoints++;
         stats.pointsPlayed++;
         stats.rallies.push(w.rally);
         stats.whyDistribution['stuck (timeout > 60s)'] = (stats.whyDistribution['stuck (timeout > 60s)'] || 0) + 1;
-        // Force reset
-        w.state = 'serve';
-        w.match.rally.phase = 'serve';
+        // Force fresh point
+        w = newWorld({ players: 4 });
         pointStartTime = w.t;
       }
     }

@@ -26,7 +26,7 @@ function makeRoom(code, cfg) {
   const players = cfg.players === 2 ? 2 : 4;
   const room = {
     code, cfg, seats: players === 2 ? [0, 2] : [0, 2, 1, 3], clients: new Map(), inputs: {}, started: false,
-    world: newWorld({ players, match: { sets: cfg.sets || 3, goldenPoint: cfg.goldenPoint !== false }, stats: {}, rackets: {} }),
+    world: newWorld({ players, match: { sets: cfg.sets || 3, goldenPoint: cfg.goldenPoint !== false, starPoint: !!cfg.starPoint, superTiebreak: !!cfg.superTiebreak }, stats: {}, rackets: {} }),
     chars: {}, timer: null,
   };
   room.timer = setInterval(() => tick(room), 1000 / 60);
@@ -60,7 +60,7 @@ wss.on('connection', (ws) => {
     if (m.type === 'join') {
       const code = String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
       if (!code) return;
-      room = rooms.get(code) || makeRoom(code, { players: m.cfg?.players, sets: m.cfg?.sets, goldenPoint: m.cfg?.goldenPoint, ai: m.cfg?.ai, venue: m.cfg?.venue | 0 });
+      room = rooms.get(code) || makeRoom(code, { players: m.cfg?.players, sets: m.cfg?.sets, goldenPoint: m.cfg?.goldenPoint, starPoint: m.cfg?.starPoint, superTiebreak: m.cfg?.superTiebreak, ai: m.cfg?.ai, venue: m.cfg?.venue | 0 });
       const taken = new Set(room.clients.values());
       const seat = room.seats.find(s => !taken.has(s));
       if (seat == null || room.started && !m.spectate) { ws.send(JSON.stringify({ type: 'error', msg: 'Oda dolu veya maç başladı' })); return; }

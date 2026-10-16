@@ -5,8 +5,9 @@ export const PTS = ['0', '15', '30', '40'];
 
 export function newMatch(opts = {}) {
   return {
-    opts: { sets: 3, goldenPoint: true, players: 4, ...opts },
-    sets: [[0, 0]], games: [0, 0], points: [0, 0], tiebreak: false,
+    // starPoint (FIP 2026): advantage twice, third deuce is one deciding point. superTiebreak: 3rd set = tie-break to 10.
+    opts: { sets: 3, goldenPoint: true, starPoint: false, superTiebreak: false, players: 4, ...opts },
+    sets: [[0, 0]], games: [0, 0], points: [0, 0], tiebreak: false, tbTo: 7, tbStart: 0, deuces: 0,
     server: 0, serveOrder: [0, 2, 1, 3], serveIdx: 0, gamesPlayed: 0,
     rally: newRally(), winner: null, log: [],
   };
@@ -108,11 +109,12 @@ export function point(m, team, why) {
   const p = m.points;
   p[team]++;
   const o = 1 - team;
+  const star = m.opts.starPoint, sudden = star ? m.deuces >= 3 : m.opts.goldenPoint;
   let gameWon = false;
-  if (m.tiebreak) gameWon = p[team] >= 7 && p[team] - p[o] >= 2;
-  else if (m.opts.goldenPoint) gameWon = p[team] >= 4;
-  else gameWon = p[team] >= 4 && p[team] - p[o] >= 2;
-  if (!m.tiebreak && !m.opts.goldenPoint && p[team] === 4 && p[o] === 4) { p[0] = p[1] = 3; }
+  if (m.tiebreak) gameWon = p[team] >= m.tbTo && p[team] - p[o] >= 2;
+  else gameWon = p[team] >= 4 && (sudden || p[team] - p[o] >= 2);
+  if (!m.tiebreak && !gameWon && p[team] === 4 && p[o] === 4) { p[0] = p[1] = 3; }
+  if (!m.tiebreak && !gameWon && p[0] === 3 && p[1] === 3) m.deuces++;
   if (m.tiebreak && (p[0] + p[1]) % 2 === 1) m.serveIdx++; // tiebreak: change after 1st then every 2
   if (gameWon) game(m, team);
   m.rally = newRally();
@@ -122,16 +124,17 @@ export function point(m, team, why) {
 function game(m, team) {
   const s = m.sets[m.sets.length - 1];
   s[team]++;
-  m.points = [0, 0];
+  m.points = [0, 0]; m.deuces = 0;
   const o = 1 - team;
-  if (!m.tiebreak) m.serveIdx++;
+  m.serveIdx = m.tiebreak ? m.tbStart + 1 : m.serveIdx + 1; // after a tie-break, its first receiver serves
   const setWon = m.tiebreak || (s[team] >= 6 && s[team] - s[o] >= 2);
   m.tiebreak = false;
   if (setWon) {
     const won = m.sets.filter(x => x[team] > x[1 - team]).length;
     if (won > m.opts.sets / 2) { m.winner = team; return; }
     m.sets.push([0, 0]);
-  } else if (s[0] === 6 && s[1] === 6) m.tiebreak = true;
+    if (m.opts.superTiebreak && m.sets.length === 3) Object.assign(m, { tiebreak: true, tbTo: 10, tbStart: m.serveIdx });
+  } else if (s[0] === 6 && s[1] === 6) Object.assign(m, { tiebreak: true, tbTo: 7, tbStart: m.serveIdx });
 }
 
 export function scoreText(m) {
@@ -139,7 +142,7 @@ export function scoreText(m) {
   const p = m.points;
   let pts;
   if (m.tiebreak) pts = p.join('-');
-  else if (p[0] >= 3 && p[1] >= 3) pts = p[0] === p[1] ? (m.opts.goldenPoint ? 'GOLDEN' : 'DEUCE') : (p[0] > p[1] ? 'AD-' : '-AD');
+  else if (p[0] >= 3 && p[1] >= 3) pts = p[0] === p[1] ? (m.opts.starPoint ? (m.deuces >= 3 ? 'STAR POINT' : 'DEUCE') : m.opts.goldenPoint ? 'GOLDEN' : 'DEUCE') : (p[0] > p[1] ? 'AD-' : '-AD');
   else pts = PTS[Math.min(p[0], 3)] + '-' + PTS[Math.min(p[1], 3)];
   return { sets, pts };
 }
