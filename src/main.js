@@ -41,9 +41,10 @@ addEventListener('resize', resize); resize();
 window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorld, inputs , tut });
 const rig = createCameraRig(camera, renderer.domElement);
 const replay = createReplay(15, 60);
-let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, msgTimer = 0, net = null, marker;
+let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, msgTimer = 0, net = null, marker, loadingScene = false;
 
 async function setupScene(venue, ids, roster, rk) {
+  loadingScene = true;
   $('menu').hidden = true;
   $('msg').textContent = 'Yükleniyor…';
   scene.clear();
@@ -58,7 +59,9 @@ async function setupScene(venue, ids, roster, rk) {
   $('t0').textContent = name(0); $('t1').textContent = name(1);
   for (const id of ['hud', 'cam', 'help']) $(id).hidden = false;
   $('msg').textContent = '';
+  acc = 0; freeze = 0; slow = 0; shake = 0; approach = 0; rallyFlags = {};
   last = performance.now();
+  loadingScene = false;
   if (!looping) { looping = true; requestAnimationFrame(loop); }  // a restart reuses the running loop
 }
 
@@ -287,33 +290,66 @@ const padPrev = {};
 function pauseItems() {
   const items = [['Devam et', () => setPaused(false)]];
   if (tut) items.push(['Dersi atla', () => { setPaused(false); tut.skip(); }]);
-  else if (!net) items.push(['Maçı yeniden başlat', () => { setPaused(false); if (replay.playing) endReplay(); $('start').onclick(); }]);
+  else if (!net) items.push(['Maçı yeniden başlat', () => { setPaused(false); if (replay.playing) endReplay(); $('start').click(); }]);
   items.push(['Ana menüye dön', () => location.reload()]);
   return items;
 }
+function updatePauseSel() {
+  const box = $('pzItems');
+  box.querySelectorAll('.pz-item').forEach((b, i) => {
+    b.classList.toggle('sel', i === pauseSel);
+  });
+}
 function drawPause() {
   const box = $('pzItems');
-  box.innerHTML = pauseItems().map(([t], i) => `<button class="pz-item${i === pauseSel ? ' sel' : ''}" data-i="${i}">${t}</button>`).join('');
-  box.querySelectorAll('button').forEach(b => {
-    b.onclick = () => pauseItems()[+b.dataset.i][1]();
-    b.onmouseenter = () => { pauseSel = +b.dataset.i; drawPause(); };
+  const items = pauseItems();
+  box.innerHTML = items.map(([t], i) => `<button type="button" class="pz-item${i === pauseSel ? ' sel' : ''}" data-i="${i}" tabindex="-1">${t}</button>`).join('');
+  box.querySelectorAll('.pz-item').forEach(b => {
+    b.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const idx = +b.dataset.i;
+      const act = pauseItems()[idx]?.[1];
+      if (act) act();
+    };
+    b.onmouseenter = () => {
+      pauseSel = +b.dataset.i;
+      updatePauseSel();
+    };
   });
   $('pzNote').textContent = net ? 'Online maç arka planda sürüyor.' : '';
 }
-function setPaused(on) { paused = on; pauseSel = 0; $('pause').hidden = !on; if (on) drawPause(); clearPressed(); }
+$('pause').onclick = (e) => {
+  if (e.target === $('pause')) setPaused(false);
+};
+function setPaused(on) {
+  paused = on;
+  pauseSel = 0;
+  $('pause').hidden = !on;
+  if (on) drawPause();
+  clearPressed();
+  if (!on) last = performance.now();
+}
 function padEdge(i) {  // fresh press of one pad button (menu navigation while paused)
   const gp = [...(navigator.getGamepads?.() || [])].find(Boolean), on = !!gp?.buttons[i]?.pressed;
   const edge = on && !padPrev[i]; padPrev[i] = on; return edge;
 }
 function pauseInput() {
-  const n = pauseItems().length;
+  const items = pauseItems(), n = items.length;
   const up = consumePressed('ArrowUp') | consumePressed('KeyW') | padEdge(12);
   const down = consumePressed('ArrowDown') | consumePressed('KeyS') | padEdge(13);
   const pick = consumePressed('Enter') | consumePressed('Space') | padEdge(0);
   const back = consumePressed('KeyP') | consumePressed('Escape') | consumePressed('Pause') | padEdge(1);
-  if (up || down) { pauseSel = (pauseSel + (down ? 1 : n - 1)) % n; drawPause(); }
-  if (pick) pauseItems()[pauseSel][1]();
-  else if (back) setPaused(false);
+  if (up || down) {
+    pauseSel = (pauseSel + (down ? 1 : n - 1)) % n;
+    updatePauseSel();
+  }
+  if (pick) {
+    const act = items[pauseSel]?.[1];
+    if (act) act();
+  } else if (back) {
+    setPaused(false);
+  }
 }
 
 let replayCamBefore = null;
@@ -336,11 +372,18 @@ function padButtonDown() {
 }
 
 function loop(now) {
+  if (loadingScene) {
+    last = now;
+    renderer.render(scene, camera);
+    requestAnimationFrame(loop);
+    return;
+  }
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   if (paused) {
     pauseInput();
     // offline the world freezes; an online match can't be stopped, so it keeps running behind the menu
     if (paused && !net) { renderer.render(scene, camera); requestAnimationFrame(loop); return; }
+    if (!paused) { requestAnimationFrame(loop); return; }
   }
   const over = world?.match.winner != null || net?.winner != null;
   if (consumePressed('KeyP') | consumePressed('Pause') | (!replay.playing && consumePressed('Escape'))) {
