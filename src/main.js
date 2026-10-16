@@ -13,7 +13,7 @@ import { readLocal, readGamepad, consumePressed, clearPressed } from './input.js
 import { connect } from './net.js';
 import { predict } from './physics.js';
 import { createFx } from './fx.js';
-import { unlockAudio, toggleMute, sfxHit, sfxContact, sfxCrowd, sfxWhoosh, callout } from './audio.js';
+import { unlockAudio, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
 import { initMenu } from './menu.js';
 import { createTutorial } from './tutorial.js';
 import { mountKeyHelp } from './helpkeys.js';
@@ -21,11 +21,13 @@ import { mountKeyHelp } from './helpkeys.js';
 const $ = (id) => document.getElementById(id);
 const matchOpts = () => ({ sets: parseInt($('sets').value), superTiebreak: $('sets').value === '3s', goldenPoint: $('golden').value === '1', starPoint: $('golden').value === 'star' });
 const fill = (sel, items, label) => { sel.innerHTML = items.map((x, i) => `<option value="${i}">${label(x)}</option>`).join(''); };
-fill($('char'), characters, c => `${c.name} (${c.countryCode}, ${c.gender === 'f' ? 'K' : 'E'})`);
+fill($('char'), characters, c => `${c.name} (${c.countryCode}, ${c.gender === 'f' ? 'F' : 'M'})`);
 fill($('venue'), venues, v => `${v.name} — ${v.city}`);
-fill($('racket'), rackets, r => `${r.name} · ${r.shape} · G${r.stats.power}/K${r.stats.control}`);
+fill($('racket'), rackets, r => `${r.name} · ${r.shape} · P${r.stats.power}/C${r.stats.control}`);
 initMenu();
 mountKeyHelp($('help'));
+addEventListener('pointerdown', unlockAudio, { once: true });
+addEventListener('keydown', unlockAudio, { once: true });
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25));
@@ -46,7 +48,7 @@ let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, ms
 async function setupScene(venue, ids, roster, rk) {
   loadingScene = true;
   $('menu').hidden = true;
-  $('msg').textContent = 'Yükleniyor…';
+  $('msg').textContent = 'Loading…';
   scene.clear();
   venueGroup = buildVenue(scene, venue);
   ballView = buildBall(scene);
@@ -59,7 +61,9 @@ async function setupScene(venue, ids, roster, rk) {
   $('t0').textContent = name(0); $('t1').textContent = name(1);
   for (const id of ['hud', 'cam', 'help']) $(id).hidden = false;
   $('msg').textContent = '';
-  acc = 0; freeze = 0; slow = 0; shake = 0; approach = 0; rallyFlags = {};
+  acc = 0; freeze = 0; slow = 0; shake = 0; approach = 0; bannerMode = ''; rallyFlags = {};
+  updateSmashBanner();
+  setMusicDuck('point');
   last = performance.now();
   loadingScene = false;
   if (!looping) { looping = true; requestAnimationFrame(loop); }  // a restart reuses the running loop
@@ -70,11 +74,11 @@ $('online').onclick = () => {
   control = $('control').value;
   // the static GitHub Pages build has no game server; ?server=wss://... points it at one
   if (!new URLSearchParams(location.search).get('server') && location.hostname.endsWith('github.io')) {
-    $('lobby').textContent = 'Online mod bir oyun sunucusu ister; bu web sürümünde yok. Bilgisayara karşı oynayabilirsin.';
+    $('lobby').textContent = 'Online mode requires a game server, which is not included in this static web build. You can play against the AI.';
     return;
   }
   const code = $('room').value.trim().toUpperCase();
-  if (!code) { $('lobby').textContent = 'Önce bir oda kodu yaz.'; return; }
+  if (!code) { $('lobby').textContent = 'Enter a room code first.'; return; }
   const me = +$('char').value, players = +$('mode').value;
   const url = new URLSearchParams(location.search).get('server') ||
     (location.port === '5173' ? `ws://${location.hostname}:8080` : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
@@ -83,8 +87,8 @@ $('online').onclick = () => {
     cfg: { players, ...matchOpts(), ai: $('ai').value, venue: +$('venue').value },
     onError: (e) => { $('lobby').textContent = e; },
     onLobby: (l) => {
-      $('lobby').innerHTML = `Oda <b>${l.code}</b> · koltuğun: ${net.seat} · oyuncular: ${l.taken.length}/${l.seats.length} (boşları AI)` +
-        (l.started ? '' : ' — <b>herkes gelince “MAÇA BAŞLA”</b>');
+      $('lobby').innerHTML = `Room <b>${l.code}</b> · your seat: ${net.seat} · players: ${l.taken.length}/${l.seats.length} (empty = AI)` +
+        (l.started ? '' : ' — <b>click “START MATCH” when everyone is ready</b>');
       if (l.started && !avatars.length) {
         const ids = l.seats, roster = {}, rk = {};
         for (const id of ids) { roster[id] = characters[l.chars[id] ?? (id * 3 + 1) % characters.length]; rk[id] = rackets[id % rackets.length]; }
@@ -148,7 +152,7 @@ let fx = null, tut = null, looping = false;
 let control = 'auto', gameSpeed = 0.85, freeze = 0, shake = 0, lastHitter = null;
 const shakeOff = new THREE.Vector3(), ballHold = new THREE.Vector3(), tmpV = new THREE.Vector3();
 // smash: brief slow motion + smash cam (for your own smashes, or every smash when only AIs play)
-let slow = 0, punchPid = null;
+let slow = 0, punchPid = null, bannerMode = '';
 // whoosh when the ball flies past the focus player
 const prevB = new THREE.Vector3();
 let lastD = Infinity, nearD = Infinity;
@@ -156,7 +160,7 @@ let lastD = Infinity, nearD = Infinity;
 // Shot coach (offline, for your player). An overhead you can take inside the service line slows the ball's
 // approach and shows it from behind your player; every overhead / glass rebound / lob chance gets key hints.
 const SHOT_KEYS = { kb: { smash: 'L', vibora: 'I', bandeja: 'Space', bajada: 'Space', lob: 'K' }, pad: { smash: 'Y', vibora: 'RB', bandeja: 'A', bajada: 'A', lob: 'B' } };
-const SHOT_NAME = { smash: 'SMAÇ', vibora: 'VÍBORA', bandeja: 'BANDEJA', bajada: 'BAJADA', lob: 'LOB' };
+const SHOT_NAME = { smash: 'SMASH', vibora: 'VÍBORA', bandeja: 'BANDEJA', bajada: 'BAJADA', lob: 'LOB' };
 let device = 'kb', approach = 0, armed = true, hintKey = '';  // armed: the next overhead chance may start a slow approach
 addEventListener('keydown', () => { device = 'kb'; });
 function showHint(list, title = '') {
@@ -167,14 +171,45 @@ function showHint(list, title = '') {
   el.hidden = !list.length;
   if (list.length) el.innerHTML = `<span class="sh-t">${title}</span>` + list.map((s, i) => `<span class="sh${i ? '' : ' best'}">${SHOT_NAME[s]} <kbd>${SHOT_KEYS[device][s]}</kbd></span>`).join('');
 }
+
+function setSmashBanner(mode, kicker = '', title = '', sub = '') {
+  const b = $('smashBanner'), v = $('smashVignette');
+  if (!b || !v) return;
+  if (!mode) {
+    b.hidden = true; v.hidden = true; b.classList.remove('hit'); bannerMode = '';
+    return;
+  }
+  v.hidden = false;
+  b.hidden = false;
+  b.classList.toggle('hit', mode === 'hit');
+  if (bannerMode !== mode) {
+    b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
+  }
+  bannerMode = mode;
+  $('sbKicker').textContent = kicker;
+  $('sbTitle').textContent = title;
+  $('sbSub').innerHTML = sub;
+}
+
+function updateSmashBanner() {
+  if (approach <= 0 && slow <= 0 && bannerMode) {
+    setSmashBanner('');
+    if (world?.state === 'play') setMusicDuck('rally');
+  }
+}
+
 function coach(dt) {
   if (approach > 0) approach -= dt;
   const pid = humans[0];
-  if (!world || net || pid == null || replay.playing || world.state !== 'play') { approach = 0; armed = true; return showHint([]); }
+  if (!world || net || pid == null || replay.playing || world.state !== 'play') {
+    approach = 0; armed = true; updateSmashBanner(); return showHint([]);
+  }
   const me = world.players[pid], b = world.ball, r = world.match.rally, zs = me.team === 0 ? 1 : -1;
-  if (!b.live || r.lastHitTeam === me.team) { approach = 0; armed = true; return showHint([]); }
+  if (!b.live || r.lastHitTeam === me.team) {
+    approach = 0; armed = true; updateSmashBanner(); return showHint([]);
+  }
   // came off your back glass and is rising toward you: attack it
-  if (r.bouncesSinceHit === 1 && b.p[2] * zs > 7 && b.v[2] * zs < 0 && b.p[1] > 1.5) return showHint(['bajada'], 'Camdan dönen top');
+  if (r.bouncesSinceHit === 1 && b.p[2] * zs > 7 && b.v[2] * zs < 0 && b.p[1] > 1.5) return showHint(['bajada'], 'Glass rebound');
   if (r.bouncesSinceHit !== 0) return showHint([]);
   // where will the ball be high and within reach, before it bounces on your side?
   const { pts, contacts } = predict(b, 1.6);
@@ -182,15 +217,26 @@ function coach(dt) {
   const hit = pts.find(q => q.t < tEnd && q.p[2] * zs > 0 && q.p[1] > 1.8 && q.p[1] < 2.9 && Math.hypot(q.p[0] - me.p[0], q.p[2] - me.p[1]) < 2.2);
   if (!hit) {
     const opps = world.players.filter(p => p.active && p.team !== me.team);
-    if (opps.length && opps.every(o => Math.abs(o.p[1]) < 4.5) && Math.abs(me.p[1]) > 5) return showHint(['lob'], 'Rakipler filede');
+    if (opps.length && opps.every(o => Math.abs(o.p[1]) < 4.5) && Math.abs(me.p[1]) > 5) return showHint(['lob'], 'Opponents at net');
+    if (approach <= 0) updateSmashBanner();
     return showHint([]);
   }
   const dist = (p) => Math.hypot(hit.p[0] - p.p[0], hit.p[2] - p.p[1]);
   if (world.players.some(p => p.active && p.team === me.team && p !== me && dist(p) < dist(me) - 0.3)) return showHint([]);  // partner's ball
   const depth = Math.abs(hit.p[2]);
-  if (depth >= 6.95) return showHint(['bandeja', 'vibora', 'lob'], 'Yüksek top');
-  if (armed) { armed = false; approach = 1.6; rig.pov(1.6); }  // once per incoming ball
-  showHint(depth < 4.5 ? ['smash', 'vibora', 'bandeja'] : ['vibora', 'bandeja', 'smash'], depth < 4.5 ? 'SMAÇ FIRSATI' : 'Üstten vur');
+  if (depth >= 6.95) return showHint(['bandeja', 'vibora', 'lob'], 'High ball');
+  if (armed) {
+    armed = false; approach = 1.6; rig.pov(1.6);
+    sfxSmashSlowMo();
+    const k = SHOT_KEYS[device];
+    setSmashBanner(
+      'approach',
+      '⚡ SLOW MOTION · OVERHEAD LOCKED ⚡',
+      depth < 4.5 ? 'SMASH TIME!' : 'OVERHEAD ZONE!',
+      `PRESS <b>${k.smash}</b> SMASH · <b>${k.vibora}</b> VÍBORA · <b>${k.bandeja}</b> BANDEJA`
+    );
+  }
+  showHint(depth < 4.5 ? ['smash', 'vibora', 'bandeja'] : ['vibora', 'bandeja', 'smash'], depth < 4.5 ? 'SMASH CHANCE' : 'Overhead shot');
 }
 const teamOf = (pid) => (pid < 2 ? 0 : 1);
 const speak = (pid, good) => { const a = avatars[pid]; if (a) a.say(callout(a.ch, good)); };
@@ -218,7 +264,11 @@ function inputs() {
 function handleEvents(events, score, winner) {
   for (const e of events) {
     if (e.type === 'hit') {
+      const wasAfterGlass = rallyFlags.afterGlass;
       rallyFlags.bounced = false;
+      rallyFlags.afterGlass = false;
+      rallyFlags.hits = (rallyFlags.hits || 0) + 1;
+      if (e.shot === 'serve') setMusicDuck('rally');
       const power = e.speed ? (e.speed - 6) / 22 : e.shot === 'smash' ? 1 : 0.5;
       sfxHit(power);
       if (world) fx?.impact(world.ball.p, power, e.quality === 'perfect');
@@ -226,33 +276,54 @@ function handleEvents(events, score, winner) {
       freeze = power > 0.7 ? 0.08 : 0.03;
       lastHitter = e.pid;
       if (humans.includes(e.pid)) {  // your stroke ends the slow approach; overheads get the smash cam treatment
+        const wasApproach = approach > 0;
         approach = 0; rig.pov(0);
-        if (['smash', 'vibora', 'bandeja', 'bajada'].includes(e.shot)) { punchPid = e.pid; slow = 0.9; shake = 0.25; }
+        if (['smash', 'vibora', 'bandeja', 'bajada'].includes(e.shot)) {
+          punchPid = e.pid; slow = 0.9; shake = 0.25;
+          sfxSmashImpact(e.quality === 'perfect');
+          const kmh = Math.round((e.speed || 22) * 3.6);
+          setSmashBanner(
+            'hit',
+            e.quality === 'perfect' ? '🔥 PERFECT TIMING 🔥' : '💥 POWER OVERHEAD 💥',
+            e.shot === 'smash' ? 'SUPER SMASH!' : `${SHOT_NAME[e.shot] || 'OVERHEAD'}!`,
+            `<b>${kmh} KM/H</b> UNSTOPPABLE SHOT`
+          );
+        } else if (wasApproach) {
+          setSmashBanner('');
+          setMusicDuck('rally');
+        }
       }
       if (e.shot === 'smash' || e.shot === 'vibora') {
         rallyFlags.smash = true; replay.mark(e.shot); shake = 0.25;
-        if (e.shot === 'smash' && !humans.length) { punchPid = e.pid; slow = 0.9; }
-        if (Math.random() < 0.4) speak(e.pid, true);
+        sfxCrowdReact('ooh');
+        if (e.shot === 'smash' && !humans.length) { punchPid = e.pid; slow = 0.9; sfxSmashImpact(false); }
+        if (Math.random() < 0.45) speak(e.pid, true);
+      } else if (e.shot === 'contra' || e.shot === 'bajada' || wasAfterGlass) {
+        sfxCrowdReact('ooh');
+      } else if (rallyFlags.hits >= 6 && rallyFlags.hits % 4 === 2) {
+        sfxCrowdReact('cheer');
       }
     } else if (e.type === 'contact') {
       sfxContact(e.kind, world?.ball ? Math.hypot(...world.ball.v) : 8);
       if (e.kind === 'floor') rallyFlags.bounced = true;
-      else if (e.kind === 'glass' && rallyFlags.bounced) rallyFlags.glass = true;
+      else if (e.kind === 'glass' && rallyFlags.bounced) { rallyFlags.glass = true; rallyFlags.afterGlass = true; }
     }
-    else if (e.type === 'fault') flash('SERVİS HATASI', 1);
+    else if (e.type === 'fault') { flash('SERVE FAULT', 1); sfxCrowdReact('murmur'); }
     else if (e.type === 'let') flash('LET', 1);
     else if (e.type === 'point') {
-      sfxCrowd(Math.min(1, 0.3 + e.rally / 10));
+      approach = 0; slow = 0; setSmashBanner('');
+      setMusicDuck('point');
+      sfxCrowd(Math.min(1, 0.35 + e.rally / 10));
       // last hitter reacts: celebrates a winner, groans at an error
       if (lastHitter != null && Math.random() < 0.75) speak(lastHitter, teamOf(lastHitter) === e.team);
       lastHitter = null;
       const team = e.team === 0 ? $('t0').textContent : $('t1').textContent;
-      const WHY = { 'double bounce': 'iki sekme', 'bounced own side': 'kendi sahasında sekti', 'hit own mesh': 'kendi teline', 'hit opponent wall directly': 'doğrudan cama', 'double fault': 'çift hata', out: 'dışarı', 'volleyed serve': 'servis vole', 'double hit': 'çift vuruş' };
+      const WHY = { 'double bounce': 'double bounce', 'bounced own side': 'bounced on own side', 'hit own mesh': 'hit own mesh', 'hit opponent wall directly': 'direct wall out', 'double fault': 'double fault', out: 'out', 'volleyed serve': 'volleyed serve', 'double hit': 'double hit' };
       if (!tut) flash(`${team}\n${WHY[e.why] || e.why}`);
       // auto highlight: long rally, smash, or a ball played off the glass
       if (!tut && (e.rally >= 8 || rallyFlags.smash || rallyFlags.glass)) setTimeout(() => startReplay(true), 900);
       rallyFlags = {};
-      if (!tut && winner != null) flash(`🏆 ${team} KAZANDI!\nEnter / Start: ana menü`, 999);
+      if (!tut && winner != null) flash(`🏆 ${team} WINS!\nEnter / Start: main menu`, 999);
     }
   }
   events.length = 0;
@@ -272,7 +343,7 @@ function renderHud(s) {
   hudKey = key;
   const n = b.sets.length, cur = (i) => (i === n - 1 ? ' cur' : '');
   const c = (t, cls = '') => `<span class="${cls}">${t}</span>`;
-  let h = c('') + c('') + b.sets.map((_, i) => c('SET ' + (i + 1), 'hd' + cur(i))).join('') + c('PUAN', 'hd');
+  let h = c('') + c('') + b.sets.map((_, i) => c('SET ' + (i + 1), 'hd' + cur(i))).join('') + c('PTS', 'hd');
   for (const t of [0, 1]) {
     h += c(b.server === t ? '●' : '', 'srv') + c(names[t], 'nm')
       + b.sets.map((st, i) => c(st[t], 'g' + cur(i) + (i < n - 1 && st[t] > st[1 - t] ? ' won' : ''))).join('')
@@ -288,10 +359,10 @@ function renderHud(s) {
 let paused = false, pauseSel = 0;
 const padPrev = {};
 function pauseItems() {
-  const items = [['Devam et', () => setPaused(false)]];
-  if (tut) items.push(['Dersi atla', () => { setPaused(false); tut.skip(); }]);
-  else if (!net) items.push(['Maçı yeniden başlat', () => { setPaused(false); if (replay.playing) endReplay(); $('start').click(); }]);
-  items.push(['Ana menüye dön', () => location.reload()]);
+  const items = [['Resume', () => setPaused(false)]];
+  if (tut) items.push(['Skip lesson', () => { setPaused(false); tut.skip(); }]);
+  else if (!net) items.push(['Restart match', () => { setPaused(false); if (replay.playing) endReplay(); $('start').click(); }]);
+  items.push(['Main menu', () => location.reload()]);
   return items;
 }
 function updatePauseSel() {
@@ -317,7 +388,7 @@ function drawPause() {
       updatePauseSel();
     };
   });
-  $('pzNote').textContent = net ? 'Online maç arka planda sürüyor.' : '';
+  $('pzNote').textContent = net ? 'Online match continues in the background.' : '';
 }
 $('pause').onclick = (e) => {
   if (e.target === $('pause')) setPaused(false);
@@ -394,7 +465,7 @@ function loop(now) {
   if (padButtonDown() || skipReplay) { if (replay.playing) endReplay(); skipReplay = false; }
   if (consumePressed('KeyC')) $('cam').textContent = '🎥 ' + rig.next();
   if (consumePressed('KeyR')) startReplay(false);
-  if (consumePressed('KeyM')) flash(toggleMute() ? '🔇 SES KAPALI' : '🔊 SES AÇIK', 1);
+  if (consumePressed('KeyM')) flash(toggleMute() ? '🔇 SOUND OFF' : '🔊 SOUND ON', 1);
   if (!tut && consumePressed('Enter') && (world?.match.winner != null || net?.winner != null)) { location.reload(); return; }
   let view;
   if (replay.playing) {
@@ -414,12 +485,16 @@ function loop(now) {
     while (acc >= STEP) { stepWorld(world, inputs(), STEP); tut?.onStep(); replay.record(snapshot(world)); handleEvents(world.events, scoreText(world.match), world.match.winner); acc -= STEP; }
     view = snapshot(world);
   }
+  updateSmashBanner();
   // landing marker: where the ball will bounce next (offline only; online uses ball shadow)
   if (world && !net && world.ball.live && !replay.playing) {
     const c = predict(world.ball, 2).contacts.find(c => c.kind === 'floor');
     marker.visible = !!c; if (c) marker.position.set(c.p[0], 0.01, c.p[2]);
   } else if (marker) marker.visible = false;
-  view.pl.forEach((s, id) => { avatars[id]?.update(dt, s, view.b); if (avatars[id]) fx.trail(id, avatars[id], !!s[4]); });
+  view.pl.forEach((s, id) => {
+    avatars[id]?.update(dt, s, view.b, id === humans[0] && approach > 0);
+    if (avatars[id]) fx.trail(id, avatars[id], !!s[4]);
+  });
   fx.update(dt);
   tut?.onFrame(dt);
   // serve: the ball sits in the server's hand, then eases onto the simulated drop

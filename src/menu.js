@@ -47,9 +47,9 @@ export function initMenu() {
         <div class="pl-tour-tag">MESUT PADEL TOUR</div>
       </div>
       <div class="pl-top-right">
-        <span class="pl-pad-hint" id="pl-pad-status">🎮 Kol kontrol ediliyor…</span>
-        <a class="pl-dev" href="kontroller.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;margin-right:14px">⌨ <b>Kontroller</b></a>
-        <span class="pl-dev">Geliştirici: <b>Mesut</b></span>
+        <span class="pl-pad-hint" id="pl-pad-status">🎮 Checking controller…</span>
+        <a class="pl-dev" href="kontroller.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;margin-right:14px">⌨ <b>Controls</b></a>
+        <span class="pl-dev">Developer: <b>Mesut</b></span>
       </div>
     </header>
 
@@ -59,7 +59,7 @@ export function initMenu() {
       <section class="pl-left-panel">
         <div class="pl-preview-stage">
           <canvas id="pl-preview-canvas" class="pl-preview-canvas"></canvas>
-          <div class="pl-preview-badge">CANLI ÖNİZLEME</div>
+          <div class="pl-preview-badge">LIVE PREVIEW</div>
           <div class="pl-preview-racket-pill" id="pl-preview-racket-pill">Starter Nova</div>
         </div>
         <div class="pl-char-info" id="pl-char-info">
@@ -70,17 +70,17 @@ export function initMenu() {
       <!-- Right Panel: Step Tabs + Step Body + Step Footer -->
       <section class="pl-right-panel">
         <nav class="pl-tabs" role="tablist">
-          <button type="button" class="pl-tab is-active" data-step="0"><span class="pl-tab-num">1</span>Mod</button>
-          <button type="button" class="pl-tab" data-step="1"><span class="pl-tab-num">2</span>Oyuncu</button>
-          <button type="button" class="pl-tab" data-step="2"><span class="pl-tab-num">3</span>Mekan</button>
-          <button type="button" class="pl-tab" data-step="3"><span class="pl-tab-num">4</span>Raket</button>
-          <button type="button" class="pl-tab" data-step="4"><span class="pl-tab-num">5</span>Maç</button>
+          <button type="button" class="pl-tab is-active" data-step="0"><span class="pl-tab-num">1</span>Mode</button>
+          <button type="button" class="pl-tab" data-step="1"><span class="pl-tab-num">2</span>Player</button>
+          <button type="button" class="pl-tab" data-step="2"><span class="pl-tab-num">3</span>Venue</button>
+          <button type="button" class="pl-tab" data-step="3"><span class="pl-tab-num">4</span>Racket</button>
+          <button type="button" class="pl-tab" data-step="4"><span class="pl-tab-num">5</span>Match</button>
         </nav>
 
         <div class="pl-step-body">
-          <!-- Step 0: Mod -->
+          <!-- Step 0: Mode -->
           <div class="pl-step" data-step="0">
-            <div class="pl-section-label">OYUN MODU</div>
+            <div class="pl-section-label">GAME MODE</div>
             <div class="pl-mode-grid">
               <button type="button" class="pl-card pl-mode-card is-selected" data-mode="4">
                 <svg class="mode-court-svg" viewBox="0 0 100 70">
@@ -92,8 +92,8 @@ export function initMenu() {
                   <circle cx="75" cy="50" r="5" fill="#e63946"/>
                 </svg>
                 <div>
-                  <div class="pl-card-title">ÇİFTLER (2v2)</div>
-                  <div class="pl-card-sub">4 oyuncu · Klasik padel tandem kurgusu</div>
+                  <div class="pl-card-title">DOUBLES (2v2)</div>
+                  <div class="pl-card-sub">4 players · Classic padel team setup</div>
                 </div>
                 <span class="pl-check">✓</span>
               </button>
@@ -105,102 +105,102 @@ export function initMenu() {
                   <circle cx="75" cy="35" r="6" fill="#e63946"/>
                 </svg>
                 <div>
-                  <div class="pl-card-title">TEKLER (1v1)</div>
-                  <div class="pl-card-sub">2 oyuncu · Çapraz kort reflexi</div>
+                  <div class="pl-card-title">SINGLES (1v1)</div>
+                  <div class="pl-card-sub">2 players · Fast cross-court duel</div>
                 </div>
                 <span class="pl-check">✓</span>
               </button>
             </div>
 
-            <div class="pl-section-label">İNSAN OYUNCU</div>
+            <div class="pl-section-label">HUMAN PLAYERS</div>
             <div class="pl-seg-row" id="pl-humans-seg">
-              <button type="button" class="pl-seg-btn" data-val="0">0 (İzle)</button>
+              <button type="button" class="pl-seg-btn" data-val="0">0 (Watch)</button>
               <button type="button" class="pl-seg-btn is-selected" data-val="1">1</button>
               <button type="button" class="pl-seg-btn" data-val="2">2</button>
               <button type="button" class="pl-seg-btn" data-val="3">3</button>
               <button type="button" class="pl-seg-btn" data-val="4">4</button>
             </div>
 
-            <div class="pl-section-label">KONTROL (1. OYUNCU)</div>
+            <div class="pl-section-label">CONTROLS (PLAYER 1)</div>
             <div class="pl-ctrl-grid">
               <button type="button" class="pl-card pl-ctrl-card is-selected" data-ctrl="auto">
                 <div class="pl-ctrl-icons">⌨️ <span class="pl-ctrl-plus">+</span> 🎮</div>
-                <div class="pl-card-title">Klavye + Xbox</div>
-                <div class="pl-card-sub">Otomatik algıla</div>
+                <div class="pl-card-title">Keyboard + Xbox</div>
+                <div class="pl-card-sub">Auto-detect</div>
                 <span class="pl-check">✓</span>
               </button>
               <button type="button" class="pl-card pl-ctrl-card" data-ctrl="kb">
                 <div class="pl-ctrl-icons">⌨️</div>
-                <div class="pl-card-title">Sadece Klavye</div>
+                <div class="pl-card-title">Keyboard Only</div>
                 <div class="pl-card-sub">WASD + Space</div>
                 <span class="pl-check">✓</span>
               </button>
               <button type="button" class="pl-card pl-ctrl-card" data-ctrl="pad">
                 <div class="pl-ctrl-icons">🎮</div>
-                <div class="pl-card-title">Sadece Xbox</div>
-                <div class="pl-card-sub">Sol çubuk + Tuşlar</div>
+                <div class="pl-card-title">Xbox Only</div>
+                <div class="pl-card-sub">Left stick + Buttons</div>
                 <span class="pl-check">✓</span>
               </button>
             </div>
-            <div class="pl-gamepad-live" id="pl-gp-live">🎮 Kol kontrol ediliyor…</div>
+            <div class="pl-gamepad-live" id="pl-gp-live">🎮 Checking controller…</div>
           </div>
 
-          <!-- Step 1: Oyuncu -->
+          <!-- Step 1: Player -->
           <div class="pl-step" data-step="1" hidden>
             <div class="pl-filter-row" id="pl-char-filter-row">
-              <button type="button" class="pl-chip is-active" data-filter="all">Tümü</button>
-              <button type="button" class="pl-chip" data-filter="f">Kadın</button>
-              <button type="button" class="pl-chip" data-filter="m">Erkek</button>
+              <button type="button" class="pl-chip is-active" data-filter="all">All</button>
+              <button type="button" class="pl-chip" data-filter="f">Women</button>
+              <button type="button" class="pl-chip" data-filter="m">Men</button>
             </div>
             <div class="pl-char-grid" id="pl-char-grid"></div>
           </div>
 
-          <!-- Step 2: Mekan -->
+          <!-- Step 2: Venue -->
           <div class="pl-step" data-step="2" hidden>
             <div class="pl-filter-row" id="pl-venue-filter-row">
-              <button type="button" class="pl-chip is-active" data-filter="all">Tümü</button>
-              <button type="button" class="pl-chip" data-filter="indoor">İç Mekan</button>
-              <button type="button" class="pl-chip" data-filter="outdoor">Dış Mekan</button>
-              <button type="button" class="pl-chip" data-filter="special">Plaj / Çatı</button>
+              <button type="button" class="pl-chip is-active" data-filter="all">All</button>
+              <button type="button" class="pl-chip" data-filter="indoor">Indoor</button>
+              <button type="button" class="pl-chip" data-filter="outdoor">Outdoor</button>
+              <button type="button" class="pl-chip" data-filter="special">Beach / Rooftop</button>
             </div>
             <div class="pl-venue-grid" id="pl-venue-grid"></div>
           </div>
 
-          <!-- Step 3: Raket -->
+          <!-- Step 3: Racket -->
           <div class="pl-step" data-step="3" hidden>
             <div class="pl-racket-grid" id="pl-racket-grid"></div>
           </div>
 
-          <!-- Step 4: Maç -->
+          <!-- Step 4: Match -->
           <div class="pl-step" data-step="4" hidden>
             <div class="pl-match-groups">
-              <div class="pl-section-label">SET</div>
+              <div class="pl-section-label">SETS</div>
               <div class="pl-seg-row" id="pl-sets-seg">
                 <button type="button" class="pl-seg-btn" data-val="1">1 SET</button>
-                <button type="button" class="pl-seg-btn is-selected" data-val="3">3 SET</button>
-                <button type="button" class="pl-seg-btn" data-val="3s">2 SET + SÜPER TIE-BREAK</button>
+                <button type="button" class="pl-seg-btn is-selected" data-val="3">3 SETS</button>
+                <button type="button" class="pl-seg-btn" data-val="3s">2 SETS + SUPER TIE-BREAK</button>
               </div>
 
-              <div class="pl-section-label">DEUCE / EŞİTLİK</div>
+              <div class="pl-section-label">DEUCE FORMAT</div>
               <div class="pl-seg-row" id="pl-golden-seg">
-                <button type="button" class="pl-seg-btn is-selected" data-val="1">ALTIN SAYI</button>
-                <button type="button" class="pl-seg-btn" data-val="0">AVANTAJ</button>
+                <button type="button" class="pl-seg-btn is-selected" data-val="1">GOLDEN POINT</button>
+                <button type="button" class="pl-seg-btn" data-val="0">ADVANTAGE</button>
                 <button type="button" class="pl-seg-btn" data-val="star">STAR POINT (FIP 2026)</button>
               </div>
 
-              <div class="pl-section-label">AI ZORLUĞU</div>
+              <div class="pl-section-label">AI DIFFICULTY</div>
               <div class="pl-seg-row" id="pl-ai-seg">
-                <button type="button" class="pl-seg-btn" data-val="rookie">ÇAYLAK ★</button>
-                <button type="button" class="pl-seg-btn is-selected" data-val="club">KULÜP ★★</button>
-                <button type="button" class="pl-seg-btn" data-val="pro">PROFESYONEL ★★★</button>
-                <button type="button" class="pl-seg-btn" data-val="legend">EFSANE ★★★★</button>
+                <button type="button" class="pl-seg-btn" data-val="rookie">ROOKIE ★</button>
+                <button type="button" class="pl-seg-btn is-selected" data-val="club">CLUB ★★</button>
+                <button type="button" class="pl-seg-btn" data-val="pro">PRO ★★★</button>
+                <button type="button" class="pl-seg-btn" data-val="legend">LEGEND ★★★★</button>
               </div>
 
-              <div class="pl-section-label">OYUN HIZI</div>
+              <div class="pl-section-label">GAME SPEED</div>
               <div class="pl-seg-row" id="pl-speed-seg">
-                <button type="button" class="pl-seg-btn" data-val="0.7">YAVAŞ (%70)</button>
-                <button type="button" class="pl-seg-btn is-selected" data-val="0.85">NORMAL (%85)</button>
-                <button type="button" class="pl-seg-btn" data-val="1">HIZLI (GERÇEK)</button>
+                <button type="button" class="pl-seg-btn" data-val="0.7">SLOW (70%)</button>
+                <button type="button" class="pl-seg-btn is-selected" data-val="0.85">NORMAL (85%)</button>
+                <button type="button" class="pl-seg-btn" data-val="1">FAST (REAL)</button>
               </div>
             </div>
           </div>
@@ -210,30 +210,30 @@ export function initMenu() {
         <div class="pl-step-footer">
           <div class="pl-online-wrap">
             <button type="button" class="pl-online-toggle" id="pl-online-toggle">
-              <span>🌐 Arkadaşlarla Online Oyna</span>
+              <span>🌐 Play Online with Friends</span>
               <span id="pl-online-arrow">▼</span>
             </button>
             <div class="pl-online-drawer" id="pl-online-drawer" hidden>
               <div class="pl-online-controls">
-                <input type="text" class="pl-room-input" id="pl-room-input" placeholder="ODA KODU" maxlength="6">
-                <button type="button" class="pl-online-btn" id="pl-online-btn">ODAYA KATIL / KUR</button>
+                <input type="text" class="pl-room-input" id="pl-room-input" placeholder="ROOM CODE" maxlength="6">
+                <button type="button" class="pl-online-btn" id="pl-online-btn">JOIN / CREATE ROOM</button>
               </div>
               <div class="pl-lobby-status" id="pl-lobby-status"></div>
             </div>
           </div>
-          <button type="button" class="pl-next-btn" id="pl-next-btn">İLERİ →</button>
+          <button type="button" class="pl-next-btn" id="pl-next-btn">NEXT →</button>
         </div>
       </section>
     </main>
 
-    <!-- Bottom Bar: Summary + MAÇA BAŞLA -->
+    <!-- Bottom Bar: Summary + START MATCH -->
     <footer class="pl-bottom-bar">
       <div class="pl-summary" id="pl-summary">
-        Çiftler · Lucia Varela · Madrid Indoor Arena · Starter Nova · 3 set
+        Doubles · Lucia Varela · Madrid Indoor Arena · Starter Nova · 3 sets
       </div>
       <div class="pl-start-slot">
-        <button type="button" class="pl-tutorial-btn" id="pl-tutorial-btn">🎓 EĞİTİM</button>
-        <button type="button" class="pl-start-btn" id="pl-start-btn">MAÇA BAŞLA</button>
+        <button type="button" class="pl-tutorial-btn" id="pl-tutorial-btn">🎓 TRAINING</button>
+        <button type="button" class="pl-start-btn" id="pl-start-btn">START MATCH</button>
       </div>
     </footer>
   `;
@@ -341,14 +341,14 @@ export function initMenu() {
     const info = shell.querySelector('#pl-char-info');
     if (!info) return;
     const flag = countryFlag(ch.countryCode);
-    const gText = ch.gender === 'f' ? 'KADIN' : 'ERKEK';
-    const hText = ch.hand === 'left' ? 'SOLAK' : 'SAĞLAK';
+    const gText = ch.gender === 'f' ? 'FEMALE' : 'MALE';
+    const hText = ch.hand === 'left' ? 'LEFT-HANDED' : 'RIGHT-HANDED';
     const s = ch.stats || {};
     info.innerHTML = `
       <div class="pl-char-header">
         <div class="pl-char-title-wrap">
           <span class="pl-char-flag">${flag}</span>
-          <h2 class="pl-char-name" lang="tr">${ch.name}</h2>
+          <h2 class="pl-char-name" lang="en">${ch.name}</h2>
         </div>
         <div class="pl-char-tags">
           <span class="pl-meta-pill">${gText}</span>
@@ -356,11 +356,11 @@ export function initMenu() {
         </div>
       </div>
       <div class="pl-stats-list">
-        ${statRow('HIZ', s.speed || 6)}
-        ${statRow('GÜÇ', s.power || 6)}
-        ${statRow('KONTROL', s.control || 6)}
-        ${statRow('VOLE', s.volley || 6)}
-        ${statRow('SMAÇ', s.smash || 6)}
+        ${statRow('SPEED', s.speed || 6)}
+        ${statRow('POWER', s.power || 6)}
+        ${statRow('CONTROL', s.control || 6)}
+        ${statRow('VOLLEY', s.volley || 6)}
+        ${statRow('SMASH', s.smash || 6)}
       </div>
     `;
   }
@@ -377,12 +377,12 @@ export function initMenu() {
   }
 
   function updateSummary() {
-    const m = $('mode')?.value === '2' ? 'Tekler' : 'Çiftler';
-    const ch = characters[selectedCharIdx]?.name || 'Oyuncu';
-    const vn = venues[selectedVenueIdx]?.name || 'Mekan';
-    const rk = rackets[selectedRacketIdx]?.name || 'Raket';
+    const m = $('mode')?.value === '2' ? 'Singles' : 'Doubles';
+    const ch = characters[selectedCharIdx]?.name || 'Player';
+    const vn = venues[selectedVenueIdx]?.name || 'Venue';
+    const rk = rackets[selectedRacketIdx]?.name || 'Racket';
     const stVal = $('sets')?.value;
-    const st = stVal === '1' ? '1 set' : stVal === '3s' ? '2 set + STB' : '3 set';
+    const st = stVal === '1' ? '1 set' : stVal === '3s' ? '2 sets + STB' : '3 sets';
     const sumEl = shell.querySelector('#pl-summary');
     if (sumEl) sumEl.textContent = `${m} · ${ch} · ${vn} · ${rk} · ${st}`;
   }
@@ -400,12 +400,12 @@ export function initMenu() {
       card.dataset.idx = idx;
       card.innerHTML = `
         <div class="pl-thumb-box pl-portrait-box shimmer">
-          <span class="pl-gender-badge">${ch.gender === 'f' ? 'K' : 'E'}</span>
+          <span class="pl-gender-badge">${ch.gender === 'f' ? 'F' : 'M'}</span>
           <img class="pl-thumb-img" alt="${ch.name}" />
         </div>
         <div class="pl-char-card-meta">
           <span class="pl-char-card-flag">${countryFlag(ch.countryCode)}</span>
-          <div class="pl-char-card-name" lang="tr">${ch.name}</div>
+          <div class="pl-char-card-name" lang="en">${ch.name}</div>
         </div>
         <span class="pl-check">✓</span>
       `;
@@ -443,8 +443,8 @@ export function initMenu() {
       card.type = 'button';
       card.className = `pl-card pl-venue-card ${idx === selectedVenueIdx ? 'is-selected' : ''}`;
       card.dataset.idx = idx;
-      const tod = v.timeOfDay === 'sunset' ? 'Gün batımı' : v.timeOfDay === 'night' ? 'Gece' : 'Gündüz';
-      const typeTr = v.type === 'indoor' ? 'İç' : v.type === 'beach' ? 'Plaj' : v.type === 'rooftop' ? 'Çatı' : 'Dış';
+      const tod = v.timeOfDay === 'sunset' ? 'Sunset' : v.timeOfDay === 'night' ? 'Night' : 'Day';
+      const typeEn = v.type === 'indoor' ? 'Indoor' : v.type === 'beach' ? 'Beach' : v.type === 'rooftop' ? 'Rooftop' : 'Outdoor';
       const surfColor = v.surface.includes('blue') ? '#2f6fb5' : v.surface.includes('green') ? '#2e7d32' : '#c85a17';
       card.innerHTML = `
         <div class="pl-thumb-box pl-venue-box shimmer">
@@ -452,7 +452,7 @@ export function initMenu() {
         </div>
         <div class="pl-venue-body">
           <div class="pl-card-title" lang="en">${v.name}</div>
-          <div class="pl-venue-loc">${countryFlag(v.countryCode)} ${v.city} · ${typeTr}</div>
+          <div class="pl-venue-loc">${countryFlag(v.countryCode)} ${v.city} · ${typeEn}</div>
           <div class="pl-venue-chips">
             <span class="pl-mini-chip"><i class="pl-surf-dot" style="background:${surfColor}"></i>${v.surfaceSpeed}x</span>
             <span class="pl-mini-chip">${tod}</span>
@@ -489,7 +489,7 @@ export function initMenu() {
       card.type = 'button';
       card.className = `pl-card pl-racket-card ${idx === selectedRacketIdx ? 'is-selected' : ''}`;
       card.dataset.idx = idx;
-      const shName = rk.shape === 'round' ? 'Yuvarlak' : rk.shape === 'teardrop' ? 'Gözyaşı' : 'Elmas';
+      const shName = rk.shape === 'round' ? 'Round' : rk.shape === 'teardrop' ? 'Teardrop' : 'Diamond';
       card.innerHTML = `
         <div class="pl-racket-top">
           <div class="pl-thumb-box pl-racket-box shimmer">
@@ -504,10 +504,10 @@ export function initMenu() {
           </div>
         </div>
         <div class="pl-racket-stats">
-          <div class="pl-rstat"><span>Güç</span><div class="pl-bar"><i style="width:${rk.stats.power * 10}%"></i></div><b>${rk.stats.power}</b></div>
-          <div class="pl-rstat"><span>Kontrol</span><div class="pl-bar"><i style="width:${rk.stats.control * 10}%"></i></div><b>${rk.stats.control}</b></div>
+          <div class="pl-rstat"><span>Power</span><div class="pl-bar"><i style="width:${rk.stats.power * 10}%"></i></div><b>${rk.stats.power}</b></div>
+          <div class="pl-rstat"><span>Control</span><div class="pl-bar"><i style="width:${rk.stats.control * 10}%"></i></div><b>${rk.stats.control}</b></div>
           <div class="pl-rstat"><span>Spin</span><div class="pl-bar"><i style="width:${rk.stats.spin * 10}%"></i></div><b>${rk.stats.spin}</b></div>
-          <div class="pl-rstat"><span>Tatlı N.</span><div class="pl-bar"><i style="width:${rk.stats.sweetSpot * 10}%"></i></div><b>${rk.stats.sweetSpot}</b></div>
+          <div class="pl-rstat"><span>Sweet Spot</span><div class="pl-bar"><i style="width:${rk.stats.sweetSpot * 10}%"></i></div><b>${rk.stats.sweetSpot}</b></div>
         </div>
         <span class="pl-check">✓</span>
       `;
@@ -539,7 +539,7 @@ export function initMenu() {
       p.hidden = i !== curStep;
     });
     const nextBtn = shell.querySelector('#pl-next-btn');
-    if (nextBtn) nextBtn.textContent = curStep === 4 ? 'BAŞA DÖN ↺' : 'İLERİ →';
+    if (nextBtn) nextBtn.textContent = curStep === 4 ? 'FIRST TAB ↺' : 'NEXT →';
   }
 
   shell.querySelectorAll('.pl-tab').forEach(btn => {
@@ -672,8 +672,8 @@ export function initMenu() {
     if (menuEl.hidden) return;
     const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
     const statusText = gps.length > 0
-      ? `🎮 ${gps.length} kol bağlı: ${gps[0].id.slice(0, 24)}…`
-      : '🎮 Kol algılanmadı';
+      ? `🎮 ${gps.length} controller(s): ${gps[0].id.slice(0, 24)}…`
+      : '🎮 No controller detected';
 
     const padHint = shell.querySelector('#pl-pad-status');
     const liveHint = shell.querySelector('#pl-gp-live');

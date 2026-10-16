@@ -3,8 +3,8 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError 
   const ws = new WebSocket(url);
   const net = { seat: null, lobby: null, snaps: [], events: [], score: null, winner: null, ws };
   ws.onopen = () => ws.send(JSON.stringify({ type: 'join', code, cfg, char, stats, racket }));
-  ws.onerror = () => onError?.('Sunucuya bağlanılamadı: ' + url);
-  ws.onclose = () => onError?.('Bağlantı kapandı');
+  ws.onerror = () => onError?.('Could not connect to server: ' + url);
+  ws.onclose = () => onError?.('Connection closed');
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
     if (m.type === 'seat') net.seat = m.seat;

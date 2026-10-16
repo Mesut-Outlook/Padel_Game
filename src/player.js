@@ -355,14 +355,20 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
   const actions = {};
   for (const k in anim) actions[k] = mixer.clipAction(anim[k]);
   actions.idle.play();
+  mixer.update(0);
+  const idleQuats = {};
+  for (const b of ['spine_02', 'upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r']) {
+    if (bones[b]) idleQuats[b] = bones[b].quaternion.clone();
+  }
   let cur = 'idle';
 
   // racket (R) / ball (B) arm bones; poses are authored right-handed and mirrored for lefties
   const lefty = ch.hand === 'left', R = lefty ? 'l' : 'r', B = lefty ? 'r' : 'l', m = lefty ? -1 : 1;
   let tossT = 0, prepW = 0, prepKey = 'forehand', lastBallD = Infinity, swingKey = null;
+  let prevBallX = NaN, prevBallY = NaN, prevBallZ = NaN, ballStepDt = 0, wantPrep = 0, localSwingT = 0, lastRawSwingT = -1;
   // which stroke the ball calls for: overhead when high, otherwise forehand on the racket-hand side
   const strokeFor = (s, ball) => {
-    if (ball[1] > 1.8) return 'overhead';
+    if (ball[1] > 1.65) return 'overhead';
     const right = -Math.cos(s[2]) * (ball[0] - s[0]) + Math.sin(s[2]) * (ball[2] - s[1]);  // + = player's right
     return right * m > -0.1 ? 'forehand' : 'backhand';
   };
@@ -375,41 +381,77 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
     ballHand: (v) => bones['hand_' + B].getWorldPosition(v),
     racketEdge: (tip, throat) => { racket.localToWorld(tip.set(0, 0.46, 0)); racket.localToWorld(throat.set(0, 0.2, 0)); },
     say(text) { bubble.draw(text); bubble.sprite.visible = true; bubbleT = 1.6; },
-    update(dt, s, ball) { // s = [x, z, facing, anim, swingAnim, swingT, backhand]; ball = [x, y, z] for stroke prep
+    update(dt, s, ball, overheadCue = false) { // s = [x, z, facing, anim, swingAnim, swingT, backhand]; ball = [x, y, z] for stroke prep
       if (bubbleT > 0 && (bubbleT -= dt) <= 0) bubble.sprite.visible = false;
       holder.position.set(s[0], 0, s[1]);
       holder.rotation.y = s[2];
       const a = actions[s[3]] ? s[3] : 'idle';
       if (a !== cur) { actions[cur].fadeOut(0.18); actions[a].reset().fadeIn(0.18).play(); cur = a; }
-      const sw = s[4], t = s[5];
+      const sw = s[4];
+      if (sw) {
+        if (lastRawSwingT < 0 || s[5] < lastRawSwingT - 0.05) localSwingT = s[5];
+        else localSwingT = Math.min(0.55, Math.max(localSwingT + dt, s[5]));
+        lastRawSwingT = s[5];
+      } else {
+        lastRawSwingT = -1;
+        localSwingT = 0;
+      }
+      const t = sw ? localSwingT : 0;
       mixer.update(dt);
       root.position.y = 0;
       root.position.y = restFoot - lowestFoot();
-      // ready grip: with the handle through the fist, the idle clip would rest the racket against the neck; turn the
-      // wrist so the head stands up and forward, clear of the body (tuned visually, mirrored for left-handers)
-      add(bones['hand_' + R], 0, 0.9 * m, 0); add(bones['lowerarm_' + R], 0, 0, 0.3 * m);
       tossT = s[3] === 'serveToss' ? tossT + dt : 0;
       // stroke preparation: blend into the right stance as the ball comes within ~3 m
+      // Only recompute closing speed on frames where the physics step actually moved the ball (prevents slow-mo jitter)
       let prep = null;
       if (ball && !sw) {
-        // timed like a real stroke: the backswing starts ~0.75 s before contact and is set by ~0.3 s
-        const d = Math.hypot(ball[0] - s[0], ball[2] - s[1]), closing = (lastBallD - d) / Math.max(dt, 1e-3);
-        const coming = closing > 0.5 && closing < 60 && ball[1] > 0.1, tt = (d - 0.8) / closing;
-        lastBallD = d;
-        if (coming && tt < 0.9) prepKey = strokeFor(s, ball);
-        const want = coming ? Math.min(1, Math.max(0, (0.75 - tt) / 0.45)) : 0;
-        prepW += (want - prepW) * (1 - Math.exp(-dt / 0.08));
+        ballStepDt += dt;
+        const moved = Math.abs(ball[0] - prevBallX) + Math.abs(ball[1] - prevBallY) + Math.abs(ball[2] - prevBallZ) > 1e-5;
+        const d = Math.hypot(ball[0] - s[0], ball[2] - s[1]);
+        if (overheadCue) {
+          prepKey = 'overhead';
+          wantPrep = 1;
+        } else if (moved || isNaN(prevBallX)) {
+          const d3 = Math.hypot(d, Math.max(0, ball[1] - 1.3));
+          const closing = (lastBallD - d3) / Math.max(ballStepDt, 1e-3);
+          lastBallD = d3; ballStepDt = 0;
+          prevBallX = ball[0]; prevBallY = ball[1]; prevBallZ = ball[2];
+          if (d < 2.6 && ball[1] > 1.55) {
+            prepKey = 'overhead';
+            wantPrep = 1;
+          } else {
+            const coming = closing > 0.5 && closing < 60 && ball[1] > 0.1, tt = (d3 - 0.8) / Math.max(closing, 0.5);
+            if (coming && tt < 0.95) {
+              if (!(prepKey === 'overhead' && prepW > 0.25 && ball[1] > 1.15)) prepKey = strokeFor(s, ball);
+            }
+            wantPrep = coming ? Math.min(1, Math.max(0, (0.8 - tt) / 0.45))
+              : (prepKey === 'overhead' && d < 2.4 && ball[1] > 1.2 ? 0.95 : 0);
+          }
+        }
+        prepW += (wantPrep - prepW) * (1 - Math.exp(-Math.max(dt, 1 / 120) / 0.09));
         if (prepW > 0.02) {
           prep = lerpPose(P({}), PREP[prepKey], prepW);
-          if (ball[1] < 0.6) prep.spine[0] += 0.4 * prepW;  // get down to low balls
+          if (ball[1] < 0.6 && prepKey !== 'overhead') prep.spine[0] += 0.4 * prepW;  // get down to low balls
         }
+      } else if (!ball) {
+        wantPrep = 0; prepW = 0;
       }
       if (!sw) swingKey = null;
       else if (sw !== 'serve' && !swingKey) {
         const side = prepKey === 'overhead' ? 'forehand' : prepKey;
         swingKey = sw === 'smash' || sw === 'overhead' ? sw : sw === 'volley' ? (side === 'backhand' ? 'volleyB' : 'volleyF') : side;
-        prepW = 0;
+        prepW = 0; wantPrep = 0;
       }
+      // Stabilize upper body against run/walk arm-pumping while cocking the racket or swinging
+      const steady = sw ? 0.92 : prepW * 0.88;
+      if (steady > 0.01 && cur !== 'idle') {
+        for (const k of ['spine_02', 'upperarm_' + R, 'lowerarm_' + R, 'hand_' + R, 'upperarm_' + B, 'lowerarm_' + B]) {
+          if (bones[k] && idleQuats[k]) bones[k].quaternion.slerp(idleQuats[k], steady);
+        }
+      }
+      // ready grip: with the handle through the fist, the idle clip would rest the racket against the neck; turn the
+      // wrist so the head stands up and forward, clear of the body (tuned visually, mirrored for left-handers)
+      add(bones['hand_' + R], 0, 0.9 * m, 0); add(bones['lowerarm_' + R], 0, 0, 0.3 * m);
       const pose = sw === 'serve' ? track(SERVE_SWING, t)
         : sw ? track(SWINGS[swingKey], t)
         : s[3] === 'serveToss' ? lerpPose(SERVE_READY, SERVE_BACK, Math.min(1, tossT / 0.45))
@@ -531,14 +573,24 @@ const SERVE_SWING = [  // t = seconds since contact
 const PREP = {
   forehand: P({ yaw: -0.7, rUp: [-0.9, 0, -0.5], rLow: [0, 0, -0.4], bUp: [0.6, 0, 0.5] }),   // racket back, shoulder turned
   backhand: P({ yaw: 0.9, rUp: [0.5, 0, 0.9], rLow: [0, 0, -0.6], bUp: [0.5, 0, -0.2] }),     // racket across the body
-  overhead: P({ yaw: -1.0, rUp: [0, 0.6, -1.6], rLow: [0, 0, -1.8], bUp: [0.3, 0, 1.6] }),    // side-on, free hand points at the ball
+  overhead: P({ yaw: -0.85, spine: [-0.12, 0, 0], rUp: [-0.35, 0.45, -1.45], rLow: [0, 0, -1.15], rHand: [-0.2, 0, 0], bUp: [0.45, 0, 1.35], bLow: [0, 0, 0.25] }), // trophy stance
 };
 const half = (k) => lerpPose(P({}), PREP[k], 0.5);
 const SWINGS = {
   forehand: [[0, PREP.forehand], [0.06, P({ spine: [0.15, 0, 0], rUp: [0.3, 0, -0.6] })], [0.3, P({ yaw: 0.5, rUp: [1.2, 0, 0.4], rLow: [0, 0, -0.9] })], [0.55, P({})]],
   backhand: [[0, PREP.backhand], [0.06, P({ yaw: 0.25, spine: [0.15, 0, 0], rUp: [0.45, 0, -0.3] })], [0.3, P({ yaw: -0.3, rUp: [0.2, 0, -1.4], rLow: [0, 0, -0.4] })], [0.55, P({})]],
-  overhead: [[0, PREP.overhead], [0.07, P({ yaw: -0.3, rUp: [0.5, 0, -2.5] })], [0.3, P({ yaw: 0.3, spine: [0.35, 0, 0], rUp: [1.1, 0, 0.2] })], [0.55, P({})]],
-  smash: [[0, PREP.overhead], [0.06, P({ yaw: -0.2, rUp: [0.6, 0, -2.6] })], [0.28, P({ yaw: 0.6, spine: [0.55, 0, 0], rUp: [1.3, 0, 0.4] })], [0.55, P({})]],
+  overhead: [
+    [0, PREP.overhead],
+    [0.08, P({ yaw: -0.15, spine: [0.05, 0, 0], rUp: [0.35, 0.15, -1.8], rLow: [0, 0, -0.2], rHand: [0.35, 0, 0], bUp: [0.2, 0, 0.5] })],
+    [0.28, P({ yaw: 0.4, spine: [0.28, 0, 0], rUp: [0.95, -0.15, -0.55], rLow: [0, 0, -0.65], rHand: [0.5, 0, 0], bUp: [-0.15, 0, 0.2] })],
+    [0.55, P({})],
+  ],
+  smash: [
+    [0, PREP.overhead],
+    [0.07, P({ yaw: -0.1, spine: [0.08, 0, 0], rUp: [0.45, 0.15, -1.95], rLow: [0, 0, -0.15], rHand: [0.45, 0, 0], bUp: [0.15, 0, 0.45] })],
+    [0.26, P({ yaw: 0.55, spine: [0.42, 0, 0], rUp: [1.15, -0.2, -0.5], rLow: [0, 0, -0.7], rHand: [0.6, 0, 0], bUp: [-0.25, 0, 0.2] })],
+    [0.55, P({})],
+  ],
   volleyF: [[0, half('forehand')], [0.05, P({ spine: [0.1, 0, 0], rUp: [0.5, 0, -0.5] })], [0.25, P({ rUp: [0.7, 0, -0.3] })], [0.45, P({})]],
   volleyB: [[0, half('backhand')], [0.05, P({ yaw: 0.2, spine: [0.1, 0, 0], rUp: [0.5, 0, 0.1] })], [0.25, P({ rUp: [0.4, 0, -0.6] })], [0.45, P({})]],
 };

@@ -63,7 +63,7 @@ wss.on('connection', (ws) => {
       room = rooms.get(code) || makeRoom(code, { players: m.cfg?.players, sets: m.cfg?.sets, goldenPoint: m.cfg?.goldenPoint, starPoint: m.cfg?.starPoint, superTiebreak: m.cfg?.superTiebreak, ai: m.cfg?.ai, venue: m.cfg?.venue | 0 });
       const taken = new Set(room.clients.values());
       const seat = room.seats.find(s => !taken.has(s));
-      if (seat == null || room.started && !m.spectate) { ws.send(JSON.stringify({ type: 'error', msg: 'Oda dolu veya maç başladı' })); return; }
+      if (seat == null || room.started && !m.spectate) { ws.send(JSON.stringify({ type: 'error', msg: 'Room is full or match already started' })); return; }
       room.clients.set(ws, seat);
       room.chars[seat] = m.char | 0;
       const pl = room.world.players[seat];

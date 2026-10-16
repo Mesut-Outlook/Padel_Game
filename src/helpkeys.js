@@ -2,13 +2,13 @@
 // H or a click toggles it, the corner arrows or Shift+H move it; both choices are remembered. Pressed keys light up.
 // Mirrors the bindings in input.js / main.js — keep in sync with public/kontroller.html.
 const K = {
-  KeyW: ['W', 'move', 'ileri'], KeyA: ['A', 'move', 'sol'], KeyS: ['S', 'move', 'geri'], KeyD: ['D', 'move', 'sağ'],
+  KeyW: ['W', 'move', 'fwd'], KeyA: ['A', 'move', 'left'], KeyS: ['S', 'move', 'back'], KeyD: ['D', 'move', 'right'],
   ArrowUp: ['↑', 'move'], ArrowDown: ['↓', 'move'], ArrowLeft: ['←', 'move'], ArrowRight: ['→', 'move'],
-  Space: ['Space', 'hit', 'vuruş · servis'], KeyJ: ['J', 'hit', 'vuruş'],
-  KeyK: ['K', 'shot', 'lob'], KeyL: ['L', 'shot', 'smaç'], KeyU: ['U', 'shot', 'chiq.'], KeyI: ['I', 'shot', 'víbora'],
+  Space: ['Space', 'hit', 'shot · serve'], KeyJ: ['J', 'hit', 'shot'],
+  KeyK: ['K', 'shot', 'lob'], KeyL: ['L', 'shot', 'smash'], KeyU: ['U', 'shot', 'chiq.'], KeyI: ['I', 'shot', 'víbora'],
   KeyO: ['O', 'shot', 'contra'], KeyF: ['F', 'shot', 'slice'],
-  KeyC: ['C', 'sys', 'kamera'], KeyR: ['R', 'sys', 'tekrar'], KeyM: ['M', 'sys', 'ses'], KeyH: ['H', 'sys', 'gizle'],
-  Escape: ['Esc', 'sys', 'geç'], Enter: ['Enter', 'sys', 'menü'],
+  KeyC: ['C', 'sys', 'cam'], KeyR: ['R', 'sys', 'replay'], KeyM: ['M', 'sys', 'sound'], KeyH: ['H', 'sys', 'hide'],
+  Escape: ['Esc', 'sys', 'pause'], Enter: ['Enter', 'sys', 'menu'],
 };
 const ROWS = [
   ['Escape'],
@@ -18,7 +18,7 @@ const ROWS = [
   ['Space'],
 ];
 const STORE = 'padel.helpHidden', POS_STORE = 'padel.helpPos';
-const CORNERS = { bl: ['↙', 'sol alt'], tl: ['↖', 'sol üst'], tr: ['↗', 'sağ üst'], br: ['↘', 'sağ alt'] };
+const CORNERS = { bl: ['↙', 'bottom-left'], tl: ['↖', 'top-left'], tr: ['↗', 'top-right'], br: ['↘', 'bottom-right'] };
 
 export function mountKeyHelp(el) {
   const caps = {};
@@ -28,14 +28,14 @@ export function mountKeyHelp(el) {
     return caps[code];
   };
   el.innerHTML = `
-    <div class="hk-pill" title="Tuşları göster (H)">⌨ Tuşlar <b>H</b></div>
+    <div class="hk-pill" title="Show controls (H)">⌨ Keys <b>H</b></div>
     <div class="hk-board">
-      <div class="hk-head"><span>Tuşlar</span><span class="hk-pos">${Object.entries(CORNERS).map(([p, [a, t]]) => `<i data-pos="${p}" title="${t} (Shift+H)">${a}</i>`).join('')}<span class="hk-x" title="Gizle (H)">✕</span></span></div>
+      <div class="hk-head"><span>Controls</span><span class="hk-pos">${Object.entries(CORNERS).map(([p, [a, t]]) => `<i data-pos="${p}" title="${t} (Shift+H)">${a}</i>`).join('')}<span class="hk-x" title="Hide (H)">✕</span></span></div>
       <div class="hk-main">
         <div class="hk-rows">${ROWS.map((r, i) => `<div class="hk-row" style="padding-left:${[0, 0, 8, 18, 56][i]}px">${r.map(c => cap(c, c === 'Space' ? 'hk-space' : c === 'Enter' || c === 'Escape' ? 'hk-wide' : '')).join('')}</div>`).join('')}</div>
         <div class="hk-arrows">${cap('ArrowUp', 'up')}${cap('ArrowLeft', 'lf')}${cap('ArrowDown', 'dn')}${cap('ArrowRight', 'rt')}</div>
       </div>
-      <div class="hk-foot">Vururken <b>A</b>/<b>D</b> = yön · Xbox: A vuruş · B lob · X chiq. · Y smaç · RB víbora · LB slice · RT contra · <a href="kontroller.html" target="_blank" rel="noopener">tümü →</a></div>
+      <div class="hk-foot">Hold <b>A</b>/<b>D</b> while hitting = aim · Xbox: A shot · B lob · X chiq. · Y smash · RB víbora · LB slice · RT contra · <a href="kontroller.html" target="_blank" rel="noopener">all →</a></div>
     </div>`;
   let hidden = false, pos = 'bl';
   try { hidden = localStorage.getItem(STORE) === '1'; pos = localStorage.getItem(POS_STORE) || 'bl'; } catch { /* storage blocked: defaults */ }

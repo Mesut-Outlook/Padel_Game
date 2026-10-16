@@ -153,8 +153,8 @@ test('score board: per-team points, advantage, golden point label and server', (
   assert.deepEqual(b.pts, ['30', '15']); assert.equal(b.label, ''); assert.equal(b.server, 0); assert.deepEqual(b.sets, [[0, 0]]);
   point(m, 1); point(m, 0); point(m, 1);  // 40-40 with golden point
   b = scoreBoard(m);
-  assert.deepEqual(b.pts, ['40', '40']); assert.equal(b.label, 'ALTIN SAYI');
+  assert.deepEqual(b.pts, ['40', '40']); assert.equal(b.label, 'GOLDEN POINT');
   const a = newMatch({ goldenPoint: false });
   for (const t of [0, 0, 0, 1, 1, 1, 0]) point(a, t);  // deuce then advantage team 0
-  assert.deepEqual(scoreBoard(a).pts, ['AD', '40']); assert.equal(scoreBoard(a).label, 'AVANTAJ');
+  assert.deepEqual(scoreBoard(a).pts, ['AD', '40']); assert.equal(scoreBoard(a).label, 'ADVANTAGE');
 });

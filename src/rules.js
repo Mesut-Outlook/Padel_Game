@@ -156,10 +156,10 @@ export function scoreBoard(m) {
   const p = m.points, deuce = !m.tiebreak && p[0] >= 3 && p[1] >= 3;
   let pts, label = '';
   if (m.tiebreak) { pts = [String(p[0]), String(p[1])]; label = 'TIE-BREAK'; }
-  else if (deuce && p[0] !== p[1]) { pts = p[0] > p[1] ? ['AD', '40'] : ['40', 'AD']; label = 'AVANTAJ'; }
+  else if (deuce && p[0] !== p[1]) { pts = p[0] > p[1] ? ['AD', '40'] : ['40', 'AD']; label = 'ADVANTAGE'; }
   else {
     pts = [PTS[Math.min(p[0], 3)], PTS[Math.min(p[1], 3)]];
-    if (deuce) label = m.opts.starPoint ? (m.deuces >= 3 ? 'STAR POINT' : 'DEUCE') : m.opts.goldenPoint ? 'ALTIN SAYI' : 'DEUCE';
+    if (deuce) label = m.opts.starPoint ? (m.deuces >= 3 ? 'STAR POINT' : 'DEUCE') : m.opts.goldenPoint ? 'GOLDEN POINT' : 'DEUCE';
   }
   return { sets: m.sets.map(s => [...s]), pts, server: teamOf(serverId(m)), label, setNo: m.sets.length };
 }

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="tr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -700,6 +700,17 @@
   #shotHint kbd { background: #0b1520; color: #fff; border-radius: 5px; padding: 1px 6px; font: 700 12px system-ui; margin-left: 4px; }
   @keyframes shPulse { to { transform: scale(1.08); } }
   @media (prefers-reduced-motion: reduce) { #shotHint .sh.best { animation: none; } }
+  /* smash slow-mo banner & vignette */
+  #smashVignette { position: fixed; inset: 0; pointer-events: none; z-index: 2; box-shadow: inset 0 0 90px rgba(216, 245, 58, 0.32), inset 0 0 28px rgba(255, 165, 2, 0.25); transition: opacity .22s ease; }
+  #smashBanner { position: fixed; top: 88px; left: 50%; transform: translateX(-50%) skewX(-6deg); pointer-events: none; z-index: 4; text-align: center; padding: 8px 24px 10px; background: linear-gradient(135deg, rgba(10,18,28,.92) 0%, rgba(22,38,56,.88) 100%); border: 1px solid rgba(216,245,58,.55); border-left: 5px solid var(--acc); border-right: 5px solid var(--acc); border-radius: 12px; box-shadow: 0 10px 32px rgba(0,0,0,.55), 0 0 24px rgba(216,245,58,.28); backdrop-filter: blur(6px); animation: sbPop .24s cubic-bezier(.18,1.3,.4,1); }
+  #smashBanner.hit { border-color: #ff9f43; border-left-color: #ff9f43; border-right-color: #ff9f43; box-shadow: 0 10px 36px rgba(0,0,0,.65), 0 0 32px rgba(255,159,67,.45); }
+  #smashBanner .sb-kicker { font: 800 11px system-ui; letter-spacing: 2.5px; color: var(--acc); text-transform: uppercase; }
+  #smashBanner.hit .sb-kicker { color: #ffbe76; }
+  #smashBanner .sb-title { font: 900 32px/1.05 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 2px; color: #fff; text-transform: uppercase; text-shadow: 0 2px 14px rgba(216,245,58,.45); margin: 2px 0; }
+  #smashBanner.hit .sb-title { color: #d8f53a; text-shadow: 0 2px 18px rgba(255,159,67,.65); }
+  #smashBanner .sb-sub { font: 700 13px system-ui; letter-spacing: 1px; color: #cfd8e3; }
+  #smashBanner .sb-sub b { color: #0b1520; background: var(--acc); padding: 1px 7px; border-radius: 5px; margin: 0 2px; font-weight: 800; }
+  @keyframes sbPop { from { opacity: 0; transform: translateX(-50%) skewX(-6deg) scale(.82); } to { opacity: 1; transform: translateX(-50%) skewX(-6deg) scale(1); } }
   /* pause menu (main.js) */
   #pause { position: fixed; inset: 0; background: rgba(5,10,16,.55); backdrop-filter: blur(3px); display: grid; place-items: center; z-index: 6; }
   #pause .pz-card { background: rgba(10,18,28,.95); border: 1px solid #ffffff1a; border-top: 4px solid var(--acc); border-radius: 14px; padding: 22px 26px; width: min(340px, 90vw); text-align: center; }
@@ -713,47 +724,49 @@
 <div id="menu" class="panel">
   <div class="card">
     <h1>PADEL <b>LEGENDS</b></h1>
-    <div class="sub">Hızlı maç · 1–4 oyuncu · AI veya arkadaşlarınla</div>
+    <div class="sub">Quick match · 1–4 players · vs AI or friends</div>
     <div class="row">
-      <div><label>Mod</label><select id="mode"><option value="4">Çiftler (2v2)</option><option value="2">Tekler (1v1)</option></select></div>
-      <div><label>İnsan oyuncu</label><select id="humans"><option value="0">0 (izle)</option><option selected>1</option><option>2</option><option>3</option><option>4</option></select></div>
+      <div><label>Mode</label><select id="mode"><option value="4">Doubles (2v2)</option><option value="2">Singles (1v1)</option></select></div>
+      <div><label>Human players</label><select id="humans"><option value="0">0 (watch)</option><option selected>1</option><option>2</option><option>3</option><option>4</option></select></div>
     </div>
     <div class="row">
-      <div><label>Karakterin</label><select id="char"></select></div>
-      <div><label>AI seviyesi</label><select id="ai"><option value="rookie">Çaylak</option><option value="club" selected>Kulüp</option><option value="pro">Profesyonel</option><option value="legend">Efsane</option></select></div>
+      <div><label>Player</label><select id="char"></select></div>
+      <div><label>AI level</label><select id="ai"><option value="rookie">Rookie</option><option value="club" selected>Club</option><option value="pro">Pro</option><option value="legend">Legend</option></select></div>
     </div>
     <div class="row">
-      <div><label>Mekan</label><select id="venue"></select></div>
-      <div><label>Raket</label><select id="racket"></select></div>
+      <div><label>Venue</label><select id="venue"></select></div>
+      <div><label>Racket</label><select id="racket"></select></div>
     </div>
     <div class="row">
-      <div><label>Set</label><select id="sets"><option value="1">1 set</option><option value="3" selected>3 set</option><option value="3s">2 set + süper tie-break</option></select></div>
-      <div><label>Deuce</label><select id="golden"><option value="1">Altın sayı</option><option value="0">Avantaj</option><option value="star">Star Point (FIP 2026)</option></select></div>
+      <div><label>Sets</label><select id="sets"><option value="1">1 set</option><option value="3" selected>3 sets</option><option value="3s">2 sets + super tie-break</option></select></div>
+      <div><label>Deuce</label><select id="golden"><option value="1">Golden point</option><option value="0">Advantage</option><option value="star">Star Point (FIP 2026)</option></select></div>
     </div>
     <div class="row">
-      <div><label>Kontrol (1. oyuncu)</label><select id="control"><option value="auto" selected>Klavye + Xbox kolu</option><option value="kb">Sadece klavye</option><option value="pad">Sadece Xbox kolu</option></select></div>
-      <div><label>Oyun hızı</label><select id="speed"><option value="0.7">Yavaş</option><option value="0.85" selected>Normal</option><option value="1">Hızlı (gerçek)</option></select></div>
+      <div><label>Controls (P1)</label><select id="control"><option value="auto" selected>Keyboard + Xbox controller</option><option value="kb">Keyboard only</option><option value="pad">Xbox controller only</option></select></div>
+      <div><label>Game speed</label><select id="speed"><option value="0.7">Slow</option><option value="0.85" selected>Normal</option><option value="1">Fast (real)</option></select></div>
     </div>
-    <button class="go" id="start">MAÇA BAŞLA</button>
-    <label>Online — arkadaşlarla</label>
+    <button class="go" id="start">START MATCH</button>
+    <label>Online — play with friends</label>
     <div class="row">
-      <div><input id="room" placeholder="Oda kodu (ör. PADEL1)" maxlength="6"></div>
-      <div><button id="online">ODAYA KATIL / KUR</button></div>
+      <div><input id="room" placeholder="Room code (e.g. PADEL1)" maxlength="6"></div>
+      <div><button id="online">JOIN / CREATE ROOM</button></div>
     </div>
     <div class="sub" id="lobby" style="margin-top:10px"></div>
-    <div class="credits">Geliştirici: <b>Mesut</b> · Ana sponsor: <b>MESUT PADEL</b></div>
+    <div class="credits">Developer: <b>Mesut</b> · Main sponsor: <b>MESUT PADEL</b></div>
   </div>
 </div>
 <div id="hud" hidden>
   <div class="hud-head"><span class="tour">MESUT PADEL TOUR</span><span id="hudLabel">SET 1</span></div>
   <div class="hud-grid" id="hudGrid"></div>
-  <span id="t0" hidden>TAKIM A</span><span id="t1" hidden>TAKIM B</span><span id="setsHud" hidden></span><span id="pts" hidden></span>
+  <span id="t0" hidden>TEAM A</span><span id="t1" hidden>TEAM B</span><span id="setsHud" hidden></span><span id="pts" hidden></span>
 </div>
 <div id="msg"></div>
 <div id="cam" hidden></div>
 <div id="shotHint" hidden></div>
-<div id="pause" hidden><div class="pz-card"><div class="pz-title">DURAKLATILDI</div><div id="pzItems"></div><div class="pz-note" id="pzNote"></div><div class="pz-hint">↑ ↓ seç · Enter / A onayla · P / Esc / Start devam</div></div></div>
-<div id="replayTag" hidden>● TEKRAR <small style="font-weight:600;opacity:.85">· geçmek için bir tuşa bas</small></div>
+<div id="smashVignette" hidden></div>
+<div id="smashBanner" hidden><div class="sb-kicker" id="sbKicker"></div><div class="sb-title" id="sbTitle"></div><div class="sb-sub" id="sbSub"></div></div>
+<div id="pause" hidden><div class="pz-card"><div class="pz-title">PAUSED</div><div id="pzItems"></div><div class="pz-note" id="pzNote"></div><div class="pz-hint">↑ ↓ select · Enter / A confirm · P / Esc / Start resume</div></div></div>
+<div id="replayTag" hidden>● REPLAY <small style="font-weight:600;opacity:.85">· press any key to skip</small></div>
 <div id="help" hidden></div>
 <script type="module" src="/src/main.js"></script>
 </body>

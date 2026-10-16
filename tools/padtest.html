@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="tr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kol Testi</title>
+<title>Controller Test</title>
 <style>
   :root { --bg: #0b1520; --panel: #12202e; --acc: #d8f53a; --mut: #9fb3c8; }
   body { margin: 0; background: var(--bg); color: #fff; font: 15px system-ui, sans-serif; padding: 24px; }
@@ -22,16 +22,16 @@
 </style>
 </head>
 <body>
-<h1>Kol <b>Testi</b></h1>
-<div class="sub" id="status">Kolu bağla ve herhangi bir düğmeye bas (tarayıcı kolu ancak ilk basıştan sonra görür).</div>
+<h1>Controller <b>Test</b></h1>
+<div class="sub" id="status">Connect a controller and press any button (browsers only detect gamepads after the first button press).</div>
 <div class="grid" id="buttons"></div>
 <div class="row">
-  <div><div class="stick" id="ls"><i></i></div><div class="sub">Sol çubuk</div></div>
-  <div><div class="stick" id="rs"><i></i></div><div class="sub">Sağ çubuk</div></div>
+  <div><div class="stick" id="ls"><i></i></div><div class="sub">Left stick</div></div>
+  <div><div class="stick" id="rs"><i></i></div><div class="sub">Right stick</div></div>
   <div class="card">
-    <div><b>Oyunun gördüğü</b> (<code>readGamepad</code>, takım 0):</div>
+    <div><b>Game input</b> (<code>readGamepad</code>, team 0):</div>
     <div id="game" class="sub" style="margin-top:8px">—</div>
-    <div style="margin-top:10px"><b>Sağlık:</b> <span id="health" class="sub">—</span></div>
+    <div style="margin-top:10px"><b>Health:</b> <span id="health" class="sub">—</span></div>
   </div>
 </div>
 <script type="module">
@@ -39,10 +39,10 @@ import { readGamepad } from '/src/input.js';
 
 // standard mapping (Xbox): what each button does in the game and in the menu
 const B = [
-  ['A', 'vuruş · menü: seç'], ['B', 'lob · menü: geri'], ['X', 'chiquita'], ['Y', 'smaç'],
-  ['LB', 'slice servis · menü: önceki sekme'], ['RB', 'víbora · menü: sonraki sekme'], ['LT', '—'], ['RT', 'contrapared'],
-  ['Back / View', '—'], ['Start / Menu', 'menü: maçı başlat'], ['L3', '—'], ['R3', '—'],
-  ['D-pad ↑', 'menü: yukarı'], ['D-pad ↓', 'menü: aşağı'], ['D-pad ←', 'menü: sol'], ['D-pad →', 'menü: sağ'], ['Xbox', '—'],
+  ['A', 'shot · menu: select'], ['B', 'lob · menu: back'], ['X', 'chiquita'], ['Y', 'smash'],
+  ['LB', 'slice serve · menu: prev tab'], ['RB', 'víbora · menu: next tab'], ['LT', '—'], ['RT', 'contrapared'],
+  ['Back / View', 'camera'], ['Start / Menu', 'pause · menu: start match'], ['L3', '—'], ['R3', 'replay'],
+  ['D-pad ↑', 'menu: up'], ['D-pad ↓', 'menu: down'], ['D-pad ←', 'menu: left'], ['D-pad →', 'menu: right'], ['Xbox', '—'],
 ];
 const grid = document.getElementById('buttons');
 grid.innerHTML = B.map(([k, a], i) => `<div class="btn" id="b${i}"><div class="k">${k}</div><div class="a">#${i} · ${a}</div></div>`).join('');
@@ -54,8 +54,8 @@ let maxDrift = 0;
 function frame() {
   const gp = [...(navigator.getGamepads?.() || [])].find(Boolean);
   const st = document.getElementById('status');
-  if (!gp) { st.textContent = 'Kol görünmüyor: bağla ve bir düğmeye bas.'; requestAnimationFrame(frame); return; }
-  st.innerHTML = `Bağlı: <code>${gp.id}</code> · eşleme: <code>${gp.mapping || 'yok (standart değil!)'}</code> · ${gp.buttons.length} düğme, ${gp.axes.length} eksen`;
+  if (!gp) { st.textContent = 'No controller detected: connect one and press any button.'; requestAnimationFrame(frame); return; }
+  st.innerHTML = `Connected: <code>${gp.id}</code> · mapping: <code>${gp.mapping || 'none (non-standard!)'}</code> · ${gp.buttons.length} buttons, ${gp.axes.length} axes`;
   gp.buttons.forEach((b, i) => {
     const el = document.getElementById('b' + i);
     if (el) { el.classList.toggle('on', b.pressed); if (b.pressed) el.classList.add('seen'); }
@@ -68,9 +68,9 @@ function frame() {
   const idle = !gp.buttons.some(b => b.pressed);
   if (idle) maxDrift = Math.max(maxDrift, Math.abs(gp.axes[0] || 0), Math.abs(gp.axes[1] || 0));
   const g = readGamepad(gp.index, 0);
-  document.getElementById('game').textContent = g ? `hareket [${g.move.map(v => v.toFixed(2)).join(', ')}] · vuruş ${g.swing ?? '—'}` : '—';
+  document.getElementById('game').textContent = g ? `move [${g.move.map(v => v.toFixed(2)).join(', ')}] · swing ${g.swing ?? '—'}` : '—';
   if (g?.swing) window.__padlog.push({ t: stamp(), game: g.swing });
-  document.getElementById('health').textContent = `çubuk boştayken en fazla sapma ${maxDrift.toFixed(3)} (oyun 0.18 altını yok sayar)`;
+  document.getElementById('health').textContent = `max resting stick drift ${maxDrift.toFixed(3)} (game ignores below 0.18)`;
   window.__padstate = { id: gp.id, mapping: gp.mapping, buttons: gp.buttons.length, axes: gp.axes.map(a => +a.toFixed(3)), maxDrift };
   requestAnimationFrame(frame);
 }
