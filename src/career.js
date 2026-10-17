@@ -41,12 +41,13 @@ export function importProfile(text) {
   return p;
 }
 
-// result = { won, gamesWon, pointsWon, scoring: 'sets'|'rally', ai: rookie|club|pro|legend|online }
+// result = { won, gamesWon, pointsWon, scoring: 'sets'|'rally', ai: rookie|club|pro|legend|online, style? }
 export function matchReward(result, eco) {
   const m = eco.match, lines = [{ label: 'Played', credits: m.base }];
   if (result.scoring === 'rally') lines.push({ label: `${result.pointsWon} points × ${m.perPointWon}`, credits: result.pointsWon * m.perPointWon });
   else lines.push({ label: `${result.gamesWon} games × ${m.perGameWon}`, credits: result.gamesWon * m.perGameWon });
   if (result.won) lines.push({ label: 'Win', credits: m.winBonus });
+  if (result.style > 0) lines.push({ label: `Style ${result.style} pts`, credits: Math.floor(result.style / m.stylePerCredit) });
   const mult = eco.mult[result.ai] ?? 1;
   return { lines, mult, credits: Math.round(lines.reduce((n, l) => n + l.credits, 0) * mult) };
 }

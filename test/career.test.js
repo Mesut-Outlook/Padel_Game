@@ -101,3 +101,10 @@ test('world ranking: AI players hold fixed points 0-6000 and the profile slots i
   assert.equal(table.findIndex(r => r.id === 'me'), 2);
   assert.equal(table[2].name, 'Mesut');
 });
+
+test('match reward: style points pay 1 Credit per 10, before the AI multiplier', () => {
+  const r = matchReward({ won: false, gamesWon: 0, scoring: 'sets', ai: 'pro', style: 165 }, eco);
+  assert.deepEqual(r.lines.at(-1), { label: 'Style 165 pts', credits: 16 });
+  assert.equal(r.credits, Math.round((20 + 0 + 16) * 1.4));
+  assert.equal(matchReward({ won: false, gamesWon: 0, scoring: 'sets', ai: 'club' }, eco).lines.length, 2, 'no style line without style points');
+});
