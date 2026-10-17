@@ -92,7 +92,15 @@ docs/     re-findings.md (rea tersine mühendislik notları)
 - [x] FIP kort kapıları ve beyaz koruma çerçevesi (`agy-05`)
 - [x] Duraklatma menüsü tıklama ve yeniden başlatma stabilizasyonu (`agy-06`)
 - [x] Smaç slow-mo jitter çözümü, efekt yazısı & melodisi, seyirci tepkileri, oyun müziği ve tam İngilizce UI (`agy-07`)
-- [ ] Faz 3 — kariyer (puan + para), raket/ayakkabı mağazası, turnuva akışı
+- [x] Maç içi STYLE puanı, seri çarpanı, madalyalar, seyirci coşkusu (`agy-09`)
+- [ ] Faz 3a — kariyer modu (tasarım: `docs/superpowers/specs/2026-10-17-career-mode-design.md`, plan: `docs/superpowers/plans/2026-10-17-career-mode.md`)
+  - [x] Görev 1: profil kaydı, Export/Import, maç kazancı, `data/economy.json` (`src/career.js`)
+  - [ ] Görev 2: `startMatch(cfg)` tek maç giriş noktası + maç sonu sonucu (`main.js`); STYLE puanının kariyer kazancına katılıp katılmayacağı kararı
+  - [ ] Görev 3: kariyer ana ekranı, karakter yaratıcı (saç/sakal/renk), profil, ödül ekranı (agy)
+  - [ ] Görev 4–6: antrenman, market, ayakkabı/top etkileri, dolap ekranı
+  - [ ] Görev 7–10: ralli puanlaması, turnuva motoru (Americano/Mexicano/eleme/lig), merdiven, sıralama
+  - [ ] Görev 11–13: online açık maç listesi, profilin online taşınması, dokümanlar
+- [ ] Faz 3b — giriş/hesap, rezervasyon, online turnuvalar, ücretli kestirmeler
 - [ ] rea ile Red Bull Padel APK davranış analizi → fizik ayarı (`docs/re-findings.md`)
 - [x] Tüm vücut prosedürel vuruşlar: bacak itişi, kalça-omuz ayrışması, alçak topta lunge, topu izleyen kafa (`agy-08`)
 - [ ] Vuruş pozlarında ince ayar (temasta dizler hafif içe kapanıyor; `tools/posetest.html` ile)
