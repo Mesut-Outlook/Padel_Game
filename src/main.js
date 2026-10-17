@@ -45,7 +45,7 @@ addEventListener('resize', resize); resize();
 window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorld, inputs, tut, humans });
 const rig = createCameraRig(camera, renderer.domElement);
 const replay = createReplay(15, 60);
-let onEnd = null, pointsWon = [0, 0];
+let onEnd = null, pointsWon = [0, 0], lastCfg = null;
 let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, msgTimer = 0, hypeTimer = 0, net = null, marker, loadingScene = false;
 let styleStats = { pts: 0, streak: 0, maxRally: 0, smashes: 0, medals: [] };
 const MEDALS = {
@@ -202,6 +202,7 @@ $('start').onclick = async () => {
 // One entry for every offline match. cfg = { players, humans, ai, match, roster: {id: Character}, rackets: {id: racket}, venue, shoes?: {id: {speed, agility}}, ball?: {speed, bounce}, sameTeam?, onEnd? }.
 // onEnd gets team 0's MatchResult (+ score text) once; the menu key then returns to #career instead of the plain menu.
 export async function startMatch(cfg) {
+  lastCfg = cfg;
   unlockAudio();
   aiLevel = cfg.ai;
   onEnd = cfg.onEnd || null; pointsWon = [0, 0];
@@ -221,14 +222,14 @@ export async function startMatch(cfg) {
 
 // back to the menu after a match; career matches return to the career hub
 function toMenu() {
-  if (onEnd) location.hash = 'career';
+  if (onEnd) history.replaceState(history.state, '', '#career');  // replace, not push: history.state carries the career backup when storage is blocked
   location.reload();
 }
 
 function flash(text, sec = 1.8, kicker = '', sub = '') {
   const el = $('msg');
   if (kicker || sub) {
-    el.innerHTML = (kicker ? `<span class="msg-kicker">${kicker}</span>\n` : '') + text + (sub ? `<span class="msg-sub">${sub}</span>` : '');
+    el.innerHTML = (kicker ? `<span class="msg-kicker">${kicker}</span>\n` : '') + escapeText(text) + (sub ? `<span class="msg-sub">${sub}</span>` : '');  // text can carry player names
   } else {
     el.textContent = text;
   }
@@ -531,7 +532,7 @@ function renderHud(s) {
   const c = (t, cls = '') => `<span class="${cls}">${t}</span>`;
   let h = c('') + c('') + b.sets.map((_, i) => c('SET ' + (i + 1), 'hd' + cur(i))).join('') + c('PTS', 'hd');
   for (const t of [0, 1]) {
-    h += c(b.server === t ? '●' : '', 'srv') + c(names[t], 'nm')
+    h += c(b.server === t ? '●' : '', 'srv') + c(escapeText(names[t]), 'nm')
       + b.sets.map((st, i) => c(st[t], 'g' + cur(i) + (i < n - 1 && st[t] > st[1 - t] ? ' won' : ''))).join('')
       + c(b.pts[t], 'pt');
   }
@@ -547,7 +548,7 @@ const padPrev = {};
 function pauseItems() {
   const items = [['Resume', () => setPaused(false)]];
   if (tut) items.push(['Skip lesson', () => { setPaused(false); tut.skip(); }]);
-  else if (!net) items.push(['Restart match', () => { setPaused(false); if (replay.playing) endReplay(); $('start').click(); }]);
+  else if (!net) items.push(['Restart match', () => { setPaused(false); if (replay.playing) endReplay(); lastCfg?.onEnd ? startMatch(lastCfg) : $('start').click(); }]);  // career matches restart as career matches
   items.push(['Main menu', toMenu]);
   return items;
 }

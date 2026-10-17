@@ -108,3 +108,11 @@ test('match reward: style points pay 1 Credit per 10, before the AI multiplier',
   assert.equal(r.credits, Math.round((20 + 0 + 16) * 1.4));
   assert.equal(matchReward({ won: false, gamesWon: 0, scoring: 'sets', ai: 'club' }, eco).lines.length, 2, 'no style line without style points');
 });
+
+test('a v1 profile missing credits/equipped/history counts as corrupt and cannot be imported', () => {
+  const partial = '{"version":1,"player":{"name":"x"},"stats":{},"inventory":[]}';
+  assert.equal(loadProfile(memStore(partial)).status, 'corrupt');
+  assert.throws(() => importProfile(partial), /invalid profile/);
+  const p = newProfile(chars[0], {});
+  assert.throws(() => importProfile(JSON.stringify({ ...p, credits: '<b>9</b>' })), /invalid profile/);
+});

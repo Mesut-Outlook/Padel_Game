@@ -71,6 +71,14 @@ export function simulateOthers(T, rng = Math.random) {
   return advance(next, rng);
 }
 
+// simulate round after round until the human has a match to play or the tournament is over
+// (simulateOthers alone never finishes a round that still holds the human's match)
+export function simulateUntilMine(T, rng = Math.random) {
+  let next = T;
+  while (!isFinished(next) && !myMatch(next)) next = simulateOthers(next, rng);
+  return next;
+}
+
 // a finished round opens the next one (mexicano needs the table, knockout the winners)
 function advance(T, rng = Math.random) {
   if (T.done || T.rounds[T.round].some(m => !m.score)) return T;

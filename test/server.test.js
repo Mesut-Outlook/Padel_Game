@@ -66,3 +66,31 @@ test('host ball spec and player shoes are clamped into the room world', async ()
     a.ws.close();
   } finally { await srv.close(); }
 });
+
+test('join: look is whitelisted (bad markup/colours/keys dropped), stats and racket clamped to 1-10', async () => {
+  const srv = await startServer(0);
+  try {
+    const a = client(srv.port);
+    const lob = a.next('lobby');
+    await a.send({ type: 'join', code: 'SAFE', cfg: { players: 2 }, char: 999,
+      stats: { volley: 1000, speed: 'x', evil: 5 }, racket: { power: -50 },
+      look: { name: 'x <img src=x onerror=alert(1)>', hair: 'Hair_Buns', hairColor: 'red;background:url(x)', skinTone: '#AABBCC', beard: 'full', outfit: { shirt: '#112233', shorts: 'javascript:1' }, body: { type: 'tall', height: 9 }, onclick: 'x', hand: 'left', glasses: '#000000', headwear: { type: 'crown', color: '#ffffff' } } });
+    const l = await lob, look = l.looks[0];
+    assert.equal(look.name, 'x img srcx onerr');
+    assert.equal(look.hair, 'Hair_Buns');
+    assert.equal(look.hairColor, undefined);
+    assert.equal(look.skinTone, '#AABBCC');
+    assert.deepEqual(look.outfit, { shirt: '#112233' });
+    assert.deepEqual(look.body, { type: 'tall', height: 1.1 });
+    assert.equal(look.onclick, undefined);
+    assert.equal(look.headwear, undefined);
+    assert.equal(look.glasses, '#000000');
+    assert.equal(l.chars[0], 25, 'char index clamped to the roster');
+    const pl = srv.rooms.get('SAFE').world.players[0];
+    assert.equal(pl.stats.volley, 10);
+    assert.equal(pl.stats.speed, 6);
+    assert.equal(pl.stats.evil, undefined);
+    assert.equal(pl.racket.power, 1);
+    a.ws.close();
+  } finally { await srv.close(); }
+});

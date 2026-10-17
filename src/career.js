@@ -19,7 +19,10 @@ export function newProfile(template, look = {}) {
   };
 }
 
-const valid = (p) => p && typeof p === 'object' && p.version === VERSION && p.player && p.stats && Array.isArray(p.inventory);
+const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x);
+const isNum = (x) => typeof x === 'number' && Number.isFinite(x);
+const valid = (p) => isObj(p) && p.version === VERSION && isObj(p.player) && isObj(p.stats) && Array.isArray(p.inventory)
+  && isNum(p.credits) && isNum(p.rankingPoints) && isObj(p.equipped) && isObj(p.history) && Object.values(p.stats).every(isNum);
 
 export function loadProfile(storage) {
   let raw;

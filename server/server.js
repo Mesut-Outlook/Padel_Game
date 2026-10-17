@@ -12,7 +12,40 @@ import { aiInput } from '../src/ai.js';
 const DIST = path.resolve(import.meta.dirname, '../dist');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.glb': 'model/gltf-binary', '.json': 'application/json' };
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, +v || 0));
-const LOOK_MAX = 2048;  // bytes of JSON; bigger looks are dropped and the client falls back to its roster character
+const LOOK_MAX = 2048;
+const CHARACTERS = JSON.parse(fs.readFileSync(new URL('../data/characters.json', import.meta.url))).length;
+// remote looks are shown to other players: only known appearance keys with safe values get through
+const COLOR = /^#[0-9a-f]{6}$/i;
+const ONE_OF = { gender: ['m', 'f'], hand: ['right', 'left'], beard: ['stubble', 'full', 'goatee'],
+  hair: ['Hair_SimpleParted', 'Hair_Buzzed', 'Hair_BuzzedFemale', 'Hair_Long', 'Hair_Buns', 'none'] };
+const BODY_TYPES = ['slim', 'athletic', 'muscular', 'stocky', 'tall', 'petite'];
+const text = (v, n) => String(v).replace(/[^\p{L}\p{N} .'-]/gu, '').slice(0, n);
+function sanitizeLook(l) {
+  if (!l || typeof l !== 'object' || JSON.stringify(l).length > LOOK_MAX) return null;
+  const out = {}, col = (v) => (typeof v === 'string' && COLOR.test(v) ? v : undefined), num = (v, lo, hi) => (typeof v === 'number' ? clamp(v, lo, hi) : undefined);
+  if (l.name != null) out.name = text(l.name, 16);
+  if (l.country != null) out.country = text(l.country, 32);
+  if (/^[A-Z]{2}$/.test(l.countryCode)) out.countryCode = l.countryCode;
+  for (const k in ONE_OF) if (ONE_OF[k].includes(l[k])) out[k] = l[k];
+  for (const k of ['skinTone', 'hairColor', 'beardColor']) if (col(l[k])) out[k] = l[k];
+  if (l.outfit && typeof l.outfit === 'object') { const o = {}; for (const k of ['shirt', 'shorts', 'shoes']) if (col(l.outfit[k])) o[k] = l.outfit[k]; out.outfit = o; }
+  if (l.body && typeof l.body === 'object') {
+    const b = {};
+    if (BODY_TYPES.includes(l.body.type)) b.type = l.body.type;
+    if (num(l.body.height, 0.9, 1.1) != null) b.height = num(l.body.height, 0.9, 1.1);
+    if (num(l.body.width, 0.85, 1.2) != null) b.width = num(l.body.width, 0.85, 1.2);
+    out.body = b;
+  }
+  if (l.face && num(l.face.width, 0.9, 1.12) != null) out.face = { width: num(l.face.width, 0.9, 1.12) };
+  if (num(l.hairCut, 0.5, 2) != null) out.hairCut = num(l.hairCut, 0.5, 2);
+  if (num(l.hairOpacity, 0, 1) != null) out.hairOpacity = num(l.hairOpacity, 0, 1);
+  for (const k of ['ponytail', 'topknot', 'makeup']) if (l[k] === true) out[k] = true;
+  if (l.glasses === true || col(l.glasses)) out.glasses = l.glasses;
+  if (l.headwear && ['headband', 'visor'].includes(l.headwear.type) && col(l.headwear.color)) out.headwear = { type: l.headwear.type, color: l.headwear.color };
+  return out;
+}
+// stats/racket from the client: known keys only, 1..10 (a huge stat would make a player error-free)
+const clampKeys = (target, src) => { for (const k in target) if (typeof src?.[k] === 'number') target[k] = clamp(src[k], 1, 10); };  // bytes of JSON; bigger looks are dropped and the client falls back to its roster character
 
 export function startServer(port) {
   const httpServer = http.createServer((req, res) => {
@@ -66,23 +99,24 @@ export function startServer(port) {
       } else if (m.type === 'join') {
         const code = String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
         if (!code) return;
-        room = rooms.get(code) || makeRoom(code, { players: m.cfg?.players, sets: m.cfg?.sets, goldenPoint: m.cfg?.goldenPoint, starPoint: m.cfg?.starPoint, superTiebreak: m.cfg?.superTiebreak, ai: m.cfg?.ai, venue: m.cfg?.venue | 0, public: !!m.public, host: String(m.name || '').slice(0, 16) });
+        room = rooms.get(code) || makeRoom(code, { players: m.cfg?.players, sets: m.cfg?.sets, goldenPoint: m.cfg?.goldenPoint, starPoint: m.cfg?.starPoint, superTiebreak: m.cfg?.superTiebreak, ai: m.cfg?.ai, venue: m.cfg?.venue | 0, public: !!m.public, host: text(m.name || '', 16) });
         const fresh = !room.clients.size && !room.started;
         const taken = new Set(room.clients.values());
         const seat = room.seats.find(s => !taken.has(s));
         if (seat == null || room.started && !m.spectate) { ws.send(JSON.stringify({ type: 'error', msg: 'Room is full or match already started' })); return; }
         room.clients.set(ws, seat);
-        room.chars[seat] = m.char | 0;
+        room.chars[seat] = clamp(m.char | 0, 0, CHARACTERS - 1);
         const pl = room.world.players[seat];
-        if (m.stats) Object.assign(pl.stats, m.stats);
-        if (m.racket) Object.assign(pl.racket, m.racket);
+        clampKeys(pl.stats, m.stats);
+        clampKeys(pl.racket, m.racket);
         if (m.shoes) pl.shoes = { speed: clamp(m.shoes.speed, 0, 0.12), agility: clamp(m.shoes.agility, 0, 0.3) };
         if (fresh && m.ball) {  // the host's match ball
           room.world.ballSpec = { speed: clamp(m.ball.speed, 1, 1.12), bounce: clamp(m.ball.bounce, 1, 1.07) };
           room.world.ball.bounce = room.world.ballSpec.bounce;
         }
-        if (m.name) room.names[seat] = String(m.name).slice(0, 16);
-        if (m.look && typeof m.look === 'object' && JSON.stringify(m.look).length <= LOOK_MAX) room.looks[seat] = m.look;
+        if (m.name) room.names[seat] = text(m.name, 16);
+        const look = sanitizeLook(m.look);
+        if (look) room.looks[seat] = look;
         ws.send(JSON.stringify({ type: 'seat', seat, code }));
         lobby(room);
       } else if (!room) return;

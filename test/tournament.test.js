@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createTournament, currentMatches, myMatch, reportResult, simulateOthers, simulateMatch, standings, isFinished, placement } from '../src/tournament.js';
+import { createTournament, currentMatches, myMatch, reportResult, simulateOthers, simulateUntilMine, simulateMatch, standings, isFinished, placement } from '../src/tournament.js';
 
 const seeded = (s) => () => ((s = (s * 16807) % 2147483647) / 2147483647);
 const people = (n) => Array.from({ length: n }, (_, i) => ({ id: i === 0 ? 'me' : 'p' + i, name: 'P' + i, rating: 4 + (i % 5) }));
@@ -89,4 +89,12 @@ test('simulateMatch: rating 8 beats rating 4 in more than 70% of 200 matches', (
   assert.ok(wins > 140, String(wins));
   const set = simulateMatch(5, 5, { sets: 1 }, rng);
   assert.ok(Math.max(set.a, set.b) >= 6, JSON.stringify(set));
+});
+
+test('simulateUntilMine stops at the human\'s next match (league of 5 opens with my bye) and never loops forever', () => {
+  const T = simulateUntilMine(createTournament({ format: 'league', entrants: people(5), rng: seeded(12) }), seeded(13));
+  assert.equal(T.round, 1);
+  assert.ok(myMatch(T));
+  const out = simulateUntilMine(reportResult(T, myMatch(T), { a: 6, b: 2 }), seeded(14));
+  assert.ok(myMatch(out) || isFinished(out));
 });

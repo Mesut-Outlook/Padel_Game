@@ -26,7 +26,7 @@ import {
   worldRanking,
 } from './career.js';
 import { listRooms } from './net.js';
-import { createTournament, myMatch, reportResult, simulateOthers, standings, isFinished, placement } from './tournament.js';
+import { createTournament, myMatch, reportResult, simulateOthers, simulateUntilMine, standings, isFinished, placement } from './tournament.js';
 import {
   countryFlag,
   setCareerPreview,
@@ -36,7 +36,7 @@ import {
 import { getPortraitThumb, getVenueThumb, getRacketThumb } from './thumbs.js';
 
 const STORAGE_NOTICE = 'Your progress is saved in this browser only. Clearing browser data deletes it. Accounts are coming later.';
-const BLOCKED_BANNER = 'Storage is blocked in this browser — progress will be lost when the page reloads.';
+const BLOCKED_BANNER = 'Storage is blocked in this browser — progress lasts only while this tab stays open. Use Profile → Export to keep it.';
 const CORRUPT_BANNER = 'Your saved profile could not be read.';
 
 const SKIN_PRESETS = [
@@ -400,21 +400,32 @@ function scheduleCreatorPreview(immediate = false) {
   else previewDebounceTimer = setTimeout(run, 150);
 }
 
+// When storage is blocked the profile also rides in history.state, which survives the reload at every match end (same tab).
+function backupProfile(p) {
+  try { history.replaceState({ ...(history.state || {}), career: p }, ''); } catch {}
+}
+function backedUpProfile() {
+  try { return history.state?.career ? importProfile(JSON.stringify(history.state.career)) : null; } catch { return null; }
+}
+
 function persistProfile(nextProfile) {
   profile = nextProfile;
   memProfile = nextProfile;
   const ok = saveProfile(getStore(), nextProfile);
   if (!ok) storageBlocked = true;
+  backupProfile(ok ? null : nextProfile);
   return ok;
 }
 
 function syncProfileFromStorage() {
   const res = loadProfile(getStore());
-  if (res.status === 'unavailable') {
+  // storage blocked (or empty because saving failed earlier): play on the in-memory / history copy
+  if (res.status === 'unavailable' || (res.status === 'none' && (memProfile || backedUpProfile()))) {
     storageBlocked = true;
     corruptState = false;
-    profile = memProfile;
-    return res.status;
+    profile = memProfile || backedUpProfile();
+    memProfile = profile;
+    return 'unavailable';
   }
   if (res.status === 'corrupt') {
     corruptState = true;
@@ -1956,6 +1967,7 @@ function renderProfileScreen() {
       try { getStore().removeItem?.(PROFILE_KEY); } catch {}
       profile = null;
       memProfile = null;
+      backupProfile(null);
       deleteConfirmOpen = false;
       flashMsg = null;
       showScreen('templates');
@@ -2013,6 +2025,7 @@ function settleTournament(p) {
   const tour = p.tournament;
   if (!tour || !isFinished(tour.T)) return p;
   const entry = entryById(tour.entryId);
+  if (!entry) return { ...p, tournament: null };
   const place = placement(tour.T, 'me');
   const rw = tournamentReward(entry, place);
   const old = p.circuit?.[entry.id];
@@ -2176,6 +2189,7 @@ function renderTournamentScreen() {
   const tour = profile?.tournament;
   if (!tour) { showScreen('tournaments'); return; }
   const T = tour.T, entry = entryById(tour.entryId);
+  if (!entry || !T?.rounds) { persistProfile({ ...profile, tournament: null }); showScreen('tournaments'); return; }  // circuit entry removed in an update
   const pl = buildEquippedPlayer(profile);
   setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), 'TOURNAMENT');
   const mine = myMatch(T);
@@ -2205,15 +2219,14 @@ function renderTournamentScreen() {
         <div class="pl-summary">${mine ? `Your match: ${escapeHtml(sideName(T, mine.a))} vs ${escapeHtml(sideName(T, mine.b))}` : 'No match for you this round.'}</div>
         ${mine
           ? '<button type="button" class="pl-start-btn" id="cr-t-play">PLAY YOUR MATCH</button>'
-          : '<button type="button" class="cr-btn" id="cr-t-end">Simulate to end</button> <button type="button" class="pl-start-btn" id="cr-t-sim">SIMULATE ROUND</button>'}
+          : '<button type="button" class="cr-btn" id="cr-t-end">Skip to my next match</button> <button type="button" class="pl-start-btn" id="cr-t-sim">SIMULATE ROUND</button>'}
       </div>
     </div>
   `;
   wireBannerButtons();
   careerPanel.querySelector('#cr-t-back').onclick = () => showScreen('hub');
   const sim = (all) => {
-    let next = T;
-    do { next = simulateOthers(next); } while (all && !isFinished(next));
+    const next = all ? simulateUntilMine(T) : simulateOthers(T);  // "skip ahead" stops at your next match or the end
     persistProfile(settleTournament({ ...profile, tournament: { ...tour, T: next } }));
     showScreen(profile.tournamentResult ? 'tresult' : 'tournament');
   };
@@ -2362,7 +2375,7 @@ function leaveOnline() {
   if (onlineState.net) {  // a joined room lives in main.js state: reload to drop it cleanly
     onlineState.net.ws.onclose = onlineState.net.ws.onerror = null;
     onlineState.net.ws.close();
-    location.hash = 'career';
+    history.replaceState(history.state, '', '#career');  // keep history.state (storage-blocked backup)
     location.reload();
     return;
   }
@@ -2642,7 +2655,7 @@ export function closeCareer() {
 
   setCareerGamepadHandler(null);
   if (location.hash === '#career') {
-    history.replaceState(null, '', location.pathname + location.search);
+    history.replaceState(history.state, '', location.pathname + location.search);
   }
   restoreQuickMatchPreview();
 }
