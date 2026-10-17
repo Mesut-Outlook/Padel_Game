@@ -43,6 +43,7 @@ addEventListener('resize', resize); resize();
 window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorld, inputs , tut });
 const rig = createCameraRig(camera, renderer.domElement);
 const replay = createReplay(15, 60);
+let onEnd = null, pointsWon = [0, 0];
 let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, msgTimer = 0, hypeTimer = 0, net = null, marker, loadingScene = false;
 let styleStats = { pts: 0, streak: 0, maxRally: 0, smashes: 0, medals: [] };
 const MEDALS = {
@@ -158,39 +159,50 @@ $('start').onclick = async () => {
   if (net) { net.start(); return; }
   const tutorial = $('start').dataset.tutorial === '1';  // training mode: singles, you vs the ball machine
   const players = tutorial ? 2 : +$('mode').value;
-  const nHumans = tutorial ? 1 : Math.min(+$('humans').value, players);
-  aiLevel = tutorial ? 'rookie' : $('ai').value;
   gameSpeed = +$('speed').value;
   control = $('control').value;
-  // keyboard + controller: with several local humans the keyboard is P1's alone so the first pad goes to P2
-  if (control === 'auto' && nHumans > 1) control = 'kb';
-  unlockAudio();
   const me = characters[+$('char').value];
-  const venue = venues[+$('venue').value];
   const myRacket = rackets[+$('racket').value];
 
   // roster: humans first fill team 0 then team 1 (P1 per menu choice, the others take the remaining pads)
   const ids = players === 2 ? [0, 2] : [0, 2, 1, 3];
-  humans = ids.slice(0, nHumans);
   const others = characters.filter(c => c !== me).sort(() => Math.random() - 0.5);
-  const roster = {};
-  ids.forEach((id, i) => { roster[id] = i === 0 ? me : others[i]; });
-  const pickRacket = (id) => id === 0 ? myRacket : rackets[Math.floor(Math.random() * rackets.length)];
-  const rk = {};
-  for (const id of ids) rk[id] = pickRacket(id);
+  const roster = {}, rk = {};
+  ids.forEach((id, i) => { roster[id] = i === 0 ? me : others[i]; rk[id] = i === 0 ? myRacket : rackets[Math.floor(Math.random() * rackets.length)]; });
 
-  world = newWorld({
-    players,
-    match: matchOpts(),
-    stats: Object.fromEntries(ids.map(id => [id, roster[id].stats])),
-    rackets: Object.fromEntries(ids.map(id => [id, rk[id].stats])),
+  await startMatch({
+    players, humans: tutorial ? 1 : Math.min(+$('humans').value, players), ai: tutorial ? 'rookie' : $('ai').value,
+    match: matchOpts(), roster, rackets: rk, venue: venues[+$('venue').value],
   });
-
-  await setupScene(venue, ids, roster, rk);
   if (tutorial) {
     tut = createTutorial({ world, scene, hand: roster[0].hand, camName: () => rig.name, replaying: () => replay.playing, consumePressed, onExit: () => location.reload() });
   }
 };
+
+// One entry for every offline match. cfg = { players, humans, ai, match, roster: {id: Character}, rackets: {id: racket}, venue, onEnd? }.
+// onEnd gets team 0's MatchResult (+ score text) once; the menu key then returns to #career instead of the plain menu.
+export async function startMatch(cfg) {
+  unlockAudio();
+  aiLevel = cfg.ai;
+  onEnd = cfg.onEnd || null; pointsWon = [0, 0];
+  const ids = cfg.players === 2 ? [0, 2] : [0, 2, 1, 3];
+  humans = ids.slice(0, cfg.humans);
+  // keyboard + controller: with several local humans the keyboard is P1's alone so the first pad goes to P2
+  if (control === 'auto' && humans.length > 1) control = 'kb';
+  world = newWorld({
+    players: cfg.players,
+    match: cfg.match,
+    stats: Object.fromEntries(ids.map(id => [id, cfg.roster[id].stats])),
+    rackets: Object.fromEntries(ids.map(id => [id, cfg.rackets[id].stats])),
+  });
+  await setupScene(cfg.venue, ids, cfg.roster, cfg.rackets);
+}
+
+// back to the menu after a match; career matches return to the career hub
+function toMenu() {
+  if (onEnd) location.hash = 'career';
+  location.reload();
+}
 
 function flash(text, sec = 1.8, kicker = '', sub = '') {
   const el = $('msg');
@@ -397,6 +409,7 @@ function handleEvents(events, score, winner) {
     else if (e.type === 'fault') { flash('SERVE FAULT', 1); sfxCrowdReact('murmur'); }
     else if (e.type === 'let') flash('LET', 1);
     else if (e.type === 'point') {
+      pointsWon[e.team]++;
       approach = 0; slow = 0; setSmashBanner('');
       setMusicDuck('point');
       const rallyLen = e.rally || rallyFlags.hits || 1;
@@ -456,6 +469,11 @@ function handleEvents(events, score, winner) {
       if (!tut && (rallyLen >= 8 || rallyFlags.smash || rallyFlags.glass)) setTimeout(() => startReplay(true), 900);
       rallyFlags = {};
       if (!tut && winner != null) {
+        if (onEnd && world) {
+          const done = onEnd; onEnd = null;
+          done({ won: winner === 0, gamesWon: world.match.sets.reduce((n, g) => n + g[0], 0), pointsWon: pointsWon[0], scoring: 'sets', ai: aiLevel, score: scoreText(world.match) });
+          onEnd = () => {};  // keeps toMenu pointed at #career without paying twice
+        }
         const medalsStr = styleStats.medals.length
           ? 'Medals: ' + styleStats.medals.map(k => `${MEDALS[k][0]} ${MEDALS[k][1]}`).join(' · ')
           : `Best Rally: ${styleStats.maxRally} shots`;
@@ -504,7 +522,7 @@ function pauseItems() {
   const items = [['Resume', () => setPaused(false)]];
   if (tut) items.push(['Skip lesson', () => { setPaused(false); tut.skip(); }]);
   else if (!net) items.push(['Restart match', () => { setPaused(false); if (replay.playing) endReplay(); $('start').click(); }]);
-  items.push(['Main menu', () => location.reload()]);
+  items.push(['Main menu', toMenu]);
   return items;
 }
 function updatePauseSel() {
@@ -600,7 +618,7 @@ function loop(now) {
   }
   const over = world?.match.winner != null || net?.winner != null;
   if (consumePressed('KeyP') | consumePressed('Pause') | (!replay.playing && consumePressed('Escape'))) {
-    if (over && !tut) { location.reload(); return; }  // Start / P on the final score: back to the menu
+    if (over && !tut) { toMenu(); return; }  // Start / P on the final score: back to the menu
     setPaused(true); requestAnimationFrame(loop); return;
   }
   // skip first, so the press that starts a replay (R / R3) can't also end it
@@ -608,7 +626,7 @@ function loop(now) {
   if (consumePressed('KeyC')) $('cam').textContent = '🎥 ' + rig.next();
   if (consumePressed('KeyR')) startReplay(false);
   if (consumePressed('KeyM')) flash(toggleMute() ? '🔇 SOUND OFF' : '🔊 SOUND ON', 1);
-  if (!tut && consumePressed('Enter') && (world?.match.winner != null || net?.winner != null)) { location.reload(); return; }
+  if (!tut && consumePressed('Enter') && (world?.match.winner != null || net?.winner != null)) { toMenu(); return; }
   let view;
   if (replay.playing) {
     view = replay.update(dt);
