@@ -1,5 +1,6 @@
 // Court + venue rendering (Three.js). Geometry matches physics.wallAt().
 import * as THREE from 'three';
+import { buildSkyline } from './skyline.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { DOOR } from './physics.js';
 
@@ -7,7 +8,8 @@ const SURF = { 'turf-blue': 0x2f6fb5, 'turf-green': 0x3f8f4a, 'turf-terracotta':
 
 export function buildVenue(scene, venue) {
   const g = new THREE.Group();
-  scene.background = new THREE.Color(venue.sky);
+  const sky = buildSkyline(g, venue);  // city landmarks on a ring around the venue
+  scene.background = new THREE.Color(venue.type === 'indoor' ? '#1b2129' : sky.top);
   scene.fog = new THREE.Fog(venue.fog, 40, 120);
 
   const night = venue.timeOfDay === 'night', sunset = venue.timeOfDay === 'sunset';
