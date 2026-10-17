@@ -94,7 +94,8 @@ docs/     re-findings.md (rea tersine mühendislik notları)
 - [x] Smaç slow-mo jitter çözümü, efekt yazısı & melodisi, seyirci tepkileri, oyun müziği ve tam İngilizce UI (`agy-07`)
 - [ ] Faz 3 — kariyer (puan + para), raket/ayakkabı mağazası, turnuva akışı
 - [ ] rea ile Red Bull Padel APK davranış analizi → fizik ayarı (`docs/re-findings.md`)
-- [ ] Gerçek tenis/padel vuruş animasyonları (şu an kılıç vuruşu klibi + prosedürel vurgular)
+- [x] Tüm vücut prosedürel vuruşlar: bacak itişi, kalça-omuz ayrışması, alçak topta lunge, topu izleyen kafa (`agy-08`)
+- [ ] Vuruş pozlarında ince ayar (temasta dizler hafif içe kapanıyor; `tools/posetest.html` ile)
 
 ## Lisanslar
 

@@ -357,10 +357,15 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
   actions.idle.play();
   mixer.update(0);
   const idleQuats = {};
-  for (const b of ['spine_02', 'upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r']) {
+  for (const b of ['spine_02', 'spine_03', 'neck_01', 'upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r']) {
     if (bones[b]) idleQuats[b] = bones[b].quaternion.clone();
   }
   let cur = 'idle';
+  // the mixer skips writing a bone whose clip value did not change (e.g. a still pelvis), so the pose offsets added
+  // below would pile up frame after frame: put every posed bone back to its last clip value before the mixer runs
+  const posed = ['pelvis', 'spine_02', 'spine_03', 'neck_01', 'upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r',
+    'thigh_l', 'calf_l', 'foot_l', 'thigh_r', 'calf_r', 'foot_r'].map(n => bones[n]).filter(Boolean);
+  const clipQ = posed.map(b => b.quaternion.clone());
 
   // racket (R) / ball (B) arm bones; poses are authored right-handed and mirrored for lefties
   const lefty = ch.hand === 'left', R = lefty ? 'l' : 'r', B = lefty ? 'r' : 'l', m = lefty ? -1 : 1;
@@ -389,7 +394,7 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
       if (a !== cur) { actions[cur].fadeOut(0.18); actions[a].reset().fadeIn(0.18).play(); cur = a; }
       const sw = s[4];
       if (sw) {
-        if (lastRawSwingT < 0 || s[5] < lastRawSwingT - 0.05) localSwingT = s[5];
+        if (lastRawSwingT < 0 || s[5] < lastRawSwingT - 0.05 || dt === 0) localSwingT = s[5];
         else localSwingT = Math.min(0.55, Math.max(localSwingT + dt, s[5]));
         lastRawSwingT = s[5];
       } else {
@@ -397,9 +402,9 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
         localSwingT = 0;
       }
       const t = sw ? localSwingT : 0;
+      posed.forEach((b, i) => b.quaternion.copy(clipQ[i]));
       mixer.update(dt);
-      root.position.y = 0;
-      root.position.y = restFoot - lowestFoot();
+      posed.forEach((b, i) => clipQ[i].copy(b.quaternion));
       tossT = s[3] === 'serveToss' ? tossT + dt : 0;
       // stroke preparation: blend into the right stance as the ball comes within ~3 m
       // Only recompute closing speed on frames where the physics step actually moved the ball (prevents slow-mo jitter)
@@ -431,21 +436,29 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
         prepW += (wantPrep - prepW) * (1 - Math.exp(-Math.max(dt, 1 / 120) / 0.09));
         if (prepW > 0.02) {
           prep = lerpPose(P({}), PREP[prepKey], prepW);
-          if (ball[1] < 0.6 && prepKey !== 'overhead') prep.spine[0] += 0.4 * prepW;  // get down to low balls
+          if (ball[1] < 0.6 && prepKey !== 'overhead') {  // get down to low balls via deep front-knee lunge, less spine bend
+            prep.hips[0] += 0.12 * prepW;
+            prep.spine[0] += 0.16 * prepW;
+            const bh = prepKey === 'backhand';
+            const fT = bh ? prep.rThigh : prep.bThigh, fC = bh ? prep.rCalf : prep.bCalf, fF = bh ? prep.rFoot : prep.bFoot;
+            const kT = bh ? prep.bThigh : prep.rThigh, kC = bh ? prep.bCalf : prep.rCalf, kF = bh ? prep.bFoot : prep.rFoot;
+            fT[0] -= 0.36 * prepW; fC[0] += 0.54 * prepW; fF[0] -= 0.18 * prepW;
+            kT[0] -= 0.24 * prepW; kC[0] += 0.56 * prepW; kF[0] += 0.02 * prepW;
+          }
         }
       } else if (!ball) {
         wantPrep = 0; prepW = 0;
       }
       if (!sw) swingKey = null;
-      else if (sw !== 'serve' && !swingKey) {
+      else if (sw !== 'serve' && (!swingKey || (SWINGS[sw] && sw !== 'forehand' && swingKey !== sw))) {
         const side = prepKey === 'overhead' ? 'forehand' : prepKey;
-        swingKey = sw === 'smash' || sw === 'overhead' ? sw : sw === 'volley' ? (side === 'backhand' ? 'volleyB' : 'volleyF') : side;
+        swingKey = SWINGS[sw] && sw !== 'forehand' ? sw : sw === 'volley' ? (side === 'backhand' ? 'volleyB' : 'volleyF') : side;
         prepW = 0; wantPrep = 0;
       }
       // Stabilize upper body against run/walk arm-pumping while cocking the racket or swinging
       const steady = sw ? 0.92 : prepW * 0.88;
       if (steady > 0.01 && cur !== 'idle') {
-        for (const k of ['spine_02', 'upperarm_' + R, 'lowerarm_' + R, 'hand_' + R, 'upperarm_' + B, 'lowerarm_' + B]) {
+        for (const k of ['spine_02', 'spine_03', 'neck_01', 'upperarm_' + R, 'lowerarm_' + R, 'hand_' + R, 'upperarm_' + B, 'lowerarm_' + B]) {
           if (bones[k] && idleQuats[k]) bones[k].quaternion.slerp(idleQuats[k], steady);
         }
       }
@@ -458,11 +471,30 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
         : s[3] === 'serveReady' ? SERVE_READY : prep;
       if (pose) {
         holder.rotation.y = s[2] + pose.yaw * m;
-        const arm = (bone, [x, y, z]) => add(bones[bone], x, y * m, z * m);
-        add(bones.spine_02, ...pose.spine);
+        const legW = (cur === 'run' ? 0.35 : cur === 'walk' ? 0.6 : 1) * LEG_DEPTH;
+        const arm = (bone, [x, y, z], w = 1) => add(bones[bone], x * w, y * m * w, z * m * w);
+        arm('pelvis', pose.hips);
+        arm('spine_02', pose.spine);
+        arm('spine_03', pose.chest);
+        let hx = pose.head[0], hy = pose.head[1], hz = pose.head[2];
+        if (ball && (sw || prepW > 0.02)) {
+          const dx = ball[0] - s[0], dy = ball[1] - 1.5, dz = ball[2] - s[1], d = Math.hypot(dx, dz) || 1;
+          const bodyYaw = s[2] + (pose.yaw + pose.hips[1] + pose.spine[1] + pose.chest[1]) * m;
+          const fwd = Math.sin(bodyYaw) * dx + Math.cos(bodyYaw) * dz;
+          const left = Math.cos(bodyYaw) * dx - Math.sin(bodyYaw) * dz;
+          const torsoPitch = pose.hips[0] + pose.spine[0] + pose.chest[0];
+          const w = sw ? Math.min(1, (0.55 - t) / 0.15) : prepW;
+          hx = Math.max(-0.6, Math.min(0.6, hx * (1 - w) + (-Math.atan2(dy, d) - torsoPitch * 0.5) * w));
+          hy = Math.max(-0.6, Math.min(0.6, hy * (1 - w) + Math.atan2(left, Math.max(0.25, fwd)) * m * w));
+        }
+        add(bones.neck_01, hx, hy * m, hz * m);
         arm('upperarm_' + R, pose.rUp); arm('lowerarm_' + R, pose.rLow); arm('hand_' + R, pose.rHand);
         arm('upperarm_' + B, pose.bUp); arm('lowerarm_' + B, pose.bLow);
+        arm('thigh_' + R, pose.rThigh, legW); arm('calf_' + R, pose.rCalf, legW); arm('foot_' + R, pose.rFoot, legW);
+        arm('thigh_' + B, pose.bThigh, legW); arm('calf_' + B, pose.bCalf, legW); arm('foot_' + B, pose.bFoot, legW);
       }
+      root.position.y = 0;
+      root.position.y = restFoot - lowestFoot();
     },
     dispose() { scene.remove(holder); },
   };
@@ -560,39 +592,204 @@ function makeShoe(upper, accent) {
 // Serve poses, tuned visually: Euler XYZ offsets added on top of the idle clip (rUp/rLow/rHand = racket arm,
 // bUp/bLow = ball arm, yaw = body turn). Ready mirrors the classic side-on stance with the racket cocked behind
 // the head; the ball is then dropped, the racket falls low, and the ball is struck underhand after the bounce.
-const P = (o) => ({ yaw: 0, spine: [0, 0, 0], rUp: [0, 0, 0], rLow: [0, 0, 0], rHand: [0, 0, 0], bUp: [0, 0, 0], bLow: [0, 0, 0], ...o });
-const SERVE_READY = P({ yaw: -1.2, rUp: [0, 0.6, -1.3], rLow: [0, 0, -1.7], bUp: [-0.7, 0, 1.1], bLow: [0, 0, 0.1] });
-const SERVE_BACK = P({ yaw: -0.5, spine: [0.3, 0, 0], rUp: [-1.0, 0, 0] });
-const SERVE_SWING = [  // t = seconds since contact
+// crouch depth knob: the leg keyframes below at full strength sink the hips ~18 cm and knock the knees in
+const LEG_DEPTH = 0.55;
+const P = (o) => ({
+  yaw: 0, hips: [0, 0, 0], spine: [0, 0, 0], chest: [0, 0, 0], head: [0, 0, 0],
+  rUp: [0, 0, 0], rLow: [0, 0, 0], rHand: [0, 0, 0], bUp: [0, 0, 0], bLow: [0, 0, 0],
+  rThigh: [0, 0, 0], rCalf: [0, 0, 0], rFoot: [0, 0, 0], bThigh: [0, 0, 0], bCalf: [0, 0, 0], bFoot: [0, 0, 0],
+  ...o,
+});
+export const SERVE_READY = P({
+  yaw: -1.15, hips: [0.05, -0.14, 0.03], spine: [0.08, -0.06, -0.03], chest: [0.04, -0.14, 0.04], head: [0.08, 0.42, 0],
+  rUp: [0, 0.6, -1.3], rLow: [0, 0, -1.7], bUp: [-0.7, 0, 1.1], bLow: [0, 0, 0.1],
+  rThigh: [-0.34, -0.06, 0.12], rCalf: [0.58, 0, 0], rFoot: [-0.24, 0, 0],
+  bThigh: [-0.32, 0.05, -0.08], bCalf: [0.55, 0, 0], bFoot: [-0.23, 0, 0],
+});
+export const SERVE_BACK = P({
+  yaw: -0.55, hips: [0.12, -0.18, 0.04], spine: [0.22, -0.08, -0.04], chest: [0.10, -0.18, 0.05], head: [0.22, 0.25, 0],
+  rUp: [-1.0, 0, 0], rLow: [0, 0, -0.25], bUp: [0.25, 0, 0.45], bLow: [0, 0, 0.20],
+  rThigh: [-0.46, -0.08, 0.14], rCalf: [0.74, 0, 0], rFoot: [-0.28, 0, 0],
+  bThigh: [-0.42, 0.06, -0.10], bCalf: [0.68, 0, 0], bFoot: [-0.26, 0, 0],
+});
+export const SERVE_SWING = [  // t = seconds since contact (underhand padel serve: crouch -> leg/hip drive -> waist-high strike -> weight forward)
   [0, SERVE_BACK],
-  [0.08, P({ yaw: -0.2, spine: [0.3, 0, 0], rUp: [0.8, 0, 0], rHand: [0.8, 0, 0] })],
-  [0.4, P({ spine: [0.15, 0, 0], rUp: [1.6, 0, 0] })],
+  [0.03, P({
+    yaw: -0.35, hips: [0.10, 0.18, 0.02], spine: [0.20, 0.04, 0], chest: [0.10, -0.12, 0.03], head: [0.18, 0.14, 0],
+    rUp: [-0.25, 0, -0.15], rLow: [0, 0, -0.20], rHand: [0.25, 0, 0], bUp: [0.30, 0, 0.35], bLow: [0, 0, 0.30],
+    rThigh: [-0.34, 0.04, 0.08], rCalf: [0.60, 0, 0], rFoot: [0.06, 0, 0],
+    bThigh: [-0.34, 0.02, -0.08], bCalf: [0.54, 0, 0], bFoot: [-0.20, 0, 0],
+  })],
+  [0.08, P({
+    yaw: -0.15, hips: [0.10, 0.24, 0.01], spine: [0.18, 0.10, 0], chest: [0.08, 0.14, -0.04], head: [0.10, -0.05, 0],
+    rUp: [0.80, 0, 0], rLow: [0, 0, -0.25], rHand: [0.80, 0, 0], bUp: [0.20, 0, 0.25], bLow: [0, 0, 0.40],
+    rThigh: [-0.26, 0.10, 0.08], rCalf: [0.56, 0, 0], rFoot: [0.24, 0, 0],
+    bThigh: [-0.30, -0.04, -0.06], bCalf: [0.48, 0, 0], bFoot: [-0.18, 0, 0],
+  })],
+  [0.36, P({
+    yaw: 0.25, hips: [0.06, 0.26, -0.01], spine: [0.12, 0.12, 0], chest: [0.06, 0.20, -0.05], head: [-0.04, -0.20, 0],
+    rUp: [1.55, -0.10, 0.25], rLow: [0, 0, -0.65], rHand: [0.40, 0, 0], bUp: [0.10, 0, -0.10], bLow: [0, 0, 0.45],
+    rThigh: [-0.22, 0.16, 0.06], rCalf: [0.58, 0, 0], rFoot: [0.38, 0, 0],
+    bThigh: [-0.26, -0.04, -0.05], bCalf: [0.44, 0, 0], bFoot: [-0.18, 0, 0],
+  })],
   [0.55, P({})],
 ];
-// Strokes, tuned visually. PREP = stance while the ball approaches; each swing runs prep -> contact -> follow-through.
-const PREP = {
-  forehand: P({ yaw: -0.7, rUp: [-0.9, 0, -0.5], rLow: [0, 0, -0.4], bUp: [0.6, 0, 0.5] }),   // racket back, shoulder turned
-  backhand: P({ yaw: 0.9, rUp: [0.5, 0, 0.9], rLow: [0, 0, -0.6], bUp: [0.5, 0, -0.2] }),     // racket across the body
-  overhead: P({ yaw: -0.85, spine: [-0.12, 0, 0], rUp: [-0.35, 0.45, -1.45], rLow: [0, 0, -1.15], rHand: [-0.2, 0, 0], bUp: [0.45, 0, 1.35], bLow: [0, 0, 0.25] }), // trophy stance
+// Strokes, tuned visually. PREP = athletic bent-knee stance while the ball approaches; each swing runs
+// kinetic chain: prep (0) -> leg push & hip opening (0.03-0.04) -> chest & arm contact (0.06-0.08) -> follow-through -> recovery (0.55).
+export const PREP = {
+  forehand: P({
+    yaw: -0.7, hips: [0.06, -0.18, 0.04], spine: [0.12, -0.10, -0.05], chest: [0.05, -0.22, 0.06], head: [-0.08, 0.38, 0],
+    rUp: [-0.9, 0, -0.5], rLow: [0, 0, -0.4], bUp: [0.6, 0, 0.5], bLow: [0, 0, 0.2],
+    rThigh: [-0.38, -0.08, 0.14], rCalf: [0.62, 0, 0], rFoot: [-0.24, 0, 0],
+    bThigh: [-0.35, 0.06, -0.10], bCalf: [0.58, 0, 0], bFoot: [-0.23, 0, 0],
+  }),
+  backhand: P({
+    yaw: 0.85, hips: [0.06, 0.18, -0.04], spine: [0.14, 0.10, 0.05], chest: [0.06, 0.24, -0.06], head: [-0.08, -0.42, 0],
+    rUp: [0.5, 0, 0.9], rLow: [0, 0, -0.6], rHand: [-0.1, 0, 0], bUp: [0.45, 0, -0.25], bLow: [0, 0, 0.35],
+    rThigh: [-0.35, -0.06, 0.10], rCalf: [0.58, 0, 0], rFoot: [-0.23, 0, 0],
+    bThigh: [-0.38, 0.08, -0.14], bCalf: [0.62, 0, 0], bFoot: [-0.24, 0, 0],
+  }),
+  overhead: P({
+    yaw: -0.85, hips: [-0.04, -0.18, 0.03], spine: [-0.12, -0.08, -0.04], chest: [-0.10, -0.22, 0.10], head: [-0.36, 0.38, 0],
+    rUp: [-0.35, 0.45, -1.45], rLow: [0, 0, -1.15], rHand: [-0.2, 0, 0], bUp: [0.45, 0, 1.35], bLow: [0, 0, 0.25],
+    rThigh: [-0.38, -0.10, 0.15], rCalf: [0.62, 0, 0], rFoot: [-0.24, 0, 0],
+    bThigh: [-0.35, 0.06, -0.12], bCalf: [0.58, 0, 0], bFoot: [-0.23, 0, 0],
+  }),
 };
-const half = (k) => lerpPose(P({}), PREP[k], 0.5);
-const SWINGS = {
-  forehand: [[0, PREP.forehand], [0.06, P({ spine: [0.15, 0, 0], rUp: [0.3, 0, -0.6] })], [0.3, P({ yaw: 0.5, rUp: [1.2, 0, 0.4], rLow: [0, 0, -0.9] })], [0.55, P({})]],
-  backhand: [[0, PREP.backhand], [0.06, P({ yaw: 0.25, spine: [0.15, 0, 0], rUp: [0.45, 0, -0.3] })], [0.3, P({ yaw: -0.3, rUp: [0.2, 0, -1.4], rLow: [0, 0, -0.4] })], [0.55, P({})]],
+const half = (k) => lerpPose(P({}), PREP[k], 0.55);
+export const SWINGS = {
+  forehand: [
+    [0, PREP.forehand],
+    [0.03, P({
+      yaw: -0.30, hips: [0.08, 0.24, 0.01], spine: [0.14, 0.04, 0], chest: [0.08, -0.18, 0.03], head: [-0.06, 0.16, 0],
+      rUp: [-0.35, 0.10, -0.58], rLow: [0, 0, -0.45], rHand: [-0.15, 0, 0], bUp: [0.45, 0, 0.35], bLow: [0, 0, 0.30],
+      rThigh: [-0.32, 0.04, 0.10], rCalf: [0.58, 0, 0], rFoot: [0.08, 0, 0],
+      bThigh: [-0.32, 0.02, -0.08], bCalf: [0.52, 0, 0], bFoot: [-0.20, 0, 0],
+    })],
+    [0.07, P({
+      yaw: 0.05, hips: [0.10, 0.28, 0], spine: [0.15, 0.12, 0], chest: [0.10, 0.18, -0.04], head: [-0.06, -0.10, 0],
+      rUp: [0.35, 0, -0.58], rLow: [0, 0, -0.35], rHand: [0.10, 0, 0], bUp: [0.25, 0, 0.20], bLow: [0, 0, 0.45],
+      rThigh: [-0.26, 0.12, 0.08], rCalf: [0.58, 0, 0], rFoot: [0.25, 0, 0],
+      bThigh: [-0.30, -0.04, -0.06], bCalf: [0.48, 0, 0], bFoot: [-0.18, 0, 0],
+    })],
+    [0.28, P({
+      yaw: 0.48, hips: [0.08, 0.30, -0.02], spine: [0.14, 0.18, 0], chest: [0.10, 0.32, -0.06], head: [-0.04, -0.38, 0],
+      rUp: [1.18, -0.15, 0.40], rLow: [0, 0, -0.92], rHand: [0.28, 0, 0], bUp: [0.15, 0, -0.15], bLow: [0, 0, 0.55],
+      rThigh: [-0.24, 0.22, 0.06], rCalf: [0.62, 0, 0], rFoot: [0.42, 0, 0],
+      bThigh: [-0.26, -0.06, -0.05], bCalf: [0.44, 0, 0], bFoot: [-0.18, 0, 0],
+    })],
+    [0.55, P({})],
+  ],
+  backhand: [
+    [0, PREP.backhand],
+    [0.03, P({
+      yaw: 0.45, hips: [0.08, -0.22, -0.01], spine: [0.14, -0.04, 0], chest: [0.08, 0.16, -0.03], head: [-0.06, -0.20, 0],
+      rUp: [0.48, 0, 0.35], rLow: [0, 0, -0.45], rHand: [-0.05, 0, 0], bUp: [0.15, 0, 0.25], bLow: [0, 0, 0.25],
+      rThigh: [-0.32, -0.02, 0.08], rCalf: [0.52, 0, 0], rFoot: [-0.20, 0, 0],
+      bThigh: [-0.32, -0.04, -0.10], bCalf: [0.58, 0, 0], bFoot: [0.08, 0, 0],
+    })],
+    [0.07, P({
+      yaw: 0.18, hips: [0.10, -0.26, 0], spine: [0.15, -0.10, 0], chest: [0.10, -0.14, 0.04], head: [-0.06, 0.05, 0],
+      rUp: [0.45, 0, -0.35], rLow: [0, 0, -0.28], rHand: [0.12, 0, 0], bUp: [-0.35, 0, 0.55], bLow: [0, 0, 0.15],
+      rThigh: [-0.30, 0.04, 0.06], rCalf: [0.48, 0, 0], rFoot: [-0.18, 0, 0],
+      bThigh: [-0.26, -0.12, -0.08], bCalf: [0.58, 0, 0], bFoot: [0.25, 0, 0],
+    })],
+    [0.28, P({
+      yaw: -0.28, hips: [0.08, -0.28, 0.02], spine: [0.12, -0.14, 0], chest: [0.08, -0.26, 0.05], head: [-0.04, 0.28, 0],
+      rUp: [0.22, 0, -1.38], rLow: [0, 0, -0.35], rHand: [0.22, 0, 0], bUp: [-0.65, 0, 0.85], bLow: [0, 0, 0.10],
+      rThigh: [-0.26, 0.06, 0.05], rCalf: [0.44, 0, 0], rFoot: [-0.18, 0, 0],
+      bThigh: [-0.24, -0.20, -0.06], bCalf: [0.62, 0, 0], bFoot: [0.42, 0, 0],
+    })],
+    [0.55, P({})],
+  ],
   overhead: [
     [0, PREP.overhead],
-    [0.08, P({ yaw: -0.15, spine: [0.05, 0, 0], rUp: [0.35, 0.15, -1.8], rLow: [0, 0, -0.2], rHand: [0.35, 0, 0], bUp: [0.2, 0, 0.5] })],
-    [0.28, P({ yaw: 0.4, spine: [0.28, 0, 0], rUp: [0.95, -0.15, -0.55], rLow: [0, 0, -0.65], rHand: [0.5, 0, 0], bUp: [-0.15, 0, 0.2] })],
+    [0.04, P({
+      yaw: -0.50, hips: [0.02, 0.16, 0.01], spine: [-0.04, -0.04, 0], chest: [-0.04, -0.16, 0.06], head: [-0.28, 0.22, 0],
+      rUp: [-0.05, 0.30, -1.65], rLow: [0, 0, -0.75], rHand: [0.05, 0, 0], bUp: [0.50, 0, 1.05], bLow: [0, 0, 0.20],
+      rThigh: [-0.30, 0.02, 0.10], rCalf: [0.52, 0, 0], rFoot: [-0.06, 0, 0],
+      bThigh: [-0.30, 0.04, -0.08], bCalf: [0.50, 0, 0], bFoot: [-0.20, 0, 0],
+    })],
+    [0.08, P({
+      yaw: -0.15, hips: [0.06, 0.20, 0], spine: [0.05, 0.06, 0], chest: [0.04, 0.14, -0.04], head: [-0.18, 0.06, 0],
+      rUp: [0.35, 0.15, -1.80], rLow: [0, 0, -0.20], rHand: [0.35, 0, 0], bUp: [0.35, 0, 0.65], bLow: [0, 0, 0.30],
+      rThigh: [-0.24, 0.08, 0.08], rCalf: [0.50, 0, 0], rFoot: [0.18, 0, 0],
+      bThigh: [-0.28, 0, -0.06], bCalf: [0.46, 0, 0], bFoot: [-0.18, 0, 0],
+    })],
+    [0.28, P({
+      yaw: 0.38, hips: [0.10, 0.24, -0.01], spine: [0.24, 0.12, 0], chest: [0.12, 0.22, -0.06], head: [-0.06, -0.22, 0],
+      rUp: [0.95, -0.15, -0.55], rLow: [0, 0, -0.65], rHand: [0.50, 0, 0], bUp: [-0.10, 0, 0.25], bLow: [0, 0, 0.45],
+      rThigh: [-0.22, 0.16, 0.06], rCalf: [0.56, 0, 0], rFoot: [0.34, 0, 0],
+      bThigh: [-0.26, -0.04, -0.05], bCalf: [0.44, 0, 0], bFoot: [-0.18, 0, 0],
+    })],
     [0.55, P({})],
   ],
   smash: [
     [0, PREP.overhead],
-    [0.07, P({ yaw: -0.1, spine: [0.08, 0, 0], rUp: [0.45, 0.15, -1.95], rLow: [0, 0, -0.15], rHand: [0.45, 0, 0], bUp: [0.15, 0, 0.45] })],
-    [0.26, P({ yaw: 0.55, spine: [0.42, 0, 0], rUp: [1.15, -0.2, -0.5], rLow: [0, 0, -0.7], rHand: [0.6, 0, 0], bUp: [-0.25, 0, 0.2] })],
+    [0.03, P({
+      yaw: -0.35, hips: [-0.04, 0.30, 0], spine: [-0.08, 0.04, 0], chest: [-0.12, -0.14, 0.08], head: [-0.32, 0.12, 0],
+      rUp: [0.05, 0.30, -1.78], rLow: [0, 0, -0.60], rHand: [0.10, 0, 0], bUp: [0.35, 0, 0.90], bLow: [0, 0, 0.30],
+      rThigh: [-0.16, 0.06, 0.08], rCalf: [0.30, 0, 0], rFoot: [0.22, 0, 0],
+      bThigh: [-0.14, 0.02, -0.06], bCalf: [0.22, 0, 0], bFoot: [-0.06, 0, 0],
+    })],
+    [0.07, P({
+      yaw: -0.08, hips: [0.06, 0.36, 0], spine: [0.08, 0.14, 0], chest: [0.06, 0.32, -0.08], head: [-0.24, -0.08, 0],
+      rUp: [0.45, 0.15, -1.95], rLow: [0, 0, -0.15], rHand: [0.45, 0, 0], bUp: [0.15, 0, 0.45], bLow: [0, 0, 0.50],
+      rThigh: [-0.12, 0.12, 0.06], rCalf: [0.26, 0, 0], rFoot: [0.32, 0, 0],
+      bThigh: [-0.10, 0, -0.05], bCalf: [0.16, 0, 0], bFoot: [-0.04, 0, 0],
+    })],
+    [0.26, P({
+      yaw: 0.55, hips: [0.18, 0.38, -0.02], spine: [0.38, 0.18, 0], chest: [0.22, 0.36, -0.10], head: [-0.24, -0.35, 0],
+      rUp: [1.15, -0.20, -0.50], rLow: [0, 0, -0.70], rHand: [0.60, 0, 0], bUp: [-0.25, 0, 0.20], bLow: [0, 0, 0.60],
+      rThigh: [-0.46, 0.20, 0.04], rCalf: [0.74, 0, 0], rFoot: [0.46, 0, 0],
+      bThigh: [-0.30, -0.08, -0.06], bCalf: [0.50, 0, 0], bFoot: [-0.20, 0, 0],
+    })],
     [0.55, P({})],
   ],
-  volleyF: [[0, half('forehand')], [0.05, P({ spine: [0.1, 0, 0], rUp: [0.5, 0, -0.5] })], [0.25, P({ rUp: [0.7, 0, -0.3] })], [0.45, P({})]],
-  volleyB: [[0, half('backhand')], [0.05, P({ yaw: 0.2, spine: [0.1, 0, 0], rUp: [0.5, 0, 0.1] })], [0.25, P({ rUp: [0.4, 0, -0.6] })], [0.45, P({})]],
+  volleyF: [
+    [0, half('forehand')],
+    [0.03, P({
+      yaw: -0.22, hips: [0.08, 0.12, 0.02], spine: [0.12, 0.02, 0], chest: [0.06, -0.08, 0.02], head: [-0.06, 0.12, 0],
+      rUp: [0.10, 0, -0.50], rLow: [0, 0, -0.38], bUp: [0.45, 0, 0.35], bLow: [0, 0, 0.30],
+      rThigh: [-0.34, 0.02, 0.10], rCalf: [0.58, 0, 0], rFoot: [-0.12, 0, 0],
+      bThigh: [-0.36, 0.04, -0.08], bCalf: [0.58, 0, 0], bFoot: [-0.22, 0, 0],
+    })],
+    [0.06, P({
+      yaw: -0.08, hips: [0.10, 0.16, 0.01], spine: [0.14, 0.06, 0], chest: [0.08, 0.10, -0.02], head: [-0.06, 0.04, 0],
+      rUp: [0.52, 0, -0.48], rLow: [0, 0, -0.35], rHand: [0.12, 0, 0], bUp: [0.38, 0, 0.28], bLow: [0, 0, 0.35],
+      rThigh: [-0.30, 0.05, 0.08], rCalf: [0.58, 0, 0], rFoot: [0.12, 0, 0],
+      bThigh: [-0.36, 0, -0.06], bCalf: [0.56, 0, 0], bFoot: [-0.20, 0, 0],
+    })],
+    [0.25, P({
+      yaw: 0.06, hips: [0.08, 0.18, 0], spine: [0.12, 0.08, 0], chest: [0.06, 0.14, -0.02], head: [-0.05, -0.08, 0],
+      rUp: [0.70, 0, -0.30], rLow: [0, 0, -0.42], rHand: [0.15, 0, 0], bUp: [0.28, 0, 0.18], bLow: [0, 0, 0.40],
+      rThigh: [-0.28, 0.08, 0.06], rCalf: [0.56, 0, 0], rFoot: [0.20, 0, 0],
+      bThigh: [-0.32, -0.02, -0.05], bCalf: [0.50, 0, 0], bFoot: [-0.18, 0, 0],
+    })],
+    [0.55, P({})],
+  ],
+  volleyB: [
+    [0, half('backhand')],
+    [0.03, P({
+      yaw: 0.32, hips: [0.08, -0.12, -0.02], spine: [0.12, -0.02, 0], chest: [0.06, 0.08, -0.02], head: [-0.06, -0.14, 0],
+      rUp: [0.48, 0, 0.45], rLow: [0, 0, -0.45], bUp: [0.20, 0, 0.10], bLow: [0, 0, 0.30],
+      rThigh: [-0.36, -0.04, 0.08], rCalf: [0.58, 0, 0], rFoot: [-0.22, 0, 0],
+      bThigh: [-0.34, -0.02, -0.10], bCalf: [0.58, 0, 0], bFoot: [-0.12, 0, 0],
+    })],
+    [0.06, P({
+      yaw: 0.16, hips: [0.10, -0.16, -0.01], spine: [0.14, -0.06, 0], chest: [0.08, -0.10, 0.02], head: [-0.06, -0.06, 0],
+      rUp: [0.52, 0, 0.08], rLow: [0, 0, -0.32], rHand: [0.10, 0, 0], bUp: [-0.18, 0, 0.38], bLow: [0, 0, 0.20],
+      rThigh: [-0.36, 0, 0.06], rCalf: [0.56, 0, 0], rFoot: [-0.20, 0, 0],
+      bThigh: [-0.30, -0.05, -0.08], bCalf: [0.58, 0, 0], bFoot: [0.12, 0, 0],
+    })],
+    [0.25, P({
+      yaw: 0.02, hips: [0.08, -0.18, 0], spine: [0.12, -0.08, 0], chest: [0.06, -0.14, 0.02], head: [-0.05, 0.05, 0],
+      rUp: [0.40, 0, -0.60], rLow: [0, 0, -0.30], rHand: [0.14, 0, 0], bUp: [-0.35, 0, 0.55], bLow: [0, 0, 0.15],
+      rThigh: [-0.32, 0.02, 0.05], rCalf: [0.50, 0, 0], rFoot: [-0.18, 0, 0],
+      bThigh: [-0.28, -0.08, -0.06], bCalf: [0.56, 0, 0], bFoot: [0.20, 0, 0],
+    })],
+    [0.55, P({})],
+  ],
 };
 
 function lerpPose(A, B, u) {

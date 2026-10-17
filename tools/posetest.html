@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Full-Body Stroke Pose Inspector (agy-08)</title>
+<style>
+  :root { --bg: #0b1520; --panel: #12202ee6; --acc: #d8f53a; --mut: #9fb3c8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: #fff; font: 14px system-ui, sans-serif; overflow: hidden; }
+  #canvas-wrap { position: fixed; inset: 0; }
+  .hud { position: fixed; top: 14px; left: 14px; width: 390px; max-height: calc(100vh - 28px); overflow-y: auto;
+    background: var(--panel); border: 1px solid #ffffff1f; border-radius: 12px; padding: 14px 16px; backdrop-filter: blur(8px); }
+  h1 { margin: 0 0 4px; font-size: 18px; } h1 b { color: var(--acc); }
+  .sub { color: var(--mut); font-size: 12px; margin-bottom: 10px; }
+  .sec { margin-top: 10px; padding-top: 10px; border-top: 1px solid #ffffff14; }
+  .sec-title { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--mut); margin-bottom: 6px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; }
+  button { background: #1a2d40; color: #fff; border: 1px solid #ffffff22; border-radius: 7px; padding: 6px 10px;
+    font: 600 12px system-ui, sans-serif; cursor: pointer; transition: all .1s; }
+  button:hover { border-color: var(--acc); }
+  button.on { background: var(--acc); color: #111; border-color: var(--acc); }
+  .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .slider-row input[type=range] { flex: 1; accent-color: var(--acc); }
+  .val { font-family: ui-monospace, monospace; color: var(--acc); min-width: 58px; text-align: right; font-weight: 700; }
+  pre { margin: 6px 0 0; padding: 8px 10px; background: #081018; border-radius: 8px; font: 11px/1.45 ui-monospace, monospace;
+    color: #cfe3f7; overflow-x: auto; white-space: pre; }
+  .legend { position: fixed; bottom: 14px; right: 14px; background: var(--panel); border: 1px solid #ffffff1f;
+    border-radius: 10px; padding: 10px 14px; font-size: 12px; color: var(--mut); }
+  .legend b { color: #fff; }
+</style>
+</head>
+<body>
+<div id="canvas-wrap"></div>
+<div class="hud">
+  <h1>Full-Body <b>Stroke Inspector</b></h1>
+  <div class="sub">Left: <b>Ahmet (Right-handed)</b> · Right: <b>Aydın (Left-handed)</b></div>
+
+  <div class="sec">
+    <div class="sec-title">Stroke / Stance</div>
+    <div class="btns" id="strokes"></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-title">Keyframe Preset &amp; Playback</div>
+    <div class="btns" id="phases"></div>
+    <div class="slider-row">
+      <span>t (s)</span>
+      <input type="range" id="tSlider" min="0" max="0.55" step="0.005" value="0">
+      <span class="val" id="tVal">0.000s</span>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-title">Locomotion Clip (Leg Blend: idle 1.0 · walk 0.6 · run 0.35)</div>
+    <div class="btns" id="clips"></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-title">Ball Position (Head Tracking &amp; Low-Ball Lunge)</div>
+    <div class="btns" id="balls"></div>
+    <div class="slider-row">
+      <span>Ball Y</span>
+      <input type="range" id="ballY" min="0.2" max="2.6" step="0.05" value="1.1">
+      <span class="val" id="ballYVal">1.10m</span>
+    </div>
+    <div class="slider-row">
+      <span>Ball X</span>
+      <input type="range" id="ballX" min="-2.0" max="2.0" step="0.1" value="0.0">
+      <span class="val" id="ballXVal">0.00m</span>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-title">Camera View</div>
+    <div class="btns" id="cams"></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-title">Pose Readout (Righty / Lefty)</div>
+    <pre id="readout">Loading avatars…</pre>
+  </div>
+</div>
+<div class="legend">Drag on canvas to orbit camera · Scroll to zoom · <b>Yellow sphere</b> = tracked ball</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { createAvatar, PREP, SWINGS, SERVE_READY, SERVE_BACK, SERVE_SWING } from '/src/player.js';
+
+const STROKES = [
+  ['forehand', 'Forehand'],
+  ['backhand', 'Backhand (1H)'],
+  ['overhead', 'Overhead (Bandeja)'],
+  ['smash', 'Smash'],
+  ['volleyF', 'Volley FH'],
+  ['volleyB', 'Volley BH'],
+  ['serve', 'Serve (Underhand)'],
+  ['prep:forehand', 'Prep FH'],
+  ['prep:backhand', 'Prep BH'],
+  ['prep:overhead', 'Prep Trophy'],
+  ['prep:low', 'Low Ball Lunge'],
+  ['serveReady', 'Serve Ready'],
+  ['serveToss', 'Serve Crouch'],
+];
+
+const PHASES = [
+  ['Prep (0.00)', 0.00],
+  ['Hip Drive (0.03)', 0.03],
+  ['Contact (0.07)', 0.07],
+  ['Follow (0.28)', 0.28],
+  ['End (0.55)', 0.55],
+];
+
+const CLIPS = [
+  ['idle', 'Idle (1.0)'],
+  ['walk', 'Walk (0.6)'],
+  ['run', 'Run (0.35)'],
+];
+
+const BALLS = [
+  ['Normal (1.1m)', 0, 1.1],
+  ['Low Lunge (0.32m)', 0, 0.32],
+  ['High Lob (2.35m)', 0, 2.35],
+  ['Wide Left (-1.4m)', -1.4, 1.0],
+  ['Wide Right (+1.4m)', 1.4, 1.0],
+];
+
+const CAMS = [
+  ['Front', 0, 1.35, 3.6],
+  ['3/4 Right', 2.2, 1.45, 3.0],
+  ['3/4 Left', -2.2, 1.45, 3.0],
+  ['Side', 3.4, 1.25, 0.0],
+];
+
+const state = {
+  stroke: 'forehand',
+  t: 0,
+  playing: false,
+  slowMo: false,
+  clip: 'idle',
+  ballX: 0,
+  ballY: 1.1,
+  camYaw: 0,
+  camPitch: 0.12,
+  camDist: 3.7,
+};
+
+const wrap = document.getElementById('canvas-wrap');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+wrap.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b1520);
+
+const hemi = new THREE.HemisphereLight(0xddeeff, 0x1b2a3a, 1.1);
+const dir = new THREE.DirectionalLight(0xfff7e8, 1.45);
+dir.position.set(3, 6, 4);
+dir.castShadow = true;
+dir.shadow.mapSize.set(1024, 1024);
+scene.add(hemi, dir);
+
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(12, 12).rotateX(-Math.PI / 2),
+  new THREE.MeshLambertMaterial({ color: 0x1b4d7e })
+);
+floor.receiveShadow = true;
+scene.add(floor);
+const grid = new THREE.GridHelper(8, 16, 0xd8f53a, 0x2c5e8f);
+grid.position.y = 0.002;
+scene.add(grid);
+
+const ballMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(0.045, 16, 16),
+  new THREE.MeshBasicMaterial({ color: 0xd8f53a })
+);
+scene.add(ballMesh);
+
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 50);
+
+function updateCamera() {
+  const target = new THREE.Vector3(0, 0.92, 0);
+  camera.position.set(
+    Math.sin(state.camYaw) * Math.cos(state.camPitch) * state.camDist,
+    target.y + Math.sin(state.camPitch) * state.camDist,
+    Math.cos(state.camYaw) * Math.cos(state.camPitch) * state.camDist
+  );
+  camera.lookAt(target);
+}
+updateCamera();
+
+let dragging = false, lx = 0, ly = 0;
+renderer.domElement.addEventListener('pointerdown', (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+window.addEventListener('pointerup', () => { dragging = false; });
+window.addEventListener('pointermove', (e) => {
+  if (!dragging) return;
+  state.camYaw -= (e.clientX - lx) * 0.007;
+  state.camPitch = Math.max(-0.2, Math.min(1.1, state.camPitch + (e.clientY - ly) * 0.006));
+  lx = e.clientX; ly = e.clientY;
+  updateCamera();
+});
+renderer.domElement.addEventListener('wheel', (e) => {
+  state.camDist = Math.max(1.8, Math.min(7.5, state.camDist + e.deltaY * 0.002));
+  updateCamera();
+});
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// UI setup
+const strokeBox = document.getElementById('strokes');
+STROKES.forEach(([id, label]) => {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.dataset.id = id;
+  b.onclick = () => {
+    state.stroke = id;
+    if (id === 'prep:low') { state.ballY = 0.32; document.getElementById('ballY').value = 0.32; document.getElementById('ballYVal').textContent = '0.32m'; }
+    else if (id === 'prep:overhead' || id === 'overhead' || id === 'smash') { state.ballY = 2.25; document.getElementById('ballY').value = 2.25; document.getElementById('ballYVal').textContent = '2.25m'; }
+    syncButtons();
+  };
+  strokeBox.appendChild(b);
+});
+
+const phaseBox = document.getElementById('phases');
+PHASES.forEach(([label, tv]) => {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.onclick = () => {
+    state.playing = false;
+    state.t = tv;
+    document.getElementById('tSlider').value = tv;
+    document.getElementById('tVal').textContent = tv.toFixed(3) + 's';
+    syncButtons();
+  };
+  phaseBox.appendChild(b);
+});
+const playBtn = document.createElement('button');
+playBtn.textContent = '▶ Play Loop';
+playBtn.onclick = () => { state.playing = !state.playing; syncButtons(); };
+phaseBox.appendChild(playBtn);
+
+const slowBtn = document.createElement('button');
+slowBtn.textContent = '0.3x Slow-Mo';
+slowBtn.onclick = () => { state.slowMo = !state.slowMo; syncButtons(); };
+phaseBox.appendChild(slowBtn);
+
+const clipBox = document.getElementById('clips');
+CLIPS.forEach(([id, label]) => {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.dataset.id = id;
+  b.onclick = () => { state.clip = id; syncButtons(); };
+  clipBox.appendChild(b);
+});
+
+const ballBox = document.getElementById('balls');
+BALLS.forEach(([label, bx, by]) => {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.onclick = () => {
+    state.ballX = bx; state.ballY = by;
+    document.getElementById('ballX').value = bx;
+    document.getElementById('ballY').value = by;
+    document.getElementById('ballXVal').textContent = bx.toFixed(2) + 'm';
+    document.getElementById('ballYVal').textContent = by.toFixed(2) + 'm';
+  };
+  ballBox.appendChild(b);
+});
+
+const camBox = document.getElementById('cams');
+CAMS.forEach(([label, x, y, z]) => {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.onclick = () => {
+    state.camYaw = Math.atan2(x, z);
+    state.camDist = Math.hypot(x, y - 0.92, z);
+    state.camPitch = Math.asin((y - 0.92) / state.camDist);
+    updateCamera();
+  };
+  camBox.appendChild(b);
+});
+
+document.getElementById('tSlider').addEventListener('input', (e) => {
+  state.playing = false;
+  state.t = +e.target.value;
+  document.getElementById('tVal').textContent = state.t.toFixed(3) + 's';
+  syncButtons();
+});
+document.getElementById('ballY').addEventListener('input', (e) => {
+  state.ballY = +e.target.value;
+  document.getElementById('ballYVal').textContent = state.ballY.toFixed(2) + 'm';
+});
+document.getElementById('ballX').addEventListener('input', (e) => {
+  state.ballX = +e.target.value;
+  document.getElementById('ballXVal').textContent = state.ballX.toFixed(2) + 'm';
+});
+
+function syncButtons() {
+  strokeBox.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.id === state.stroke));
+  clipBox.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.id === state.clip));
+  playBtn.classList.toggle('on', state.playing);
+  slowBtn.classList.toggle('on', state.slowMo);
+}
+syncButtons();
+
+const chars = await fetch('data/characters.json').then(r => r.json());
+const rightyChar = chars.find(c => c.hand === 'right') || chars[0];
+const leftyChar = chars.find(c => c.hand === 'left') || chars[1];
+
+const righty = await createAvatar(scene, rightyChar, '#d8f53a', 'diamond');
+const lefty = await createAvatar(scene, leftyChar, '#ff6b00', 'teardrop');
+
+// Expose for inspection / automated verification
+window.__poseInspector = { state, righty, lefty, PREP, SWINGS, SERVE_READY, SERVE_BACK, SERVE_SWING };
+
+let lastT = performance.now();
+let approachD = 2.4;
+
+function applyAvatar(av, xPos, dt) {
+  const st = state.stroke;
+  const bx = xPos + state.ballX;
+  const by = state.ballY;
+  const bz = 1.1;
+  if (st.startsWith('prep:')) {
+    const sub = st.slice(5);
+    // Simulate approaching ball so prepW reaches 1
+    approachD -= 0.15;
+    if (approachD < 0.9) approachD = 2.4;
+    const sideX = sub === 'backhand' ? (av.ch.hand === 'left' ? -0.9 : 0.9) : (av.ch.hand === 'left' ? 0.9 : -0.9);
+    const py = sub === 'overhead' ? 2.1 : sub === 'low' ? 0.32 : by;
+    for (let i = 0; i < 6; i++) {
+      av.update(0.05, [xPos, 0, 0, state.clip, null, 0, 0], [xPos + sideX * 0.5, py, 0.9 + (5 - i) * 0.25], sub === 'overhead');
+    }
+  } else if (st === 'serveReady' || st === 'serveToss') {
+    av.update(0.08, [xPos, 0, 0, st, null, 0, 0], [bx, 0.7, bz], false);
+  } else {
+    av.update(state.playing ? dt : 0, [xPos, 0, 0, state.clip, st, state.t, st === 'backhand' || st === 'volleyB' ? 1 : 0], [bx, by, bz], false);
+  }
+}
+
+function fmtV(v) { return v.map(n => (n >= 0 ? '+' : '') + n.toFixed(2)).join(','); }
+
+function tick(now) {
+  const rawDt = Math.min(0.05, (now - lastT) / 1000);
+  lastT = now;
+  const dt = rawDt * (state.slowMo ? 0.3 : 1);
+
+  if (state.playing) {
+    state.t = (state.t + dt) % 0.55;
+    document.getElementById('tSlider').value = state.t;
+    document.getElementById('tVal').textContent = state.t.toFixed(3) + 's';
+  }
+
+  ballMesh.position.set(state.ballX, state.ballY, 1.1);
+  applyAvatar(righty, -0.95, dt);
+  applyAvatar(lefty, 0.95, dt);
+
+  const v = new THREE.Vector3();
+  const rPel = righty.bones.pelvis.getWorldPosition(v).y;
+  const lPel = lefty.bones.pelvis.getWorldPosition(v).y;
+  const rFootR = righty.bones.ball_r.getWorldPosition(v).y;
+  const rFootL = righty.bones.ball_l.getWorldPosition(v).y;
+  const lFootL = lefty.bones.ball_l.getWorldPosition(v).y;
+  const lFootR = lefty.bones.ball_r.getWorldPosition(v).y;
+
+  const keys = state.stroke === 'serve' ? SERVE_SWING : SWINGS[state.stroke];
+  let poseInfo = `mode: ${state.stroke} | clip: ${state.clip} | t: ${state.t.toFixed(3)}s\n`;
+  poseInfo += `pelvis.y  R: ${rPel.toFixed(2)}m   L: ${lPel.toFixed(2)}m\n`;
+  poseInfo += `feet.y    R: [${rFootR.toFixed(2)}, ${rFootL.toFixed(2)}]  L: [${lFootL.toFixed(2)}, ${lFootR.toFixed(2)}]\n`;
+  if (keys) {
+    const kf = keys.find(k => k[0] >= state.t)?.[1] || keys[keys.length - 1][1];
+    poseInfo += `yaw: ${kf.yaw.toFixed(2)}  hips: [${fmtV(kf.hips)}]  chest: [${fmtV(kf.chest)}]\n`;
+    poseInfo += `rLeg(T/C/F): [${kf.rThigh[0].toFixed(2)}, ${kf.rCalf[0].toFixed(2)}, ${kf.rFoot[0].toFixed(2)}]\n`;
+    poseInfo += `bLeg(T/C/F): [${kf.bThigh[0].toFixed(2)}, ${kf.bCalf[0].toFixed(2)}, ${kf.bFoot[0].toFixed(2)}]`;
+  }
+  document.getElementById('readout').textContent = poseInfo;
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
