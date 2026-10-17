@@ -21,5 +21,6 @@ Read `CLAUDE.md` — it is the shared guide for every agent (Claude, Antigravity
 | `agy-08` | Full-body procedural strokes + `tools/posetest.html` | `agents/reports/agy-08-fullbody-strokes.md` | Completed, Opus fixes (bone reset, crouch knob) |
 | `agy-09` | Crowd reactions, 3D stand wave, motivational callouts & style rewards | `agents/reports/agy-09-crowd-hype-rewards.md` | Completed, Opus reviewed |
 | `agy-10` | Career Mode: Hub, Character Creator, Profile & Reward screens | `agents/reports/agy-10-career-hub.md` | Completed, Opus reviewed (partner grid fix) |
+| `agy-11` | Career: Training, Shop, Locker; equipment into matches | `agents/reports/agy-11-career-shop.md` | Completed, Opus reviewed |
 
 

@@ -1,9 +1,10 @@
-// Career mode UI screens: Template picker, Character Creator, Career Hub, Career Play, Match Reward, Profile.
+// Career mode UI screens: Template picker, Character Creator, Career Hub, Career Play, Training, Shop, Locker, Match Reward, Profile.
 // Reuses the menu's single 3D preview canvas (Intel HD 620 friendly) and routes all storage through src/career.js.
 import characters from '../data/characters.json';
 import venues from '../data/venues.json';
 import rackets from '../data/rackets.json';
 import eco from '../data/economy.json';
+import shop from '../data/shop.json';
 import {
   PROFILE_KEY,
   newProfile,
@@ -13,6 +14,11 @@ import {
   importProfile,
   matchReward,
   applyReward,
+  trainCost,
+  buyTraining,
+  tierOf,
+  buyItem,
+  equip,
 } from './career.js';
 import {
   countryFlag,
@@ -20,7 +26,7 @@ import {
   restoreQuickMatchPreview,
   setCareerGamepadHandler,
 } from './menu.js';
-import { getPortraitThumb, getVenueThumb } from './thumbs.js';
+import { getPortraitThumb, getVenueThumb, getRacketThumb } from './thumbs.js';
 
 const STORAGE_NOTICE = 'Your progress is saved in this browser only. Clearing browser data deletes it. Accounts are coming later.';
 const BLOCKED_BANNER = 'Storage is blocked in this browser — progress will be lost when the page reloads.';
@@ -83,6 +89,23 @@ const AI_LEVELS = [
   { id: 'legend', label: 'Legend', stars: '★★★★' },
 ];
 
+const TRAINING_STATS = [
+  { key: 'speed', label: 'Speed', desc: 'Speed: court movement and sprint pace across the turf.' },
+  { key: 'power', label: 'Power', desc: 'Power: ball speed on groundstrokes and serves.' },
+  { key: 'control', label: 'Control', desc: 'Control: shot placement accuracy toward your target.' },
+  { key: 'volley', label: 'Volley', desc: 'Volley: accuracy on balls taken before the bounce.' },
+  { key: 'smash', label: 'Smash', desc: 'Smash: speed and accuracy on smashes, bandejas and víboras.' },
+  { key: 'stamina', label: 'Stamina', desc: 'Stamina: reduces accuracy loss during long rallies (8+ shots).' },
+];
+
+const SHOP_TABS = [
+  { id: 'racket', label: 'Rackets' },
+  { id: 'shoes', label: 'Shoes' },
+  { id: 'ball', label: 'Balls' },
+  { id: 'kit', label: 'Kit' },
+  { id: 'headwear', label: 'Headwear' },
+];
+
 function buildCountriesList() {
   const map = new Map();
   for (const c of characters) {
@@ -125,7 +148,7 @@ let startMatchFn = null;
 let careerPanel = null;
 let fileInputEl = null;
 let isOpen = false;
-let curScreen = 'hub'; // 'templates' | 'creator' | 'hub' | 'play' | 'reward' | 'profile'
+let curScreen = 'hub'; // 'templates' | 'creator' | 'hub' | 'play' | 'training' | 'shop' | 'locker' | 'reward' | 'profile'
 
 let profile = null;
 let memProfile = null;
@@ -134,6 +157,8 @@ let corruptState = false;
 let flashMsg = null; // { type: 'error'|'ok', text: string }
 let deleteConfirmOpen = false;
 let templateFilter = 'all';
+let shopTab = 'racket';
+let shopErrors = {}; // { [itemId]: string }
 
 // Creator state
 let creatorMode = 'create'; // 'create' | 'edit'
@@ -149,9 +174,64 @@ const playState = {
   partnerIdx: 0,
 };
 
+function capitalize(s) {
+  const str = String(s || '');
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 function equippedRacket(p = profile) {
   const id = p?.equipped?.racket || 'r01';
   return rackets.find(r => r.id === id) || rackets[0];
+}
+
+function equippedShoes(p = profile) {
+  const id = p?.equipped?.shoes || 'shoe_starter';
+  return shop.items.find(i => i.type === 'shoes' && i.id === id) || shop.items.find(i => i.id === 'shoe_starter');
+}
+
+function equippedBall(p = profile) {
+  const id = p?.equipped?.ball || 'ball_standard';
+  return shop.items.find(i => i.type === 'ball' && i.id === id) || shop.items.find(i => i.id === 'ball_standard');
+}
+
+function equippedKit(p = profile) {
+  const id = p?.equipped?.kit || 'kit_starter';
+  return shop.items.find(i => i.type === 'kit' && i.id === id) || shop.items.find(i => i.id === 'kit_starter');
+}
+
+function equippedHeadwearItem(p = profile) {
+  const id = p?.equipped?.headwear;
+  if (!id) return null;
+  return shop.items.find(i => i.type === 'headwear' && i.id === id) || null;
+}
+
+function buildEquippedPlayer(p = profile) {
+  if (!p) return null;
+  const kit = equippedKit(p);
+  const shoeItem = equippedShoes(p);
+  const hwItem = equippedHeadwearItem(p);
+  return {
+    ...p.player,
+    stats: { ...p.stats },
+    outfit: {
+      shirt: kit ? kit.shirt : (p.player.outfit?.shirt || '#FFFFFF'),
+      shorts: kit ? kit.shorts : (p.player.outfit?.shorts || '#1D3557'),
+      shoes: shoeItem ? shoeItem.color : (kit?.shoes || p.player.outfit?.shoes || '#1B1B1E'),
+    },
+    headwear: hwItem ? hwItem.headwear : p.player.headwear,
+  };
+}
+
+function renderTopCreditsHtml(p = profile) {
+  if (!p) return '';
+  const curTier = capitalize(tierOf(p.rankingPoints, shop));
+  return `
+    <div class="cr-top-currencies" aria-label="Player currencies">
+      <div class="cr-top-curr"><span>Credits</span><b class="tabular">${p.credits}</b></div>
+      <div class="cr-top-curr is-rp"><span>Ranking pts</span><b class="tabular">${p.rankingPoints}</b></div>
+      <div class="cr-top-curr is-tier"><span>Tier</span><b>${escapeHtml(curTier)}</b></div>
+    </div>
+  `;
 }
 
 function statBarHtml(name, val) {
@@ -417,6 +497,7 @@ function handleImportFile(file) {
 function showScreen(screen) {
   curScreen = screen;
   deleteConfirmOpen = false;
+  if (screen !== 'shop') shopErrors = {};
   renderCurrentScreen();
 }
 
@@ -426,6 +507,9 @@ function renderCurrentScreen() {
   else if (curScreen === 'creator') renderCreatorScreen();
   else if (curScreen === 'reward') renderRewardScreen();
   else if (curScreen === 'play') renderPlayScreen();
+  else if (curScreen === 'training') renderTrainingScreen();
+  else if (curScreen === 'shop') renderShopScreen();
+  else if (curScreen === 'locker') renderLockerScreen();
   else if (curScreen === 'profile') renderProfileScreen();
   else renderHubScreen();
 }
@@ -880,11 +964,12 @@ function renderHubScreen() {
     return;
   }
 
-  const pl = profile.player;
+  const pl = buildEquippedPlayer(profile);
   const rk = equippedRacket(profile);
   setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'CAREER HUB');
 
   const h = profile.history || { played: 0, won: 0, pointsWon: 0 };
+  const curTier = capitalize(tierOf(profile.rankingPoints, shop));
 
   careerPanel.innerHTML = `
     ${renderBannersHtml()}
@@ -893,7 +978,7 @@ function renderHubScreen() {
         <span class="cr-prof-flag">${countryFlag(pl.countryCode)}</span>
         <div>
           <div class="cr-prof-name" lang="en">${escapeHtml(pl.name)}</div>
-          <div class="cr-prof-rank">World rank: — · Record: ${h.won}W – ${Math.max(0, h.played - h.won)}L (${h.played} played)</div>
+          <div class="cr-prof-rank">World rank: — · Tier: ${escapeHtml(curTier)} · Record: ${h.won}W – ${Math.max(0, h.played - h.won)}L (${h.played} played)</div>
         </div>
       </div>
       <div class="cr-currencies">
@@ -930,28 +1015,28 @@ function renderHubScreen() {
           <div class="pl-card-sub">Americano, Mexicano, Knockout & League ladder.</div>
         </button>
 
-        <button type="button" class="pl-card cr-hub-card is-disabled" disabled>
+        <button type="button" class="pl-card cr-hub-card" id="cr-hub-training">
           <div class="cr-hub-card-top">
             <div class="pl-card-title">💪 Training</div>
-            <span class="cr-soon-pill">Coming soon</span>
+            <span class="pl-meta-pill">6 Stats · Max 10</span>
           </div>
           <div class="pl-card-sub">Spend Credits to upgrade your 6 player attributes.</div>
         </button>
 
-        <button type="button" class="pl-card cr-hub-card is-disabled" disabled>
+        <button type="button" class="pl-card cr-hub-card" id="cr-hub-shop">
           <div class="cr-hub-card-top">
             <div class="pl-card-title">🛒 Shop</div>
-            <span class="cr-soon-pill">Coming soon</span>
+            <span class="pl-meta-pill">${escapeHtml(curTier)} Tier</span>
           </div>
-          <div class="pl-card-sub">Unlock pro rackets, shoes, kits & match balls.</div>
+          <div class="pl-card-sub">Unlock pro rackets, shoes, kits, headwear & match balls.</div>
         </button>
 
-        <button type="button" class="pl-card cr-hub-card is-disabled" disabled>
+        <button type="button" class="pl-card cr-hub-card" id="cr-hub-locker">
           <div class="cr-hub-card-top">
             <div class="pl-card-title">🎒 Locker</div>
-            <span class="cr-soon-pill">Coming soon</span>
+            <span class="pl-meta-pill">${profile.inventory.length} Owned</span>
           </div>
-          <div class="pl-card-sub">Equip your owned rackets, shoes, kit and ball.</div>
+          <div class="pl-card-sub">Equip your owned rackets, shoes, kit, headwear and ball.</div>
         </button>
 
         <button type="button" class="pl-card cr-hub-card is-disabled" disabled>
@@ -982,6 +1067,9 @@ function renderHubScreen() {
 
   wireBannerButtons();
   careerPanel.querySelector('#cr-hub-play').onclick = () => { flashMsg = null; showScreen('play'); };
+  careerPanel.querySelector('#cr-hub-training').onclick = () => { flashMsg = null; showScreen('training'); };
+  careerPanel.querySelector('#cr-hub-shop').onclick = () => { flashMsg = null; shopErrors = {}; showScreen('shop'); };
+  careerPanel.querySelector('#cr-hub-locker').onclick = () => { flashMsg = null; showScreen('locker'); };
   careerPanel.querySelector('#cr-hub-profile').onclick = () => { flashMsg = null; showScreen('profile'); };
   careerPanel.querySelector('#cr-hub-back').onclick = () => closeCareer();
 }
@@ -989,8 +1077,11 @@ function renderHubScreen() {
 // 4. Career Play Screen
 function renderPlayScreen() {
   if (!profile) { showScreen('templates'); return; }
-  const pl = profile.player;
+  const pl = buildEquippedPlayer(profile);
   const rk = equippedRacket(profile);
+  const shoeItem = equippedShoes(profile);
+  const ballItem = equippedBall(profile);
+  const kitItem = equippedKit(profile);
   setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'CAREER MATCH');
 
   const curVenue = venues[playState.venueIdx] || venues[0];
@@ -1002,9 +1093,13 @@ function renderPlayScreen() {
     <div class="cr-head">
       <div>
         <h2 class="cr-title">CAREER · <span>PLAY MATCH</span></h2>
-        <div class="cr-sub">Format: 1 Set (to 6 games) · Golden Point · Equipped: ${escapeHtml(rk.name)}</div>
+        <div class="cr-sub">Format: 1 Set (to 6 games) · Golden Point · Equipped: ${escapeHtml(rk.name)} · ${escapeHtml(shoeItem.name)} · ${escapeHtml(ballItem.name)} · ${escapeHtml(kitItem.name)}</div>
       </div>
-      <button type="button" class="cr-btn" id="cr-play-back">← Back to Hub</button>
+      <div class="cr-head-right">
+        ${renderTopCreditsHtml(profile)}
+        <button type="button" class="cr-btn" id="cr-play-locker">🎒 Locker</button>
+        <button type="button" class="cr-btn" id="cr-play-back">← Back to Hub</button>
+      </div>
     </div>
 
     <div class="cr-body">
@@ -1052,6 +1147,7 @@ function renderPlayScreen() {
 
   wireBannerButtons();
   careerPanel.querySelector('#cr-play-back').onclick = () => showScreen('hub');
+  careerPanel.querySelector('#cr-play-locker').onclick = () => showScreen('locker');
 
   careerPanel.querySelectorAll('#cr-play-mode [data-players]').forEach(btn => {
     btn.onclick = () => {
@@ -1115,8 +1211,23 @@ function renderPlayScreen() {
 async function launchCareerMatch() {
   if (!startMatchFn || !profile) return;
   const players = playState.players;
-  const me = { ...profile.player, stats: { ...profile.stats } };
-  const myRacket = equippedRacket(profile);
+  const myRacket = rackets.find(r => r.id === profile.equipped?.racket) || rackets[0];
+  const kit = equippedKit(profile);
+  const shoeItem = equippedShoes(profile);
+  const ballItem = equippedBall(profile);
+  const hwItem = equippedHeadwearItem(profile);
+
+  const me = {
+    ...profile.player,
+    stats: { ...profile.stats },
+    outfit: {
+      shirt: kit.shirt,
+      shorts: kit.shorts,
+      shoes: shoeItem.color,
+    },
+    headwear: hwItem ? hwItem.headwear : profile.player.headwear,
+  };
+
   const partner = characters[playState.partnerIdx] || characters[0];
   const oppPool = characters.filter(c => (players === 4 ? c !== partner : true)).slice().sort(() => Math.random() - 0.5);
 
@@ -1147,6 +1258,8 @@ async function launchCareerMatch() {
     match: { sets: 1, superTiebreak: false, goldenPoint: true, starPoint: false },
     roster,
     rackets: rk,
+    shoes: { 0: { speed: shoeItem.speed, agility: shoeItem.agility } },
+    ball: { speed: ballItem.speed, bounce: ballItem.bounce },
     venue,
     onEnd(result) {
       const reward = matchReward(result, eco);
@@ -1164,14 +1277,466 @@ async function launchCareerMatch() {
   });
 }
 
-// 5. Reward Screen
+// 5. Training Screen
+function renderTrainingScreen() {
+  if (!profile) { showScreen('templates'); return; }
+  const pl = buildEquippedPlayer(profile);
+  const rk = equippedRacket(profile);
+  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'TRAINING');
+
+  const maxLevel = eco.training.max;
+
+  careerPanel.innerHTML = `
+    ${renderBannersHtml()}
+    <div class="cr-head">
+      <div>
+        <h2 class="cr-title">CAREER · <span>TRAINING</span></h2>
+        <div class="cr-sub">Upgrade your 6 player attributes with Credits. Each level raises on-court performance.</div>
+      </div>
+      <div class="cr-head-right">
+        ${renderTopCreditsHtml(profile)}
+        <button type="button" class="cr-btn" id="cr-train-back">← Back to Hub</button>
+      </div>
+    </div>
+
+    <div class="cr-body">
+      <div class="cr-train-list" id="cr-train-list">
+        ${TRAINING_STATS.map(st => {
+          const level = profile.stats[st.key] ?? 4;
+          const isMax = level >= maxLevel;
+          const cost = isMax ? 0 : trainCost(level, eco);
+          const deficit = Math.max(0, cost - profile.credits);
+          const canBuy = !isMax && deficit === 0;
+          const pct = Math.min(100, (level / maxLevel) * 100);
+          const reasonText = isMax ? 'Maxed' : deficit > 0 ? `Need ${deficit} more Credits` : '';
+
+          return `
+            <div class="cr-train-card" data-stat-card="${st.key}">
+              <div class="cr-train-top">
+                <div class="cr-train-title-group">
+                  <span class="cr-train-name">${escapeHtml(st.label)}</span>
+                  <span class="cr-train-lvl tabular">${level}/${maxLevel}</span>
+                </div>
+                <div class="cr-train-actions">
+                  <span class="cr-train-cost tabular">${isMax ? 'Maxed' : `Next: ${cost} Credits`}</span>
+                  ${reasonText ? `<span class="cr-train-reason">${escapeHtml(reasonText)}</span>` : ''}
+                  <button type="button" class="cr-btn cr-btn-acc cr-train-buy" data-train="${st.key}" ${canBuy ? '' : 'disabled'}>Buy</button>
+                </div>
+              </div>
+              <div class="pl-stat-track cr-train-track">
+                <div class="pl-stat-fill" style="width:${pct}%"></div>
+              </div>
+              <div class="cr-train-desc">${escapeHtml(st.desc)}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+
+  wireBannerButtons();
+  careerPanel.querySelector('#cr-train-back').onclick = () => {
+    flashMsg = null;
+    showScreen('hub');
+  };
+
+  careerPanel.querySelectorAll('[data-train]').forEach(btn => {
+    btn.onclick = () => {
+      const statKey = btn.dataset.train;
+      const st = TRAINING_STATS.find(x => x.key === statKey);
+      const res = buyTraining(profile, statKey, eco);
+      if (res.ok) {
+        persistProfile(res.profile);
+        flashMsg = { type: 'ok', text: `${st ? st.label : statKey} upgraded to ${res.profile.stats[statKey]}/${maxLevel}!` };
+        renderTrainingScreen();
+      } else {
+        const level = profile.stats[statKey] ?? 4;
+        const cost = level >= maxLevel ? 0 : trainCost(level, eco);
+        const msg = res.reason === 'max'
+          ? 'Maxed'
+          : res.reason === 'credits'
+          ? `Need ${Math.max(1, cost - profile.credits)} more Credits`
+          : 'Cannot train this stat.';
+        flashMsg = { type: 'error', text: msg };
+        renderTrainingScreen();
+      }
+    };
+  });
+}
+
+// 6. Shop Screen
+function renderShopItemSpecHtml(item, tabId) {
+  if (tabId === 'racket') {
+    return `
+      <div class="cr-shop-spec">${escapeHtml(item.core)} · ${escapeHtml(item.face)} · ${escapeHtml(item.shape)} · ${item.weightG} g</div>
+      <div class="pl-racket-stats">
+        <div class="pl-rstat"><span>Power</span><div class="pl-bar"><i style="width:${item.stats.power * 10}%"></i></div><b>${item.stats.power}</b></div>
+        <div class="pl-rstat"><span>Control</span><div class="pl-bar"><i style="width:${item.stats.control * 10}%"></i></div><b>${item.stats.control}</b></div>
+        <div class="pl-rstat"><span>Spin</span><div class="pl-bar"><i style="width:${item.stats.spin * 10}%"></i></div><b>${item.stats.spin}</b></div>
+        <div class="pl-rstat"><span>Sweet Spot</span><div class="pl-bar"><i style="width:${item.stats.sweetSpot * 10}%"></i></div><b>${item.stats.sweetSpot}</b></div>
+      </div>
+    `;
+  }
+  if (tabId === 'shoes') {
+    const spdPct = Math.round((item.speed || 0) * 100);
+    const agiVal = Math.round((item.agility || 0) * 100);
+    return `
+      <div class="cr-kit-swatches">
+        <span class="cr-kit-chip"><i style="background:${item.color}"></i>Shoe color</span>
+      </div>
+      <div class="cr-shop-spec">+${spdPct}% speed · agility ${agiVal}</div>
+    `;
+  }
+  if (tabId === 'ball') {
+    return `
+      <div class="cr-kit-swatches">
+        <span class="cr-kit-chip"><i style="background:#d8f53a"></i>Match ball</span>
+      </div>
+      <div class="cr-shop-spec">Speed ×${item.speed} · Bounce ×${item.bounce}</div>
+    `;
+  }
+  if (tabId === 'kit') {
+    return `
+      <div class="cr-kit-swatches">
+        <span class="cr-kit-chip"><i style="background:${item.shirt}"></i>Shirt</span>
+        <span class="cr-kit-chip"><i style="background:${item.shorts}"></i>Shorts</span>
+        <span class="cr-kit-chip"><i style="background:${item.shoes}"></i>Shoes</span>
+      </div>
+    `;
+  }
+  if (tabId === 'headwear') {
+    const hw = item.headwear || { type: 'headband', color: '#ffffff' };
+    return `
+      <div class="cr-kit-swatches">
+        <span class="cr-kit-chip"><i style="background:${hw.color}"></i>${hw.type === 'visor' ? 'Visor' : 'Headband'}</span>
+      </div>
+      <div class="cr-shop-spec">${hw.type === 'visor' ? 'Sun Visor' : 'Sweat Headband'} · ${escapeHtml(hw.color)}</div>
+    `;
+  }
+  return '';
+}
+
+function renderShopScreen() {
+  if (!profile) { showScreen('templates'); return; }
+  const pl = buildEquippedPlayer(profile);
+  const rk = equippedRacket(profile);
+  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'PRO SHOP');
+
+  const items = shopTab === 'racket'
+    ? rackets
+    : shop.items.filter(it => it.type === shopTab);
+
+  careerPanel.innerHTML = `
+    ${renderBannersHtml()}
+    <div class="cr-head">
+      <div>
+        <h2 class="cr-title">CAREER · <span>SHOP</span></h2>
+        <div class="cr-sub">Unlock pro rackets, court shoes, match balls, kits and headwear.</div>
+      </div>
+      <div class="cr-head-right">
+        ${renderTopCreditsHtml(profile)}
+        <button type="button" class="cr-btn" id="cr-shop-locker">🎒 Locker</button>
+        <button type="button" class="cr-btn" id="cr-shop-back">← Back to Hub</button>
+      </div>
+    </div>
+
+    <div class="pl-tabs cr-shop-tabs" id="cr-shop-tabs" role="tablist">
+      ${SHOP_TABS.map(t => `
+        <button type="button" class="pl-tab ${shopTab === t.id ? 'is-active' : ''}" data-shop-tab="${t.id}">
+          ${escapeHtml(t.label)}
+        </button>
+      `).join('')}
+    </div>
+
+    <div class="cr-body">
+      <div class="cr-shop-grid" id="cr-shop-grid"></div>
+    </div>
+  `;
+
+  wireBannerButtons();
+  careerPanel.querySelector('#cr-shop-back').onclick = () => {
+    flashMsg = null;
+    shopErrors = {};
+    showScreen('hub');
+  };
+  careerPanel.querySelector('#cr-shop-locker').onclick = () => {
+    flashMsg = null;
+    shopErrors = {};
+    showScreen('locker');
+  };
+
+  careerPanel.querySelectorAll('#cr-shop-tabs [data-shop-tab]').forEach(btn => {
+    btn.onclick = () => {
+      shopTab = btn.dataset.shopTab;
+      shopErrors = {};
+      flashMsg = null;
+      renderShopScreen();
+    };
+  });
+
+  const grid = careerPanel.querySelector('#cr-shop-grid');
+  items.forEach((item, idx) => {
+    const isOwned = profile.inventory.includes(item.id);
+    const isEquipped = profile.equipped?.[shopTab] === item.id;
+    const minRp = shop.tiers[item.tier] ?? 0;
+    const tierName = capitalize(item.tier);
+    const isTierLocked = profile.rankingPoints < minRp;
+    const canAfford = profile.credits >= item.price;
+    const errText = shopErrors[item.id] || '';
+
+    const card = document.createElement('div');
+    card.className = `pl-card cr-shop-card ${isEquipped ? 'is-selected' : ''} ${isTierLocked && !isOwned ? 'is-locked' : ''}`;
+    card.dataset.shopItem = item.id;
+
+    const thumbHtml = shopTab === 'racket'
+      ? `<div class="pl-thumb-box pl-racket-box shimmer"><img class="pl-thumb-img" alt="${escapeHtml(item.name)}" /></div>`
+      : '';
+
+    card.innerHTML = `
+      <div class="cr-shop-card-top">
+        ${thumbHtml}
+        <div class="cr-shop-card-head">
+          <div class="cr-shop-title-row">
+            <div class="pl-card-title" lang="en">${escapeHtml(item.name)}</div>
+            <div class="cr-badges">
+              ${isOwned ? '<span class="cr-badge is-owned">Owned</span>' : ''}
+              ${isEquipped ? '<span class="cr-badge is-equipped">Equipped</span>' : ''}
+            </div>
+          </div>
+          <div class="cr-shop-meta-row">
+            <span class="cr-shop-price tabular">${item.price} Credits</span>
+            <span class="cr-tier-pill ${isTierLocked ? 'is-locked' : ''}">
+              ${minRp > 0 ? `Unlocks at ${escapeHtml(tierName)} — ${minRp} ranking pts` : 'Amateur — 0 ranking pts'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      ${renderShopItemSpecHtml(item, shopTab)}
+
+      ${errText ? `<div class="cr-card-error" role="alert">${escapeHtml(errText)}</div>` : ''}
+
+      <div class="cr-shop-foot">
+        <button type="button" class="cr-btn ${!isOwned && !isTierLocked && canAfford ? 'cr-btn-acc' : 'cr-btn-muted'} cr-shop-buy" data-buy="${item.id}">
+          Buy
+        </button>
+        ${isOwned && !isEquipped ? `<button type="button" class="cr-btn cr-shop-equip" data-equip-shop="${item.id}">Equip</button>` : ''}
+      </div>
+    `;
+
+    if (shopTab === 'racket') {
+      const box = card.querySelector('.pl-thumb-box');
+      const img = card.querySelector('.pl-thumb-img');
+      getRacketThumb(item, (url) => {
+        img.src = url;
+        img.onload = () => box.classList.remove('shimmer');
+      }, idx < 6);
+    }
+
+    const buyBtn = card.querySelector('[data-buy]');
+    buyBtn.onclick = () => {
+      const res = buyItem(profile, item, shop);
+      if (res.ok) {
+        delete shopErrors[item.id];
+        persistProfile(res.profile);
+        flashMsg = { type: 'ok', text: `Purchased ${item.name}!` };
+        renderShopScreen();
+      } else {
+        let msg = 'Cannot purchase item.';
+        if (res.reason === 'owned') {
+          msg = 'Already owned (owned)';
+        } else if (res.reason === 'tier') {
+          msg = `Locked (tier): Unlocks at ${tierName} — ${minRp} ranking pts`;
+        } else if (res.reason === 'credits') {
+          msg = `Not enough Credits (credits): Need ${Math.max(1, item.price - profile.credits)} more Credits`;
+        }
+        shopErrors[item.id] = msg;
+        renderShopScreen();
+      }
+    };
+
+    const eqBtn = card.querySelector('[data-equip-shop]');
+    if (eqBtn) {
+      eqBtn.onclick = () => {
+        const next = equip(profile, shopTab, item.id);
+        persistProfile(next);
+        flashMsg = { type: 'ok', text: `Equipped ${item.name}.` };
+        renderShopScreen();
+      };
+    }
+
+    grid.appendChild(card);
+  });
+}
+
+// 7. Locker Screen
+function renderLockerScreen() {
+  if (!profile) { showScreen('templates'); return; }
+  const pl = buildEquippedPlayer(profile);
+  const rk = equippedRacket(profile);
+  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'LOCKER');
+
+  const ownedRackets = rackets.filter(r => profile.inventory.includes(r.id));
+  const ownedShoes = shop.items.filter(i => i.type === 'shoes' && profile.inventory.includes(i.id));
+  const ownedBalls = shop.items.filter(i => i.type === 'ball' && profile.inventory.includes(i.id));
+  const ownedKits = shop.items.filter(i => i.type === 'kit' && profile.inventory.includes(i.id));
+  const ownedHeadwear = shop.items.filter(i => i.type === 'headwear' && profile.inventory.includes(i.id));
+
+  careerPanel.innerHTML = `
+    ${renderBannersHtml()}
+    <div class="cr-head">
+      <div>
+        <h2 class="cr-title">CAREER · <span>LOCKER</span></h2>
+        <div class="cr-sub">Select from your owned equipment per slot. The 3D preview updates immediately.</div>
+      </div>
+      <div class="cr-head-right">
+        ${renderTopCreditsHtml(profile)}
+        <button type="button" class="cr-btn" id="cr-locker-shop">🛒 Shop</button>
+        <button type="button" class="cr-btn" id="cr-locker-back">← Back to Hub</button>
+      </div>
+    </div>
+
+    <div class="cr-body">
+      <div class="pl-section-label">RACKET (${ownedRackets.length} OWNED)</div>
+      <div class="cr-locker-grid" id="cr-locker-racket">
+        ${ownedRackets.map(r => {
+          const isEq = profile.equipped?.racket === r.id;
+          return `
+            <button type="button" class="pl-card cr-locker-card ${isEq ? 'is-selected' : ''}" data-slot="racket" data-id="${r.id}">
+              <div class="cr-locker-card-head">
+                <span class="cr-swatch-dot" style="background:${r.color}"></span>
+                <div class="pl-card-title" lang="en">${escapeHtml(r.name)}</div>
+                ${isEq ? '<span class="cr-badge is-equipped">Equipped</span>' : '<span class="cr-badge is-owned">Owned</span>'}
+              </div>
+              <div class="cr-shop-spec">${escapeHtml(r.core)} · ${escapeHtml(r.face)} · ${escapeHtml(r.shape)} · ${r.weightG} g</div>
+              <div class="pl-card-sub">P${r.stats.power} · C${r.stats.control} · Spin ${r.stats.spin} · Sweet ${r.stats.sweetSpot}</div>
+              <span class="pl-check">✓</span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+
+      <div class="pl-section-label">SHOES (${ownedShoes.length} OWNED)</div>
+      <div class="cr-locker-grid" id="cr-locker-shoes">
+        ${ownedShoes.map(s => {
+          const isEq = profile.equipped?.shoes === s.id;
+          return `
+            <button type="button" class="pl-card cr-locker-card ${isEq ? 'is-selected' : ''}" data-slot="shoes" data-id="${s.id}">
+              <div class="cr-locker-card-head">
+                <span class="cr-swatch-dot" style="background:${s.color}"></span>
+                <div class="pl-card-title" lang="en">${escapeHtml(s.name)}</div>
+                ${isEq ? '<span class="cr-badge is-equipped">Equipped</span>' : '<span class="cr-badge is-owned">Owned</span>'}
+              </div>
+              <div class="cr-shop-spec">+${Math.round(s.speed * 100)}% speed · agility ${Math.round(s.agility * 100)}</div>
+              <span class="pl-check">✓</span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+
+      <div class="pl-section-label">MATCH BALL (${ownedBalls.length} OWNED)</div>
+      <div class="cr-locker-grid" id="cr-locker-ball">
+        ${ownedBalls.map(b => {
+          const isEq = profile.equipped?.ball === b.id;
+          return `
+            <button type="button" class="pl-card cr-locker-card ${isEq ? 'is-selected' : ''}" data-slot="ball" data-id="${b.id}">
+              <div class="cr-locker-card-head">
+                <span class="cr-swatch-dot" style="background:#d8f53a"></span>
+                <div class="pl-card-title" lang="en">${escapeHtml(b.name)}</div>
+                ${isEq ? '<span class="cr-badge is-equipped">Equipped</span>' : '<span class="cr-badge is-owned">Owned</span>'}
+              </div>
+              <div class="cr-shop-spec">Speed ×${b.speed} · Bounce ×${b.bounce}</div>
+              <span class="pl-check">✓</span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+
+      <div class="pl-section-label">KIT (${ownedKits.length} OWNED)</div>
+      <div class="cr-locker-grid" id="cr-locker-kit">
+        ${ownedKits.map(k => {
+          const isEq = profile.equipped?.kit === k.id;
+          return `
+            <button type="button" class="pl-card cr-locker-card ${isEq ? 'is-selected' : ''}" data-slot="kit" data-id="${k.id}">
+              <div class="cr-locker-card-head">
+                <div class="pl-card-title" lang="en">${escapeHtml(k.name)}</div>
+                ${isEq ? '<span class="cr-badge is-equipped">Equipped</span>' : '<span class="cr-badge is-owned">Owned</span>'}
+              </div>
+              <div class="cr-kit-swatches">
+                <span class="cr-kit-chip"><i style="background:${k.shirt}"></i>Shirt</span>
+                <span class="cr-kit-chip"><i style="background:${k.shorts}"></i>Shorts</span>
+                <span class="cr-kit-chip"><i style="background:${k.shoes}"></i>Shoes</span>
+              </div>
+              <span class="pl-check">✓</span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+
+      <div class="pl-section-label">HEADWEAR (${ownedHeadwear.length} OWNED)</div>
+      ${ownedHeadwear.length > 0 ? `
+        <div class="cr-locker-grid" id="cr-locker-headwear">
+          ${ownedHeadwear.map(h => {
+            const isEq = profile.equipped?.headwear === h.id;
+            return `
+              <button type="button" class="pl-card cr-locker-card ${isEq ? 'is-selected' : ''}" data-slot="headwear" data-id="${h.id}">
+                <div class="cr-locker-card-head">
+                  <span class="cr-swatch-dot" style="background:${h.headwear.color}"></span>
+                  <div class="pl-card-title" lang="en">${escapeHtml(h.name)}</div>
+                  ${isEq ? '<span class="cr-badge is-equipped">Equipped</span>' : '<span class="cr-badge is-owned">Owned</span>'}
+                </div>
+                <div class="cr-shop-spec">${h.headwear.type === 'visor' ? 'Visor' : 'Headband'} · ${escapeHtml(h.headwear.color)}</div>
+                <span class="pl-check">✓</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      ` : `
+        <div class="cr-empty-slot">
+          <span>No headwear unlocked yet. Visit the Shop to unlock headbands and visors.</span>
+          <button type="button" class="cr-btn" id="cr-locker-buy-hw">Shop Headwear →</button>
+        </div>
+      `}
+    </div>
+  `;
+
+  wireBannerButtons();
+  careerPanel.querySelector('#cr-locker-back').onclick = () => {
+    flashMsg = null;
+    showScreen('hub');
+  };
+  careerPanel.querySelector('#cr-locker-shop').onclick = () => {
+    flashMsg = null;
+    showScreen('shop');
+  };
+  const buyHwBtn = careerPanel.querySelector('#cr-locker-buy-hw');
+  if (buyHwBtn) {
+    buyHwBtn.onclick = () => {
+      shopTab = 'headwear';
+      flashMsg = null;
+      showScreen('shop');
+    };
+  }
+
+  careerPanel.querySelectorAll('[data-slot][data-id]').forEach(btn => {
+    btn.onclick = () => {
+      const slot = btn.dataset.slot;
+      const id = btn.dataset.id;
+      const next = equip(profile, slot, id);
+      persistProfile(next);
+      renderLockerScreen();
+    };
+  });
+}
+
+// 8. Reward Screen
 function renderRewardScreen() {
   if (!profile || !profile.lastReward) {
     showScreen('hub');
     return;
   }
   const r = profile.lastReward;
-  const pl = profile.player;
+  const pl = buildEquippedPlayer(profile);
   const rk = equippedRacket(profile);
   setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), r.won ? 'VICTORY' : 'MATCH COMPLETE');
 
@@ -1185,6 +1750,9 @@ function renderRewardScreen() {
       <div>
         <h2 class="cr-title">MATCH <span>REWARDS</span></h2>
         <div class="cr-sub">Career match summary and Credits breakdown</div>
+      </div>
+      <div class="cr-head-right">
+        ${renderTopCreditsHtml(profile)}
       </div>
     </div>
 
@@ -1233,10 +1801,10 @@ function renderRewardScreen() {
   setTimeout(() => contBtn.focus(), 20);
 }
 
-// 6. Profile Screen
+// 9. Profile Screen
 function renderProfileScreen() {
   if (!profile) { showScreen('templates'); return; }
-  const pl = profile.player;
+  const pl = buildEquippedPlayer(profile);
   const rk = equippedRacket(profile);
   setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'PLAYER PROFILE');
   const h = profile.history || { played: 0, won: 0, pointsWon: 0 };
@@ -1248,7 +1816,10 @@ function renderProfileScreen() {
         <h2 class="cr-title">CAREER · <span>PROFILE</span></h2>
         <div class="cr-sub">Manage appearance, backup save file, or reset career</div>
       </div>
-      <button type="button" class="cr-btn" id="cr-prof-back">← Back to Hub</button>
+      <div class="cr-head-right">
+        ${renderTopCreditsHtml(profile)}
+        <button type="button" class="cr-btn" id="cr-prof-back">← Back to Hub</button>
+      </div>
     </div>
 
     <div class="cr-body">
@@ -1378,8 +1949,15 @@ function goBack() {
     if (btn) btn.click();
     return;
   }
-  if (curScreen === 'play' || curScreen === 'profile') {
+  if (
+    curScreen === 'play' ||
+    curScreen === 'profile' ||
+    curScreen === 'training' ||
+    curScreen === 'shop' ||
+    curScreen === 'locker'
+  ) {
     flashMsg = null;
+    shopErrors = {};
     showScreen('hub');
     return;
   }
@@ -1411,19 +1989,34 @@ function moveCareerFocus(dx, dy) {
     active.dispatchEvent(new Event('input'));
     return;
   }
-  const cols = curScreen === 'templates' ? 4 : curScreen === 'hub' ? 2 : 2;
+  const cols = curScreen === 'templates' ? 4 : curScreen === 'training' ? 1 : 2;
   let nextIdx = idx + (dx !== 0 ? dx : dy * cols);
   nextIdx = Math.max(0, Math.min(focusables.length - 1, nextIdx));
   focusables[nextIdx]?.focus();
 }
 
-let padPrevA = false, padPrevB = false, padPrevX = 0, padPrevY = 0;
+let padPrevA = false, padPrevB = false, padPrevLB = false, padPrevRB = false, padPrevX = 0, padPrevY = 0;
 function handleCareerGamepad(pad) {
   if (!isOpen || !pad) return;
   const a = !!pad.buttons[0]?.pressed;
   const b = !!pad.buttons[1]?.pressed;
+  const lb = !!pad.buttons[4]?.pressed;
+  const rb = !!pad.buttons[5]?.pressed;
   const sx = pad.axes[0] || (pad.buttons[15]?.pressed ? 1 : pad.buttons[14]?.pressed ? -1 : 0);
   const sy = pad.axes[1] || (pad.buttons[13]?.pressed ? 1 : pad.buttons[12]?.pressed ? -1 : 0);
+
+  if (curScreen === 'shop') {
+    const curIdx = SHOP_TABS.findIndex(t => t.id === shopTab);
+    if (lb && !padPrevLB && curIdx > 0) {
+      shopTab = SHOP_TABS[curIdx - 1].id;
+      shopErrors = {};
+      renderShopScreen();
+    } else if (rb && !padPrevRB && curIdx < SHOP_TABS.length - 1) {
+      shopTab = SHOP_TABS[curIdx + 1].id;
+      shopErrors = {};
+      renderShopScreen();
+    }
+  }
 
   if (Math.abs(sx) > 0.6 && Math.abs(padPrevX) <= 0.6) moveCareerFocus(Math.sign(sx), 0);
   if (Math.abs(sy) > 0.6 && Math.abs(padPrevY) <= 0.6) moveCareerFocus(0, Math.sign(sy));
@@ -1436,6 +2029,8 @@ function handleCareerGamepad(pad) {
 
   padPrevA = a;
   padPrevB = b;
+  padPrevLB = lb;
+  padPrevRB = rb;
   padPrevX = sx;
   padPrevY = sy;
 }
