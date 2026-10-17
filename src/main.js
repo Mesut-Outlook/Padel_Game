@@ -471,7 +471,7 @@ function handleEvents(events, score, winner) {
       if (!tut && winner != null) {
         if (onEnd && world) {
           const done = onEnd; onEnd = null;
-          done({ won: winner === 0, gamesWon: world.match.sets.reduce((n, g) => n + g[0], 0), pointsWon: pointsWon[0], scoring: 'sets', ai: aiLevel, score: scoreText(world.match) });
+          done({ won: winner === 0, gamesWon: world.match.sets.reduce((n, g) => n + g[0], 0), pointsWon: pointsWon[0], scoring: world.match.opts.pointsTo ? 'rally' : 'sets', ai: aiLevel, score: scoreText(world.match) });
           onEnd = () => {};  // keeps toMenu pointed at #career without paying twice
         }
         const medalsStr = styleStats.medals.length
@@ -512,7 +512,7 @@ function renderHud(s) {
   const grid = $('hudGrid');
   grid.style.gridTemplateColumns = `14px auto repeat(${n}, 34px) 48px`;
   grid.innerHTML = h;
-  $('hudLabel').textContent = `SET ${b.setNo}` + (b.label ? ' · ' + b.label : '');
+  $('hudLabel').textContent = n ? `SET ${b.setNo}` + (b.label ? ' · ' + b.label : '') : b.label;  // rally scoring has no sets
 }
 
 // Pause menu: P, Esc (when no replay is running) or pad Start. Freezes the match; online games keep running.

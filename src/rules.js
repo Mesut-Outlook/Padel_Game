@@ -108,6 +108,12 @@ export function point(m, team, why) {
   m.log.push(`point T${team}: ${why}`);
   const p = m.points;
   p[team]++;
+  if (m.opts.pointsTo) {  // rally scoring (Americano/Mexicano): first to N, serve passes every 4 points
+    if ((p[0] + p[1]) % 4 === 0) m.serveIdx++;
+    if (p[team] >= m.opts.pointsTo) m.winner = team;
+    m.rally = newRally();
+    return { point: team, why, changeEnds: false };
+  }
   const o = 1 - team;
   const star = m.opts.starPoint, sudden = star ? m.deuces >= 3 : m.opts.goldenPoint;
   let gameWon = false;
@@ -145,7 +151,7 @@ export function scoreText(m) {
   const sets = m.sets.map(s => s.join('-')).join('  ');
   const p = m.points;
   let pts;
-  if (m.tiebreak) pts = p.join('-');
+  if (m.tiebreak || m.opts.pointsTo) pts = p.join('-');
   else if (p[0] >= 3 && p[1] >= 3) pts = p[0] === p[1] ? (m.opts.starPoint ? (m.deuces >= 3 ? 'STAR POINT' : 'DEUCE') : m.opts.goldenPoint ? 'GOLDEN' : 'DEUCE') : (p[0] > p[1] ? 'AD-' : '-AD');
   else pts = PTS[Math.min(p[0], 3)] + '-' + PTS[Math.min(p[1], 3)];
   return { sets, pts, board: scoreBoard(m) };
@@ -154,6 +160,7 @@ export function scoreText(m) {
 // Structured score for the on-screen board: games per set, each team's point, who serves and a state label.
 export function scoreBoard(m) {
   const p = m.points, deuce = !m.tiebreak && p[0] >= 3 && p[1] >= 3;
+  if (m.opts.pointsTo) return { sets: [], pts: [String(p[0]), String(p[1])], server: teamOf(serverId(m)), label: 'RALLY TO ' + m.opts.pointsTo, setNo: 1 };
   let pts, label = '';
   if (m.tiebreak) { pts = [String(p[0]), String(p[1])]; label = 'TIE-BREAK'; }
   else if (deuce && p[0] !== p[1]) { pts = p[0] > p[1] ? ['AD', '40'] : ['40', 'AD']; label = 'ADVANTAGE'; }

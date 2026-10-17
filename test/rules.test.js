@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newMatch, onHit, onContact, point, scoreText, scoreBoard, serviceBox, servePosition } from '../src/rules.js';
+import { newMatch, onHit, onContact, point, scoreText, scoreBoard, serviceBox, servePosition, serverId } from '../src/rules.js';
 
 const fl = (side, x, z) => ({ kind: 'floor', side, p: [x, 0.03, z] });
 
@@ -157,4 +157,23 @@ test('score board: per-team points, advantage, golden point label and server', (
   const a = newMatch({ goldenPoint: false });
   for (const t of [0, 0, 0, 1, 1, 1, 0]) point(a, t);  // deuce then advantage team 0
   assert.deepEqual(scoreBoard(a).pts, ['AD', '40']); assert.equal(scoreBoard(a).label, 'ADVANTAGE');
+});
+
+test('rally scoring to 16: every rally is a point, serve passes every 4 points, first to 16 wins', () => {
+  const m = newMatch({ pointsTo: 16 });
+  const servers = [serverId(m)];
+  for (let i = 0; i < 25; i++) {
+    point(m, i < 20 ? (i % 5 < 3 ? 0 : 1) : i === 20 ? 1 : 0, 'test');  // 12-8, 12-9, then team 0 runs away with it
+    if ((m.points[0] + m.points[1]) % 4 === 0) servers.push(serverId(m));
+    if (m.winner != null) break;
+  }
+  assert.deepEqual(m.points, [16, 9]);
+  assert.equal(m.winner, 0);
+  assert.deepEqual(m.sets, [[0, 0]], 'no games in rally scoring');
+  assert.deepEqual(servers.slice(0, 4), [0, 2, 1, 3]);
+  const b = scoreBoard(m);
+  assert.deepEqual(b.pts, ['16', '9']);
+  assert.equal(b.label, 'RALLY TO 16');
+  assert.deepEqual(b.sets, []);
+  assert.equal(scoreText(m).pts, '16-9');
 });
