@@ -640,6 +640,13 @@
   #hud { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(10,18,28,.9); backdrop-filter: blur(10px); border: 1px solid #ffffff1a; border-radius: 10px; padding: 6px 10px 8px; z-index: 2; min-width: 300px; }
   #hud .hud-head { display: flex; justify-content: space-between; gap: 16px; font-size: 10px; letter-spacing: 1.5px; color: #9fb3c8; font-weight: 800; margin-bottom: 4px; }
   #hud #hudLabel { color: var(--acc); }
+  #hud .hud-energy { margin-top: 5px; display: grid; gap: 3px; }
+  #hud .he-row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; letter-spacing: 1px; color: #9fb3c8; }
+  #hud .he-bar { height: 6px; background: #ffffff14; border-radius: 3px; overflow: hidden; }
+  #hud .he-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #4ade80, #d8f53a); border-radius: 3px; transition: width .25s linear; }
+  #hud .he-bar i.mid { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+  #hud .he-bar i.low { background: #ef4444; animation: heLow .7s ease-in-out infinite alternate; }
+  @keyframes heLow { from { opacity: 1; } to { opacity: .35; } }
   #hud .hud-grid { display: grid; align-items: center; column-gap: 6px; row-gap: 3px; font-variant-numeric: tabular-nums; }
   #hud .hud-grid span { text-align: center; font-weight: 800; font-size: 17px; }
   #hud .hud-grid .hd { font-size: 9px; color: #9fb3c8; letter-spacing: 1px; } #hud .hud-grid .hd.cur { color: #fff; }
@@ -1528,6 +1535,7 @@
   <div class="hud-head"><span class="tour">MESUT PADEL TOUR</span><span id="hudLabel">SET 1</span></div>
   <div class="hud-grid" id="hudGrid"></div>
   <div class="hud-style" id="hudStyle"><span class="hs-pts" id="hsPts">STYLE <b>0</b> PTS</span><span class="hs-streak" id="hsStreak" hidden>🔥 x1.5 ON FIRE</span><span class="hs-medals" id="hsMedals"></span></div>
+  <div class="hud-energy" id="hudEnergy" hidden></div>
   <span id="t0" hidden>TEAM A</span><span id="t1" hidden>TEAM B</span><span id="setsHud" hidden></span><span id="pts" hidden></span>
 </div>
 <div id="hypeToast" hidden><span class="ht-text" id="htText"></span><span class="ht-pts" id="htPts"></span></div>

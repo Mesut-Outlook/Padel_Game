@@ -176,3 +176,41 @@ test('ball spec: a faster ball reaches the opponent sooner and is set on every n
   };
   try { const fast = flight(1.12), std = flight(1); assert.ok(fast > std, `${fast} vs ${std}`); } finally { Math.random = rnd; }
 });
+
+// run player 0 back and forth for `sec` seconds in open play (ball dead far away), return the energy left
+function runFor(stamina, sec) {
+  const w = newWorld({ stats: { 0: { stamina } } }); w.state = 'play';
+  Object.assign(w.ball, { p: [0, -5, 0], v: [0, 0, 0], live: false });
+  const p = w.players[0]; p.p = [0, 6];
+  for (let i = 0; i < sec * 60; i++) stepWorld(w, { 0: { move: [Math.sin(i / 40) > 0 ? 1 : -1, 0] } }, 1 / 60);
+  return p.energy;
+}
+
+test('energy: starts full, running drains it, low stamina tires faster', () => {
+  assert.equal(newWorld().players[0].energy, 1);
+  const weak = runFor(2, 20), strong = runFor(10, 20);
+  assert.ok(weak < 1 && strong < 1, `${weak} ${strong}`);
+  assert.ok(weak < strong, `stamina 2 left ${weak}, stamina 10 left ${strong}`);
+});
+
+test('energy: a tired player runs slower', () => {
+  const dist = (energy) => {
+    const w = newWorld(); w.state = 'play';
+    Object.assign(w.ball, { p: [0, -5, 0], v: [0, 0, 0], live: false });
+    const p = w.players[0]; p.p = [-4, 8]; p.energy = energy;
+    for (let i = 0; i < 30; i++) stepWorld(w, { 0: { move: [1, 0] } }, 1 / 60);
+    return p.p[0] + 4;
+  };
+  assert.ok(dist(0.1) < dist(1) * 0.9, `${dist(0.1)} vs ${dist(1)}`);
+});
+
+test('energy: a changeover is a drink break that restores energy and is announced', () => {
+  const w = newWorld();
+  for (const p of w.players) p.energy = 0.3;
+  Object.assign(w.match, { sets: [[0, 0]], points: [3, 0] });  // team 0 wins the first game -> odd games -> change ends
+  w.state = 'play'; Object.assign(w.match.rally, { phase: 'rally', lastHitTeam: 0, bouncesSinceHit: 1 });
+  Object.assign(w.ball, { p: [0, 0.5, -5], v: [0, -3, 0], w: [0, 0, 0], live: true });  // second bounce on team 1's side
+  for (let i = 0; i < 60 && !w.events.some(e => e.type === 'drink'); i++) stepWorld(w, {}, 1 / 60);
+  assert.ok(w.events.some(e => e.type === 'drink'), w.match.log.join(' | '));
+  assert.ok(w.players.every(p => p.energy > 0.5), w.players.map(p => p.energy).join());
+});

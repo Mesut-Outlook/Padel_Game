@@ -119,6 +119,7 @@ async function setupScene(venue, ids, roster, rk) {
   for (const id of ['hud', 'cam', 'help']) $(id).hidden = false;
   $('msg').textContent = '';
   acc = 0; freeze = 0; slow = 0; shake = 0; approach = 0; bannerMode = ''; rallyFlags = {};
+  energyUi = null; tiredWarned = false;
   resetStyleStats();
   updateSmashBanner();
   setMusicDuck('point');
@@ -434,6 +435,7 @@ function handleEvents(events, score, winner) {
     }
     else if (e.type === 'fault') { flash('SERVE FAULT', 1); sfxCrowdReact('murmur'); }
     else if (e.type === 'let') flash('LET', 1);
+    else if (e.type === 'drink') setTimeout(() => showHype('💧 CHANGEOVER — water & banana, energy back up', 0, 2.4), 1300);  // after the point call
     else if (e.type === 'point') {
       pointsWon[e.team]++;
       approach = 0; slow = 0; setSmashBanner('');
@@ -521,6 +523,26 @@ function handleEvents(events, score, winner) {
   const s = score;
   if (!s) return;
   renderHud(s);
+}
+
+// energy bars for the local humans (offline from the world, online from the snapshot); red and pulsing when spent
+let energyUi = null, tiredWarned = false;
+function renderEnergy(view) {
+  const box = $('hudEnergy');
+  if (!box) return;
+  const key = humans.join();
+  if (energyUi?.key !== key) {
+    box.innerHTML = humans.map(id => `<div class="he-row"><span>⚡ ${escapeText(avatars[id]?.ch?.name?.split(' ').pop() || 'P' + (id + 1))}</span><span class="he-bar"><i></i></span></div>`).join('');
+    energyUi = { key, bars: [...box.querySelectorAll('i')] };
+    box.hidden = !humans.length;
+  }
+  humans.forEach((id, k) => {
+    const e = world ? world.players[id].energy : (view.pl[id]?.[7] ?? 1), bar = energyUi.bars[k];
+    bar.style.width = `${Math.round(e * 100)}%`;
+    bar.className = e < 0.25 ? 'low' : e < 0.5 ? 'mid' : '';
+    if (k === 0 && e < 0.25 && !tiredWarned) { tiredWarned = true; showHype('😮‍💨 TIRED — catch your breath between points', 0, 2.2); }
+    if (k === 0 && e > 0.4) tiredWarned = false;
+  });
 }
 
 // score board: rows per team with games per set, the current point and a ball marking the server
@@ -682,6 +704,7 @@ function loop(now) {
     const c = predict(world.ball, 2).contacts.find(c => c.kind === 'floor');
     marker.visible = !!c; if (c) marker.position.set(c.p[0], 0.01, c.p[2]);
   } else if (marker) marker.visible = false;
+  renderEnergy(view);
   view.pl.forEach((s, id) => {
     avatars[id]?.update(dt, s, view.b, id === humans[0] && approach > 0);
     if (avatars[id]) fx.trail(id, avatars[id], !!s[4]);

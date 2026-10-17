@@ -3,6 +3,13 @@ import { newBall, stepBall, aimVelocity, predict, contraVelocity } from './physi
 import { newMatch, onHit, onContact, servePosition, serviceBox, serverId } from './rules.js';
 
 export const REACH = 1.35, MAX_HIT_H = 2.9, SPEED = 5.2;
+// Energy 0..1: running and strokes drain it (long rallies ever faster, low stamina faster), points and changeover
+// drink breaks give it back. Tired players run slower and miss more. ponytail: tuning knobs, calibrate in play.
+export const ENERGY = { run: 0.012, stroke: 0.006, smash: 0.012, rallyFrom: 6, rallyStep: 0.08, rest: 0.008, drink: 0.3 };
+const tire = (w, pl, amount) => {
+  const k = (16 - pl.stats.stamina) / 10 * (1 + Math.max(0, w.rally - ENERGY.rallyFrom) * ENERGY.rallyStep);
+  pl.energy = Math.max(0, pl.energy - amount * k);
+};
 
 // depth = metres from net on opponent side, t = flight time to first bounce, spin = topspin(+)/slice(-) rad/s
 export const SHOTS = {
@@ -23,7 +30,7 @@ export const SHOTS = {
 export function newWorld(opts = {}) {
   const players = [0, 1, 2, 3].map(id => ({
     id, team: id < 2 ? 0 : 1, active: opts.players === 2 ? id % 2 === 0 : true,
-    p: [0, 0], f: 0, swing: null, anim: 'idle', want: null, wantT: 0,
+    p: [0, 0], f: 0, swing: null, anim: 'idle', want: null, wantT: 0, energy: 1,
     stats: { speed: 6, power: 6, control: 6, volley: 6, smash: 6, stamina: 6, ...(opts.stats?.[id] || {}) },
     racket: { power: 6, control: 6, spin: 6, sweetSpot: 6, ...(opts.rackets?.[id] || {}) },
     shoes: { speed: 0, agility: 0, ...(opts.shoes?.[id] || {}) },
@@ -96,6 +103,8 @@ function strike(w, pl, kind, aimX = 0) {
   if (w.match.rally.bouncesSinceHit === 0 && kind !== 'serve') statK *= 1 + (6 - pl.stats.volley) * 0.08;
   if (overhead) statK *= 1 + (6 - pl.stats.smash) * 0.08;
   statK *= Math.max(0.5, 1 + Math.max(0, w.rally - 8) * 0.02 * (6 - pl.stats.stamina));
+  statK *= 1 + (1 - pl.energy) * 0.5;  // a tired player misses more
+  tire(w, pl, overhead ? ENERGY.smash : ENERGY.stroke);
 
   let depth = s.depth, t = s.t;
   if (overhead) t *= 1 + (6 - pl.stats.smash) * 0.03;
@@ -103,6 +112,7 @@ function strike(w, pl, kind, aimX = 0) {
   if (kind === 'drive') t *= 1.15 - pow * 0.3;
   if (quality === 'perfect') t *= 0.92;
   t /= w.ballSpec.speed;
+  t *= 1 + (1 - pl.energy) * 0.08;  // and hits a little softer
 
   let err = (1 - ctl) * 1.4 * statK;
   if (quality === 'perfect') err *= 0.6;
@@ -154,6 +164,11 @@ function strike(w, pl, kind, aimX = 0) {
 
 function endPoint(w, r) {
   w.events.push({ type: 'point', team: r.point, why: r.why, rally: w.rally, t: w.t });
+  const m = w.match, total = m.points[0] + m.points[1];
+  if (m.winner == null && (r.changeEnds || (m.opts.pointsTo && total % 8 === 0))) {  // changeover: water and a banana
+    for (const pl of w.players) pl.energy = Math.min(1, pl.energy + ENERGY.drink);
+    w.events.push({ type: 'drink', t: w.t });
+  }
   w.state = w.match.winner != null ? 'over' : 'dead';
   w.timer = 2.2;
 }
@@ -170,13 +185,15 @@ export function stepWorld(w, inputs, dt) {
     const len = Math.min(1, Math.hypot(mv[0], mv[1]));
     // feet planted while a stroke is pending or under way: aiming with the move keys must not walk you off the ball
     // (agile shoes keep a little more footwork during the stroke)
-    const spd = SPEED * (0.75 + pl.stats.speed / 24) * (1 + pl.shoes.speed) * (pl.swing || pl.want ? 0.35 + pl.shoes.agility : 1);
+    const spd = SPEED * (0.75 + pl.stats.speed / 24) * (1 + pl.shoes.speed) * (0.75 + 0.25 * pl.energy) * (pl.swing || pl.want ? 0.35 + pl.shoes.agility : 1);
     const tossing = w.state === 'toss' && pl.id === serverId(w.match);
     if (len > 0.05 && !tossing) {
       pl.p[0] += mv[0] / Math.hypot(...mv) * len * spd * dt;
       pl.p[1] += mv[1] / Math.hypot(...mv) * len * spd * dt;
       pl.anim = len > 0.6 ? 'run' : 'walk';
+      if (w.state === 'play') tire(w, pl, ENERGY.run * len * dt);
     } else pl.anim = 'idle';
+    if (w.state !== 'play') pl.energy = Math.min(1, pl.energy + ENERGY.rest * dt * pl.stats.stamina / 6);  // breathe between points
     const zs = pl.team === 0 ? 1 : -1;
     pl.p[0] = Math.max(-4.8, Math.min(4.8, pl.p[0]));
     pl.p[1] = zs * Math.max(0.4, Math.min(9.8, pl.p[1] * zs));
@@ -259,7 +276,7 @@ export function snapshot(w) {
   return {
     t: w.t, s: w.state,
     b: [...w.ball.p],
-    pl: w.players.map(p => [p.p[0], p.p[1], p.f, p.anim, p.swing ? p.swing.anim : 0, p.swing ? p.swing.t : 0, p.swing?.backhand ? 1 : 0]),
+    pl: w.players.map(p => [p.p[0], p.p[1], p.f, p.anim, p.swing ? p.swing.anim : 0, p.swing ? p.swing.t : 0, p.swing?.backhand ? 1 : 0, Math.round(p.energy * 100) / 100]),
   };
 }
 
