@@ -7,13 +7,25 @@ import venues from '../data/venues.json';
 import rackets from '../data/rackets.json';
 import { createAvatar } from './player.js';
 import { getPortraitThumb, getVenueThumb, getRacketThumb, disposeThumbs } from './thumbs.js';
+import { openCareer } from './careerui.js';
 
 const $ = (id) => document.getElementById(id);
 
-function countryFlag(cc) {
+export function countryFlag(cc) {
   if (!cc || cc.length !== 2) return '';
   const codePoints = cc.toUpperCase().split('').map(c => 127397 + c.charCodeAt(0));
   return String.fromCodePoint(...codePoints);
+}
+
+let previewApi = null;
+export function setCareerPreview(ch, rk, infoHtml, badgeText) {
+  return previewApi?.setCustomPreview(ch, rk, infoHtml, badgeText);
+}
+export function restoreQuickMatchPreview() {
+  return previewApi?.restoreQuickMatch();
+}
+export function setCareerGamepadHandler(fn) {
+  return previewApi?.setPadHandler(fn);
 }
 
 export function initMenu() {
@@ -47,6 +59,7 @@ export function initMenu() {
         <div class="pl-tour-tag">MESUT PADEL TOUR</div>
       </div>
       <div class="pl-top-right">
+        <button type="button" class="pl-career-top-btn" id="pl-career-btn">CAREER</button>
         <span class="pl-pad-hint" id="pl-pad-status">🎮 Checking controller…</span>
         <a class="pl-dev" href="kontroller.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;margin-right:14px">⌨ <b>Controls</b></a>
         <span class="pl-dev">Developer: <b>Mesut</b></span>
@@ -311,13 +324,16 @@ export function initMenu() {
     animFrameId = requestAnimationFrame(loop);
   }
 
-  async function updateAvatarPreview(chIdx, racketIdx) {
+  let previewReqId = 0;
+
+  async function updateAvatarPreview(chIdx, racketIdx, force = false) {
     if (!previewScene) initPreview();
     const ch = characters[chIdx] || characters[0];
     const rk = rackets[racketIdx] || rackets[0];
+    const req = ++previewReqId;
 
     // If same character, simply switch the held racket
-    if (previewAvatar && previewAvatar.ch.id === ch.id) {
+    if (!force && previewAvatar && previewAvatar.ch.id === ch.id) {
       if (previewAvatar.setRacket) previewAvatar.setRacket(rk.color, rk.shape);
       updateInfoCard(ch, rk);
       return;
@@ -329,9 +345,42 @@ export function initMenu() {
       previewAvatar = null;
     }
 
-    previewAvatar = await createAvatar(previewScene, ch, rk.color, rk.shape);
+    const av = await createAvatar(previewScene, ch, rk.color, rk.shape);
+    if (req !== previewReqId) {
+      previewScene.remove(av.holder);
+      av.dispose?.();
+      return;
+    }
+    previewAvatar = av;
     previewAvatar.holder.traverse(o => { if (o.isSprite) o.visible = false; });
     updateInfoCard(ch, rk);
+  }
+
+  async function setCustomPreview(ch, rk = rackets[0], infoHtml = null, badgeText = 'LIVE PREVIEW') {
+    if (!previewScene) initPreview();
+    const req = ++previewReqId;
+    const badge = shell.querySelector('.pl-preview-badge');
+    if (badge) badge.textContent = badgeText;
+    const pill = shell.querySelector('#pl-preview-racket-pill');
+    if (pill) pill.textContent = rk?.name || 'Starter Nova';
+    const info = shell.querySelector('#pl-char-info');
+    if (info && infoHtml != null) info.innerHTML = infoHtml;
+    else if (ch) updateInfoCard(ch, rk || rackets[0]);
+
+    if (previewAvatar) {
+      previewScene.remove(previewAvatar.holder);
+      previewAvatar.dispose?.();
+      previewAvatar = null;
+    }
+    if (!ch) return;
+    const av = await createAvatar(previewScene, ch, rk?.color || '#7FB3D5', rk?.shape || 'round');
+    if (req !== previewReqId) {
+      previewScene.remove(av.holder);
+      av.dispose?.();
+      return;
+    }
+    previewAvatar = av;
+    previewAvatar.holder.traverse(o => { if (o.isSprite) o.visible = false; });
   }
 
   function updateInfoCard(ch, rk) {
@@ -643,6 +692,10 @@ export function initMenu() {
     };
   }
 
+  // Career mode entry
+  const careerBtn = shell.querySelector('#pl-career-btn');
+  if (careerBtn) careerBtn.onclick = () => openCareer();
+
   // Training mode: same start path, flagged for main.js
   const tutBtn = shell.querySelector('#pl-tutorial-btn');
   if (tutBtn && $('start')) tutBtn.onclick = () => { cleanUp(); $('start').dataset.tutorial = '1'; $('start').click(); };
@@ -665,8 +718,22 @@ export function initMenu() {
 
   // Xbox Gamepad Polling & Keyboard Grid Navigation
   let gpTimer = null;
+  let careerPadHandler = null;
   let lastPadA = false, lastPadB = false, lastPadLB = false, lastPadRB = false, lastPadStart = false;
   let lastStickX = 0, lastStickY = 0;
+
+  previewApi = {
+    setCustomPreview,
+    restoreQuickMatch() {
+      const badge = shell.querySelector('.pl-preview-badge');
+      if (badge) badge.textContent = 'LIVE PREVIEW';
+      updateAvatarPreview(selectedCharIdx, selectedRacketIdx, true);
+    },
+    setPadHandler(fn) {
+      careerPadHandler = fn;
+      lastPadA = true; lastPadB = true; lastPadLB = true; lastPadRB = true; lastPadStart = true;
+    },
+  };
 
   function pollGamepads() {
     if (menuEl.hidden) return;
@@ -679,6 +746,12 @@ export function initMenu() {
     const liveHint = shell.querySelector('#pl-gp-live');
     if (padHint) padHint.textContent = statusText;
     if (liveHint) liveHint.textContent = statusText;
+
+    if (careerPadHandler) {
+      if (gps.length > 0) careerPadHandler(gps[0]);
+      gpTimer = requestAnimationFrame(pollGamepads);
+      return;
+    }
 
     if (gps.length > 0) {
       const pad = gps[0];

@@ -15,6 +15,7 @@ import { predict } from './physics.js';
 import { createFx } from './fx.js';
 import { unlockAudio, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxReward, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
 import { initMenu } from './menu.js';
+import { initCareer } from './careerui.js';
 import { createTutorial } from './tutorial.js';
 import { mountKeyHelp } from './helpkeys.js';
 
@@ -25,6 +26,7 @@ fill($('char'), characters, c => `${c.name} (${c.countryCode}, ${c.gender === 'f
 fill($('venue'), venues, v => `${v.name} — ${v.city}`);
 fill($('racket'), rackets, r => `${r.name} · ${r.shape} · P${r.stats.power}/C${r.stats.control}`);
 initMenu();
+initCareer({ startMatch });
 mountKeyHelp($('help'));
 addEventListener('pointerdown', unlockAudio, { once: true });
 addEventListener('keydown', unlockAudio, { once: true });
@@ -179,7 +181,7 @@ $('start').onclick = async () => {
   }
 };
 
-// One entry for every offline match. cfg = { players, humans, ai, match, roster: {id: Character}, rackets: {id: racket}, venue, onEnd? }.
+// One entry for every offline match. cfg = { players, humans, ai, match, roster: {id: Character}, rackets: {id: racket}, venue, shoes?: {id: {speed, agility}}, ball?: {speed, bounce}, onEnd? }.
 // onEnd gets team 0's MatchResult (+ score text) once; the menu key then returns to #career instead of the plain menu.
 export async function startMatch(cfg) {
   unlockAudio();
@@ -194,6 +196,7 @@ export async function startMatch(cfg) {
     match: cfg.match,
     stats: Object.fromEntries(ids.map(id => [id, cfg.roster[id].stats])),
     rackets: Object.fromEntries(ids.map(id => [id, cfg.rackets[id].stats])),
+    shoes: cfg.shoes, ball: cfg.ball,
   });
   await setupScene(cfg.venue, ids, cfg.roster, cfg.rackets);
 }
@@ -471,7 +474,7 @@ function handleEvents(events, score, winner) {
       if (!tut && winner != null) {
         if (onEnd && world) {
           const done = onEnd; onEnd = null;
-          done({ won: winner === 0, gamesWon: world.match.sets.reduce((n, g) => n + g[0], 0), pointsWon: pointsWon[0], scoring: world.match.opts.pointsTo ? 'rally' : 'sets', ai: aiLevel, score: scoreText(world.match) });
+          done({ won: winner === 0, gamesWon: world.match.sets.reduce((n, g) => n + g[0], 0), pointsWon: pointsWon[0], points: [...pointsWon], games: world.match.sets.reduce((g, s) => [g[0] + s[0], g[1] + s[1]], [0, 0]), scoring: world.match.opts.pointsTo ? 'rally' : 'sets', ai: aiLevel, score: scoreText(world.match) });
           onEnd = () => {};  // keeps toMenu pointed at #career without paying twice
         }
         const medalsStr = styleStats.medals.length
@@ -481,7 +484,7 @@ function handleEvents(events, score, winner) {
           `🏆 ${team} WINS!`,
           999,
           `FINAL STYLE SCORE: ${styleStats.pts} PTS`,
-          `${medalsStr} · Press Enter / Start for Main Menu`
+          `${medalsStr} · Press Enter / Start for ${onEnd ? 'Career' : 'Main Menu'}`
         );
       }
     }
