@@ -1,0 +1,1 @@
+{ "match": { "base": 20, "perGameWon": 4, "perPointWon": 1, "winBonus": 40 }, "mult": { "rookie": 0.6, "club": 1, "pro": 1.4, "legend": 1.8, "online": 1.2 }, "training": { "base": 50, "growth": 1.6, "start": 4, "max": 10 } }
