@@ -7,15 +7,14 @@
 {"id":"mixed_doubles","name":"Mixed Doubles","description":"Each team has one male and one female player competing in a knockout bracket.","players":16,"matchFormat":{"sets":2,"gamesPerSet":6,"goldenPoint":false}}
 ],
 "circuit":[
-{"id":"local_club_americano","name":"Local Club Americano","tier":"amateur","format":"americano","drawSize":16,"entryFee":0,"prizeMoney":100,"rankingPoints":10,"minRankingPoints":0,"venues":["v01"]},
-{"id":"club_league","name":"Club League","tier":"club","format":"round_robin_league","drawSize":16,"entryFee":150,"prizeMoney":400,"rankingPoints":40,"minRankingPoints":0,"venues":["v04","v10"]},
-{"id":"regional_open","name":"Regional Open","tier":"regional","format":"mexicano","drawSize":32,"entryFee":300,"prizeMoney":1000,"rankingPoints":100,"minRankingPoints":50,"venues":["v02","v03","v10"]},
-{"id":"fip_promotion","name":"FIP Promotion","tier":"regional","format":"knockout","drawSize":32,"entryFee":500,"prizeMoney":1500,"rankingPoints":150,"minRankingPoints":100,"venues":["v05","v06","v07"]},
-{"id":"fip_bronze","name":"FIP Bronze","tier":"pro","format":"knockout","drawSize":32,"entryFee":800,"prizeMoney":2500,"rankingPoints":250,"minRankingPoints":200,"venues":["v07","v09"]},
-{"id":"fip_silver","name":"FIP Silver","tier":"pro","format":"knockout","drawSize":32,"entryFee":1200,"prizeMoney":4000,"rankingPoints":400,"minRankingPoints":300,"venues":["v03","v09"]},
-{"id":"fip_gold","name":"FIP Gold","tier":"pro","format":"knockout","drawSize":32,"entryFee":1800,"prizeMoney":6000,"rankingPoints":600,"minRankingPoints":450,"venues":["v02","v05","v09"]},
-{"id":"premier_p2","name":"Premier P2","tier":"pro","format":"knockout","drawSize":32,"entryFee":2500,"prizeMoney":9000,"rankingPoints":800,"minRankingPoints":600,"venues":["v06","v08"]},
-{"id":"premier_p1","name":"Premier P1","tier":"pro","format":"knockout","drawSize":32,"entryFee":3000,"prizeMoney":12000,"rankingPoints":1000,"minRankingPoints":800,"venues":["v02","v08","v09"]},
-{"id":"premier_major","name":"Premier Major","tier":"elite","format":"knockout","drawSize":32,"entryFee":3000,"prizeMoney":25000,"rankingPoints":1500,"minRankingPoints":1000,"venues":["v05","v08"]},
-{"id":"premier_finals","name":"Premier Finals","tier":"elite","format":"knockout","drawSize":16,"entryFee":5000,"prizeMoney":50000,"rankingPoints":3000,"minRankingPoints":2000,"venues":["v08"]}
+{"id":"club_americano","name":"Club Americano","format":"americano","drawSize":8,"minRankingPoints":0,"ai":"rookie","venue":"v06","championPoints":10,"entryFee":10},
+{"id":"club_league","name":"Club League","format":"league","drawSize":5,"minRankingPoints":10,"ai":"rookie","venue":"v07","championPoints":20,"entryFee":20},
+{"id":"fip_bronze","name":"FIP Bronze","format":"mexicano","drawSize":8,"minRankingPoints":30,"ai":"club","venue":"v04","championPoints":40,"entryFee":40},
+{"id":"fip_silver","name":"FIP Silver","format":"knockout","drawSize":8,"minRankingPoints":80,"ai":"club","venue":"v10","championPoints":80,"entryFee":80},
+{"id":"fip_gold","name":"FIP Gold","format":"league","drawSize":6,"minRankingPoints":180,"ai":"pro","venue":"v02","championPoints":150,"entryFee":150},
+{"id":"fip_platinum","name":"FIP Platinum","format":"knockout","drawSize":8,"minRankingPoints":350,"ai":"pro","venue":"v03","championPoints":300,"entryFee":300},
+{"id":"p2","name":"Premier Padel P2","format":"knockout","drawSize":16,"minRankingPoints":700,"ai":"pro","venue":"v09","championPoints":600,"entryFee":600},
+{"id":"p1","name":"Premier Padel P1","format":"knockout","drawSize":16,"minRankingPoints":1300,"ai":"legend","venue":"v05","championPoints":1000,"entryFee":1000},
+{"id":"major","name":"Premier Padel Major","format":"knockout","drawSize":16,"minRankingPoints":2500,"ai":"legend","venue":"v01","championPoints":2000,"entryFee":2000},
+{"id":"premier_finals","name":"Premier Padel Finals","format":"knockout","drawSize":8,"minRankingPoints":0,"ai":"legend","venue":"v08","championPoints":1500,"entryFee":1500,"inviteTop":8}
 ]}

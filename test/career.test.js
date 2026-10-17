@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { newProfile, loadProfile, saveProfile, matchReward, applyReward, exportProfile, importProfile, trainCost, buyTraining } from '../src/career.js';
+import { newProfile, loadProfile, saveProfile, matchReward, applyReward, exportProfile, importProfile, trainCost, buyTraining, tournamentReward, canEnter, worldRanking, aiRankingTable } from '../src/career.js';
 
 const eco = JSON.parse(fs.readFileSync(new URL('../data/economy.json', import.meta.url)));
 const chars = JSON.parse(fs.readFileSync(new URL('../data/characters.json', import.meta.url)));
@@ -70,4 +70,34 @@ test('buyTraining: max, credits, unknown stat rejected unchanged; success deduct
   assert.equal(r.profile.credits, 50);
   assert.equal(r.profile.stats.power, 5);
   assert.equal(p.stats.power, 4);
+});
+
+const circuit = JSON.parse(fs.readFileSync(new URL('../data/tournaments.json', import.meta.url))).circuit;
+const entry = (id) => circuit.find(e => e.id === id);
+
+test('tournament reward: P1 runner-up gets 60% of 1000 points and 10x that in credits', () => {
+  assert.deepEqual(tournamentReward(entry('p1'), 2), { rankingPoints: 600, credits: 6000 });
+  assert.deepEqual(tournamentReward(entry('club_americano'), 1), { rankingPoints: 10, credits: 100 });
+  assert.deepEqual(tournamentReward(entry('fip_bronze'), 6), { rankingPoints: 7, credits: 72 });
+  assert.deepEqual(tournamentReward(entry('fip_bronze'), 9), { rankingPoints: 4, credits: 36 });
+});
+
+test('canEnter: ranking minimum, entry fee, and Premier Finals by invitation (top 8)', () => {
+  const p = { ...newProfile(chars[0], {}), rankingPoints: 100, credits: 50 };
+  assert.deepEqual(canEnter(p, entry('fip_gold'), 40), { ok: false, reason: 'ranking' });
+  assert.deepEqual(canEnter(p, entry('fip_silver'), 40), { ok: false, reason: 'credits' });
+  assert.deepEqual(canEnter(p, entry('fip_bronze'), 40), { ok: true });
+  assert.deepEqual(canEnter({ ...p, credits: 9999 }, entry('premier_finals'), 9), { ok: false, reason: 'invite' });
+  assert.deepEqual(canEnter({ ...p, credits: 9999 }, entry('premier_finals'), 8), { ok: true });
+});
+
+test('world ranking: AI players hold fixed points 0-6000 and the profile slots in by points', () => {
+  const ai = aiRankingTable(chars);
+  assert.equal(ai.length, chars.length);
+  assert.ok(ai.every(r => r.points >= 0 && r.points <= 6000));
+  assert.deepEqual(aiRankingTable(chars), ai, 'stable');
+  const p = { ...newProfile(chars[0], { name: 'Mesut' }), rankingPoints: ai[2].points + 1 };
+  const table = worldRanking(p, ai);
+  assert.equal(table.findIndex(r => r.id === 'me'), 2);
+  assert.equal(table[2].name, 'Mesut');
 });

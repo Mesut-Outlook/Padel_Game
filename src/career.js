@@ -85,3 +85,28 @@ export function buyItem(profile, item, shop) {
 }
 
 export const equip = (profile, slot, id) => profile.inventory.includes(id) ? { ...profile, equipped: { ...profile.equipped, [slot]: id } } : profile;
+
+// circuit entry (data/tournaments.json): champion gets championPoints and 10x that in Credits; lower places get a share
+const SHARE = [[1, 1], [2, 0.6], [4, 0.36], [8, 0.18]];
+export function tournamentReward(entry, placement) {
+  const share = (SHARE.find(([last]) => placement <= last) || [0, 0.09])[1];
+  return { rankingPoints: Math.round(entry.championPoints * share), credits: Math.round(entry.championPoints * 10 * share) };
+}
+
+// rank = the player's current world rank (1 = top)
+export function canEnter(profile, entry, rank) {
+  if (entry.inviteTop && rank > entry.inviteTop) return { ok: false, reason: 'invite' };
+  if (profile.rankingPoints < entry.minRankingPoints) return { ok: false, reason: 'ranking' };
+  if (profile.credits < entry.entryFee) return { ok: false, reason: 'credits' };
+  return { ok: true };
+}
+
+// fixed AI table: strongest roster characters (stat total) on top, points falling from 6000 to 0 on a curve
+export function aiRankingTable(characters) {
+  const total = (c) => Object.values(c.stats).reduce((a, b) => a + b, 0);
+  const sorted = [...characters].sort((a, b) => total(b) - total(a) || a.id.localeCompare(b.id)), n = sorted.length;
+  return sorted.map((c, i) => ({ id: c.id, name: c.name, points: Math.round(6000 * ((n - 1 - i) / (n - 1)) ** 2) }));
+}
+
+export const worldRanking = (profile, aiTable) =>
+  [...aiTable, { id: 'me', name: profile.player.name, points: profile.rankingPoints }].sort((a, b) => b.points - a.points);
