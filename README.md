@@ -41,6 +41,10 @@ Pages sürümünde bilgisayara karşı maç, eğitim, menü ve kol desteği çal
 | M | sesi aç/kapa | |
 | Enter (maç bitince) | ana menüye (kariyer maçında kariyer ekranına) dön | Start |
 
+**PlayStation kolu** (DualShock 4 / DualSense) da desteklenir: tuşlar aynı yerde, ekranda PlayStation simgeleri çıkar (A=✕, B=○, X=□, Y=△, LB/RB=L1/R1, LT/RT=L2/R2, View=Share, Start=Options).
+
+**Enerji:** koşmak ve vuruşlar oyuncuyu yorar; uzun rallilerde ve düşük dayanıklılıkta (stamina) daha çabuk. Yorgun oyuncu daha yavaş koşar, daha çok hata yapar. Sayı aralarında biraz, taraf değişiminde su + muz molasıyla çok toparlanır. Skor tablosunun altında enerji çubuğu var.
+
 Menüdeki **Kontrol** seçimi 1. oyuncu için: *Klavye + Xbox kolu* (ikisi birden), *Sadece klavye* veya *Sadece Xbox kolu*. Diğer insan oyuncular kalan kolları sırayla alır.
 
 **Servis:** yan duruş, raket başın arkasında, top öndeki elde → top bırakılır, yere seker ve bel altında alttan vurulur (FIP kuralı).

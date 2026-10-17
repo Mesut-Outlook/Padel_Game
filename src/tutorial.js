@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { aimVelocity } from './physics.js';
 import { newMatch, servePosition } from './rules.js';
+import { padText } from './padstyle.js';
 
 // key names per device; the instructions follow whichever device was used last
 const KEYS = {
@@ -79,6 +80,8 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
   const done = loadDone();
   let li = LESSONS.findIndex(l => !done.has(l.id)); if (li < 0) li = 0;
   let count = 0, att = null, wait = 0, msg = '', msgT = 0, device = 'kb', camSeen = null, camChanges = 0, sawReplay = false;
+  // pad labels follow the connected pad (✕ ○ □ △ on a PlayStation pad)
+  const keys = () => (device === 'pad' ? Object.fromEntries(Object.entries(KEYS.pad).map(([k, v]) => [k, padText(v)])) : KEYS.kb);
 
   // --- DOM panel
   const el = document.createElement('div');
@@ -104,7 +107,7 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
   }
 
   function render() {
-    const l = LESSONS[li], k = KEYS[device];
+    const l = LESSONS[li], k = keys();
     $('.tut-step').textContent = `TRAINING · LESSON ${li + 1}/${LESSONS.length}`;
     $('.tut-title').textContent = l.title + (done.has(l.id) ? ' ✓' : '');
     $('.tut-text').innerHTML = l.text(k, count);
@@ -137,7 +140,7 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
   function finish() {
     marks.clear();
     el.classList.add('final');
-    const k = KEYS[device];
+    const k = keys();
     const all = LESSONS.every(l => done.has(l.id));
     el.innerHTML = `<div class="tut-title">${all ? '🏆 Training Complete!' : 'Training Finished'}</div>${all ? '' : '<div class="tut-step">You can retry any ○ lessons from TRAINING in the main menu</div>'}<div class="tut-text">${LESSONS.map(l => `${done.has(l.id) ? '✓' : '○'} ${l.title}`).join('<br>')}</div><div class="tut-foot"><b>${k.next}</b>: main menu</div>`;
     li = -1;
@@ -147,7 +150,7 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
     att = null; wait = 1.3;
     w.state = 'over'; w.timer = 1e9;
     if (ok) { count++; say(['Great!', 'Awesome!', 'Spot on!', 'Nailed it!'][count % 4]); if (count >= l.need) return pass(); }
-    else say(l.hint?.(a, count, KEYS[device]) || (a.hit ? 'Missed — try again!' : 'You missed the ball — try again!'), 2);
+    else say(l.hint?.(a, count, keys()) || (a.hit ? 'Missed — try again!' : 'You missed the ball — try again!'), 2);
     drawMarks(l); render();
   }
 

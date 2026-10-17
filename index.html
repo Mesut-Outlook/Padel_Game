@@ -703,6 +703,8 @@
   #help .hp-svg .shot rect, #help .hp-svg .shot circle { fill: #ff9f43; } #help .hp-svg .sys, #help .hp-svg .sys circle { fill: #b8c4d0; }
   #help .xa circle, #help b.xa { fill: #5dc21e; background: #5dc21e; } #help .xb circle, #help b.xb { fill: #ff4d4d; background: #ff4d4d; }
   #help .xx circle, #help b.xx { fill: #2f8cff; background: #2f8cff; } #help .xy circle, #help b.xy { fill: #ffc21a; background: #ffc21a; }
+  #help[data-pad="ps"] .xa circle, #help[data-pad="ps"] b.xa { fill: #6e9dff; background: #6e9dff; } #help[data-pad="ps"] .xx circle, #help[data-pad="ps"] b.xx { fill: #ff7fc8; background: #ff7fc8; }
+  #help[data-pad="ps"] .xy circle, #help[data-pad="ps"] b.xy { fill: #3fd08a; background: #3fd08a; }
   #help .hp-svg .on, #help .hp-svg .on circle, #help .hp-svg .on rect { stroke: #fff; stroke-width: 2.5; filter: brightness(1.35); }
   #help .hp-legend { display: grid; gap: 2px; font-size: 10.5px; color: #cfd8e3; align-content: center; }
   #help .pk { display: flex; align-items: center; gap: 6px; white-space: nowrap; border-radius: 4px; padding: 0 3px 0 0; }
@@ -1544,7 +1546,7 @@
 <div id="shotHint" hidden></div>
 <div id="smashVignette" hidden></div>
 <div id="smashBanner" hidden><div class="sb-kicker" id="sbKicker"></div><div class="sb-title" id="sbTitle"></div><div class="sb-sub" id="sbSub"></div></div>
-<div id="pause" hidden><div class="pz-card"><div class="pz-title">PAUSED</div><div id="pzItems"></div><div id="pzNote" class="pz-note"></div><div class="pz-hint">↑ ↓ select · Enter / A confirm · P / Esc / Start resume</div></div></div>
+<div id="pause" hidden><div class="pz-card"><div class="pz-title">PAUSED</div><div id="pzItems"></div><div id="pzNote" class="pz-note"></div><div class="pz-hint">↑ ↓ select · Enter / A (✕) confirm · P / Esc / Start (Options) resume</div></div></div>
 <div id="replayTag" hidden>● REPLAY <small style="font-weight:600;opacity:.85">· press any key to skip</small></div>
 <div id="help" hidden></div>
 <script type="module" src="/src/main.js"></script>

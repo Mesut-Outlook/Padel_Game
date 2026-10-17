@@ -20,6 +20,8 @@ const ROWS = [
 ];
 // Xbox buttons (standard gamepad indices): drawing [shape, x, y, label] + legend text, coloured like the keyboard
 // groups except A/B/X/Y, which keep their real Xbox colours so they are found at a glance
+import { padText, isPlayStation } from './padstyle.js';
+
 const PAD = [
   [6, 'trig', 'LT', 44, 2, ''], [7, 'shot', 'RT', 168, 2, 'contrapared'],
   [4, 'shot', 'LB', 38, 15, 'slice serve'], [5, 'shot', 'RB', 158, 15, 'víbora'],
@@ -28,21 +30,21 @@ const PAD = [
   [12, 'sys', '', 92, 83, 'hide this help (D-pad ↑)'],
 ];
 const PAD_BODY = 'M60 30C80 22 160 22 180 30C205 34 222 50 228 80C236 118 230 142 210 144C192 146 182 126 170 112C160 104 80 104 70 112C58 126 48 146 30 144C10 142 4 118 12 80C18 50 35 34 60 30Z';
-function padSvg() {
-  const btn = ([b, c, t, x, y]) => b === 6 || b === 7 ? `<g data-b="${b}" class="${c}"><rect x="${x}" y="${y}" width="28" height="11" rx="5"/><text x="${x + 14}" y="${y + 8.5}">${t}</text></g>`
-    : b === 4 || b === 5 ? `<g data-b="${b}" class="${c}"><rect x="${x}" y="${y}" width="44" height="11" rx="5"/><text x="${x + 22}" y="${y + 8.5}">${t}</text></g>`
+function padSvg(kind) {
+  const btn = ([b, c, t, x, y]) => b === 6 || b === 7 ? `<g data-b="${b}" class="${c}"><rect x="${x}" y="${y}" width="28" height="11" rx="5"/><text x="${x + 14}" y="${y + 8.5}">${padText(t, kind)}</text></g>`
+    : b === 4 || b === 5 ? `<g data-b="${b}" class="${c}"><rect x="${x}" y="${y}" width="44" height="11" rx="5"/><text x="${x + 22}" y="${y + 8.5}">${padText(t, kind)}</text></g>`
     : b === 11 ? `<g data-b="11" class="${c}"><circle cx="${x}" cy="${y}" r="11"/><circle class="dot" data-stick="2" cx="${x}" cy="${y}" r="6"/></g>`
     : b === 12 ? ''
-    : `<g data-b="${b}" class="${c}"><circle cx="${x}" cy="${y}" r="${t ? 7 : 5}"/>${t ? `<text x="${x}" y="${y + 3}">${t}</text>` : ''}</g>`;
+    : `<g data-b="${b}" class="${c}"><circle cx="${x}" cy="${y}" r="${t ? 7 : 5}"/>${t ? `<text x="${x}" y="${y + 3}">${padText(t, kind)}</text>` : ''}</g>`;
   const dpad = [[12, 88, 79], [13, 88, 97], [14, 79, 88], [15, 97, 88]].map(([b, x, y]) => `<rect data-b="${b}" class="${b === 12 ? 'sys' : 'off'}" x="${x}" y="${y}" width="9" height="9" rx="1.5"/>`).join('');
   return `<svg class="hp-svg" viewBox="0 0 240 150" width="230" height="144">
     <path class="body" d="${PAD_BODY}"/><circle class="off" cx="120" cy="42" r="7"/>
     <g data-b="10" class="move"><circle cx="64" cy="62" r="13"/><circle class="dot" data-stick="0" cx="64" cy="62" r="7"/></g>
     ${dpad}${PAD.map(btn).join('')}</svg>`;
 }
-const padLegend = () => `<div class="hp-legend">
+const padLegend = (kind) => `<div class="hp-legend">
     <div class="pk" data-b="10"><b class="move">L</b>move · tilt while hitting = aim</div>
-    ${PAD.filter(p => p[5]).map(([b, c, t, , , txt]) => `<div class="pk" data-b="${b}"><b class="${c}">${t || { 8: '⧉', 9: '≡', 12: '↑' }[b]}</b>${txt}</div>`).join('')}
+    ${PAD.filter(p => p[5]).map(([b, c, t, , , txt]) => `<div class="pk" data-b="${b}"><b class="${c}">${t ? padText(t, kind) : { 8: '⧉', 9: '≡', 12: '↑' }[b]}</b>${padText(txt, kind)}</div>`).join('')}
   </div>`;
 
 const STORE = 'padel.helpHidden', POS_STORE = 'padel.helpPos';
@@ -58,12 +60,12 @@ export function mountKeyHelp(el) {
   el.innerHTML = `
     <div class="hk-pill" title="Show controls (H / D-pad ↑)"><span class="kb-only">⌨ Keys <b>H</b></span><span class="pad-only">🎮 Buttons <b>↑</b></span></div>
     <div class="hk-board">
-      <div class="hk-head"><span>Controls <span class="hk-dev"><i data-dev="kb" title="Keyboard">⌨</i><i data-dev="pad" title="Xbox controller">🎮</i></span></span><span class="hk-pos">${Object.entries(CORNERS).map(([p, [a, t]]) => `<i data-pos="${p}" title="${t} (Shift+H)">${a}</i>`).join('')}<span class="hk-x" title="Hide (H)">✕</span></span></div>
+      <div class="hk-head"><span>Controls <span class="hk-dev"><i data-dev="kb" title="Keyboard">⌨</i><i data-dev="pad" title="Controller (Xbox / PlayStation)">🎮</i></span></span><span class="hk-pos">${Object.entries(CORNERS).map(([p, [a, t]]) => `<i data-pos="${p}" title="${t} (Shift+H)">${a}</i>`).join('')}<span class="hk-x" title="Hide (H)">✕</span></span></div>
       <div class="hk-main kb-only">
         <div class="hk-rows">${ROWS.map((r, i) => `<div class="hk-row" style="padding-left:${[0, 0, 8, 18, 56][i]}px">${r.map(c => cap(c, c === 'Space' ? 'hk-space' : c === 'Enter' || c === 'Escape' ? 'hk-wide' : '')).join('')}</div>`).join('')}</div>
         <div class="hk-arrows">${cap('ArrowUp', 'up')}${cap('ArrowLeft', 'lf')}${cap('ArrowDown', 'dn')}${cap('ArrowRight', 'rt')}</div>
       </div>
-      <div class="hk-main pad-only">${padSvg()}${padLegend()}</div>
+      <div class="hk-main pad-only">${padSvg('xbox')}${padLegend('xbox')}</div>
       <div class="hk-foot"><span class="kb-only">Hold <b>A</b>/<b>D</b> while hitting = aim · </span><span class="pad-only">Keyboard + controller = 2 players: P1 controls “Keyboard only” · </span><a href="kontroller.html" target="_blank" rel="noopener">all controls →</a></div>
     </div>`;
   let hidden = false, pos = 'bl';
@@ -88,13 +90,20 @@ export function mountKeyHelp(el) {
   };
   el.querySelectorAll('.hk-dev i').forEach(i => { i.onclick = () => setDev(i.dataset.dev); });
   setDev(navigator.getGamepads?.().some(Boolean) ? 'pad' : 'kb');
-  const padEls = [...el.querySelectorAll('.pad-only [data-b]')], dots = [...el.querySelectorAll('[data-stick]')];
+  let padEls = [...el.querySelectorAll('.pad-only [data-b]')], dots = [...el.querySelectorAll('[data-stick]')], kindNow = 'xbox';
+  const relabel = (kind) => {  // a DualShock / DualSense shows ✕ ○ □ △, L1/R1, Options
+    kindNow = kind; el.dataset.pad = kind;
+    el.querySelector('.hk-main.pad-only').innerHTML = padSvg(kind) + padLegend(kind);
+    padEls = [...el.querySelectorAll('.pad-only [data-b]')]; dots = [...el.querySelectorAll('[data-stick]')];
+  };
   let upWas = false;
   const pollPad = () => {
     requestAnimationFrame(pollPad);
     if (el.hidden) return;
     const gp = [...(navigator.getGamepads?.() || [])].find(Boolean);
     if (!gp) return;
+    const kind = isPlayStation(gp.id) ? 'ps' : 'xbox';
+    if (kind !== kindNow) relabel(kind);
     if (gp.buttons.some(b => b.pressed) || gp.axes.some(a => Math.abs(a) > 0.5)) setDev('pad');
     const up = !!gp.buttons[12]?.pressed;
     if (up && !upWas && document.getElementById('pause')?.hidden !== false) toggle();  // D-pad ↑ navigates the pause menu instead

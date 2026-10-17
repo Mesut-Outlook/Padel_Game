@@ -17,6 +17,7 @@ import { unlockAudio, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sf
 import { initMenu } from './menu.js';
 import { initCareer } from './careerui.js';
 import { createTutorial } from './tutorial.js';
+import { padText } from './padstyle.js';
 import { mountKeyHelp } from './helpkeys.js';
 
 const $ = (id) => document.getElementById(id);
@@ -269,7 +270,7 @@ function showHint(list, title = '') {
   hintKey = key;
   const el = $('shotHint');
   el.hidden = !list.length;
-  if (list.length) el.innerHTML = `<span class="sh-t">${title}</span>` + list.map((s, i) => `<span class="sh${i ? '' : ' best'}">${SHOT_NAME[s]} <kbd>${SHOT_KEYS[device][s]}</kbd></span>`).join('');
+  if (list.length) el.innerHTML = `<span class="sh-t">${title}</span>` + list.map((s, i) => `<span class="sh${i ? '' : ' best'}">${SHOT_NAME[s]} <kbd>${device === 'pad' ? padText(SHOT_KEYS.pad[s]) : SHOT_KEYS.kb[s]}</kbd></span>`).join('');
 }
 
 function setSmashBanner(mode, kicker = '', title = '', sub = '') {
@@ -328,7 +329,7 @@ function coach(dt) {
   if (armed) {
     armed = false; approach = 1.6; rig.pov(1.6);
     sfxSmashSlowMo();
-    const k = SHOT_KEYS[device];
+    const k = device === 'pad' ? Object.fromEntries(Object.entries(SHOT_KEYS.pad).map(([s, b]) => [s, padText(b)])) : SHOT_KEYS.kb;
     setSmashBanner(
       'approach',
       '⚡ SLOW MOTION · OVERHEAD LOCKED ⚡',

@@ -147,7 +147,7 @@ export function initMenu() {
             <div class="pl-ctrl-grid">
               <button type="button" class="pl-card pl-ctrl-card is-selected" data-ctrl="auto">
                 <div class="pl-ctrl-icons">⌨️ <span class="pl-ctrl-plus">+</span> 🎮</div>
-                <div class="pl-card-title">Keyboard + Xbox</div>
+                <div class="pl-card-title">Keyboard + Controller</div>
                 <div class="pl-card-sub">Auto-detect</div>
                 <span class="pl-check">✓</span>
               </button>
@@ -159,7 +159,7 @@ export function initMenu() {
               </button>
               <button type="button" class="pl-card pl-ctrl-card" data-ctrl="pad">
                 <div class="pl-ctrl-icons">🎮</div>
-                <div class="pl-card-title">Xbox Only</div>
+                <div class="pl-card-title">Controller Only</div>
                 <div class="pl-card-sub">Left stick + Buttons</div>
                 <span class="pl-check">✓</span>
               </button>
