@@ -61,19 +61,30 @@ async function renderPortrait(ch) {
   const hand = avatar.bones[ch.hand === 'left' ? 'hand_l' : 'hand_r'];
   if (hand) hand.children.forEach((c) => { if (!c.isBone) c.visible = false; });
 
-  avatar.update(0.05, [0, 0, -0.18, 'idle', null, 0, false]);
+  // portrait: body squarely to the camera, then the neck turned so the face looks straight into the lens
+  // (the ready stance pitches and turns the head; bind pose faces +z, so the head's rotation since bind gives its gaze)
+  const head = avatar.bones.Head || avatar.bones.head, neck = avatar.bones.neck_01;  // UE rig: "Head"
+  avatar.holder.updateMatrixWorld(true);
+  const qBind = head ? head.getWorldQuaternion(new THREE.Quaternion()) : null;
+  avatar.update(0.05, [0, 0, 0, 'idle', null, 0, false]);
   avatar.holder.updateMatrixWorld(true);
 
   const headPos = new THREE.Vector3(0, 1.55, 0);
-  const neckPos = new THREE.Vector3(0, 1.38, 0);
-  if (avatar.bones.head) avatar.bones.head.getWorldPosition(headPos);
-  if (avatar.bones.neck_01) avatar.bones.neck_01.getWorldPosition(neckPos);
-
-  // frame the real head position (the idle stance leans forward/sideways), from the direction the body faces
-  const focus = headPos.clone().lerp(neckPos, 0.35); focus.y += 0.02;
-  const f = -0.18 + 0.25;  // body yaw from update() above, plus a slight three-quarter turn
+  if (head) head.getWorldPosition(headPos);
   const camera = new THREE.PerspectiveCamera(28, 1, 0.05, 10);
-  camera.position.set(focus.x + Math.sin(f) * 0.95, focus.y - 0.06, focus.z + Math.cos(f) * 0.95);  // slightly below: heads tilt down in the stance
+  camera.position.set(headPos.x, headPos.y + 0.02, headPos.z + 0.95);
+  if (head && neck && qBind) {
+    const gaze = new THREE.Vector3(0, 0, 1).applyQuaternion(head.getWorldQuaternion(new THREE.Quaternion()).multiply(qBind.invert()));
+    const lens = camera.position.clone().add(new THREE.Vector3(0, 0.3, 0));  // aim a little high: the rig's eyes sit low in the skull's forward axis
+    const fix = new THREE.Quaternion().setFromUnitVectors(gaze, lens.sub(headPos).normalize());
+    const parentQ = neck.parent.getWorldQuaternion(new THREE.Quaternion());
+    neck.quaternion.copy(parentQ.invert().multiply(fix.multiply(neck.getWorldQuaternion(new THREE.Quaternion()))));
+    avatar.holder.updateMatrixWorld(true);
+    head.getWorldPosition(headPos);
+  }
+  // frame the face: the head bone sits at the skull base, the face centre is a few cm above it
+  const focus = headPos.clone(); focus.y += 0.07;  // room above for buns and tall hair
+  camera.position.set(focus.x, focus.y, focus.z + 0.95);
   camera.lookAt(focus);
 
   r.render(scene, camera);
