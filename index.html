@@ -647,7 +647,17 @@
   #hud .hud-grid .nm { text-align: left; font-size: 15px; padding-right: 8px; white-space: nowrap; }
   #hud .hud-grid .g { color: #9fb3c8; } #hud .hud-grid .g.won { color: #fff; } #hud .hud-grid .g.cur { color: #fff; background: #ffffff14; border-radius: 4px; }
   #hud .hud-grid .pt { color: #0b1520; background: var(--acc); border-radius: 5px; font-size: 18px; padding: 0 4px; }
-  #msg { white-space: pre-line; position: fixed; top: 34%; left: 50%; transform: translateX(-50%); font-size: 38px; font-weight: 900; text-shadow: 0 3px 12px #000; z-index: 2; pointer-events: none; text-align: center; }
+  #hud .hud-style { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 5px; padding-top: 4px; border-top: 1px solid #ffffff14; font-size: 10.5px; letter-spacing: 1px; color: #9fb3c8; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #hud .hs-pts b { color: var(--acc); font-weight: 800; font-size: 12px; }
+  #hud .hs-streak { background: linear-gradient(90deg, #ff9f43, #ff4d4d); color: #0b1520; padding: 1px 6px; border-radius: 999px; font-size: 9.5px; font-weight: 900; letter-spacing: .8px; }
+  #hud .hs-medals { display: flex; gap: 4px; font-size: 12px; }
+  #hypeToast { position: fixed; top: 96px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 5px 14px; border-radius: 999px; background: rgba(10,18,28,.9); border: 1px solid rgba(216,245,58,.45); box-shadow: 0 6px 20px rgba(0,0,0,.45); z-index: 3; pointer-events: none; backdrop-filter: blur(6px); animation: htPop .2s cubic-bezier(.18,1.3,.4,1); }
+  #hypeToast .ht-text { font: 800 13px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 1.4px; color: #fff; text-transform: uppercase; }
+  #hypeToast .ht-pts { font: 800 11px system-ui; color: #0b1520; background: var(--acc); padding: 1px 7px; border-radius: 999px; letter-spacing: .5px; }
+  @keyframes htPop { from { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(.9); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
+  #msg { white-space: pre-line; position: fixed; top: 32%; left: 50%; transform: translateX(-50%); font-size: 36px; font-weight: 900; text-shadow: 0 3px 14px #000; z-index: 2; pointer-events: none; text-align: center; line-height: 1.18; }
+  #msg .msg-kicker { display: inline-block; font: 800 14px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 2px; color: #0b1520; background: var(--acc); padding: 2px 12px; border-radius: 999px; text-shadow: none; margin-bottom: 4px; text-transform: uppercase; }
+  #msg .msg-sub { display: block; font-size: 18px; font-weight: 700; color: #cfd8e3; margin-top: 2px; }
   #cam { position: fixed; right: 12px; bottom: 12px; background: var(--bg); padding: 6px 12px; border-radius: 8px; z-index: 2; font-size: 13px; }
   /* in-game key help (src/helpkeys.js): colours match public/kontroller.html */
   #help { position: fixed; z-index: 2; font-size: 12px; }
@@ -775,14 +785,16 @@
 <div id="hud" hidden>
   <div class="hud-head"><span class="tour">MESUT PADEL TOUR</span><span id="hudLabel">SET 1</span></div>
   <div class="hud-grid" id="hudGrid"></div>
+  <div class="hud-style" id="hudStyle"><span class="hs-pts" id="hsPts">STYLE <b>0</b> PTS</span><span class="hs-streak" id="hsStreak" hidden>🔥 x1.5 ON FIRE</span><span class="hs-medals" id="hsMedals"></span></div>
   <span id="t0" hidden>TEAM A</span><span id="t1" hidden>TEAM B</span><span id="setsHud" hidden></span><span id="pts" hidden></span>
 </div>
+<div id="hypeToast" hidden><span class="ht-text" id="htText"></span><span class="ht-pts" id="htPts"></span></div>
 <div id="msg"></div>
 <div id="cam" hidden></div>
 <div id="shotHint" hidden></div>
 <div id="smashVignette" hidden></div>
 <div id="smashBanner" hidden><div class="sb-kicker" id="sbKicker"></div><div class="sb-title" id="sbTitle"></div><div class="sb-sub" id="sbSub"></div></div>
-<div id="pause" hidden><div class="pz-card"><div class="pz-title">PAUSED</div><div id="pzItems"></div><div class="pz-note" id="pzNote"></div><div class="pz-hint">↑ ↓ select · Enter / A confirm · P / Esc / Start resume</div></div></div>
+<div id="pause" hidden><div class="pz-card"><div class="pz-title">PAUSED</div><div id="pzItems"></div><div id="pzNote" class="pz-note"></div><div class="pz-hint">↑ ↓ select · Enter / A confirm · P / Esc / Start resume</div></div></div>
 <div id="replayTag" hidden>● REPLAY <small style="font-weight:600;opacity:.85">· press any key to skip</small></div>
 <div id="help" hidden></div>
 <script type="module" src="/src/main.js"></script>

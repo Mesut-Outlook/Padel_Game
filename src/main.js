@@ -13,7 +13,7 @@ import { readLocal, readGamepad, consumePressed, clearPressed } from './input.js
 import { connect } from './net.js';
 import { predict } from './physics.js';
 import { createFx } from './fx.js';
-import { unlockAudio, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
+import { unlockAudio, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxReward, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
 import { initMenu } from './menu.js';
 import { createTutorial } from './tutorial.js';
 import { mountKeyHelp } from './helpkeys.js';
@@ -43,7 +43,61 @@ addEventListener('resize', resize); resize();
 window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorld, inputs , tut });
 const rig = createCameraRig(camera, renderer.domElement);
 const replay = createReplay(15, 60);
-let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, msgTimer = 0, net = null, marker, loadingScene = false;
+let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, msgTimer = 0, hypeTimer = 0, net = null, marker, loadingScene = false;
+let styleStats = { pts: 0, streak: 0, maxRally: 0, smashes: 0, medals: [] };
+const MEDALS = {
+  wall:   ['🧱', 'WALL WIZARD'],
+  smash:  ['⚡', 'SMASH MASTER'],
+  iron:   ['🔥', 'IRON LUNG'],
+  clutch: ['👑', 'CLUTCH KING'],
+};
+
+function resetStyleStats() {
+  styleStats = { pts: 0, streak: 0, maxRally: 0, smashes: 0, medals: [] };
+  renderStyleHud();
+  if ($('hypeToast')) $('hypeToast').hidden = true;
+}
+
+function renderStyleHud() {
+  const ptsEl = $('hsPts'), strEl = $('hsStreak'), medEl = $('hsMedals');
+  if (!ptsEl) return;
+  ptsEl.innerHTML = `STYLE <b>${styleStats.pts}</b> PTS`;
+  if (strEl) {
+    strEl.hidden = styleStats.streak < 2;
+    if (styleStats.streak >= 2) strEl.textContent = `🔥 x${styleStats.streak >= 3 ? '2.0' : '1.5'} ON FIRE`;
+  }
+  if (medEl) medEl.textContent = styleStats.medals.map(k => MEDALS[k][0]).join(' ');
+}
+
+function showHype(text, pts = 0, sec = 1.05) {
+  if (tut) return;
+  const el = $('hypeToast');
+  if (!el) return;
+  $('htText').textContent = text;
+  const pEl = $('htPts');
+  pEl.hidden = !pts;
+  if (pts) pEl.textContent = `+${pts} PTS`;
+  el.hidden = false;
+  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  hypeTimer = sec;
+}
+
+function awardStyle(basePts, label = '', medalKey = null, tier = 1) {
+  if (tut) return 0;
+  const mult = styleStats.streak >= 3 ? 2 : styleStats.streak >= 2 ? 1.5 : 1;
+  const gained = Math.round(basePts * mult);
+  styleStats.pts += gained;
+  let newMedal = null;
+  if (medalKey && !styleStats.medals.includes(medalKey)) {
+    styleStats.medals.push(medalKey);
+    newMedal = MEDALS[medalKey];
+  }
+  renderStyleHud();
+  sfxReward(newMedal ? 2 : tier);
+  if (newMedal) showHype(`${newMedal[0]} ${newMedal[1]} UNLOCKED!`, gained, 1.35);
+  else if (label) showHype(label, gained, 0.95);
+  return gained;
+}
 
 async function setupScene(venue, ids, roster, rk) {
   loadingScene = true;
@@ -62,6 +116,7 @@ async function setupScene(venue, ids, roster, rk) {
   for (const id of ['hud', 'cam', 'help']) $(id).hidden = false;
   $('msg').textContent = '';
   acc = 0; freeze = 0; slow = 0; shake = 0; approach = 0; bannerMode = ''; rallyFlags = {};
+  resetStyleStats();
   updateSmashBanner();
   setMusicDuck('point');
   last = performance.now();
@@ -137,7 +192,15 @@ $('start').onclick = async () => {
   }
 };
 
-function flash(text, sec = 1.8) { $('msg').textContent = text; msgTimer = sec; }
+function flash(text, sec = 1.8, kicker = '', sub = '') {
+  const el = $('msg');
+  if (kicker || sub) {
+    el.innerHTML = (kicker ? `<span class="msg-kicker">${kicker}</span>\n` : '') + text + (sub ? `<span class="msg-sub">${sub}</span>` : '');
+  } else {
+    el.textContent = text;
+  }
+  msgTimer = sec;
+}
 
 const STEP = 1 / 60;
 let last = 0, acc = 0, rallyFlags = {};
@@ -264,12 +327,16 @@ function inputs() {
 }
 
 function handleEvents(events, score, winner) {
+  const myTeam = humans.length ? teamOf(humans[0]) : 0;
   for (const e of events) {
     if (e.type === 'hit') {
       const wasAfterGlass = rallyFlags.afterGlass;
       rallyFlags.bounced = false;
       rallyFlags.afterGlass = false;
       rallyFlags.hits = (rallyFlags.hits || 0) + 1;
+      rallyFlags.lastShot = e.shot;
+      rallyFlags.lastQuality = e.quality;
+      rallyFlags.lastWasGlassSave = !!(wasAfterGlass || e.shot === 'contra' || e.shot === 'bajada');
       if (e.shot === 'serve') setMusicDuck('rally');
       const power = e.speed ? (e.speed - 6) / 22 : e.shot === 'smash' ? 1 : 0.5;
       sfxHit(power);
@@ -277,6 +344,7 @@ function handleEvents(events, score, winner) {
       sfxWhoosh(0.25 + 0.4 * power, 0, 0.18);  // racket swing through the air
       freeze = power > 0.7 ? 0.08 : 0.03;
       lastHitter = e.pid;
+      const isHumanHit = humans.includes(e.pid) || (!humans.length && teamOf(e.pid) === 0);
       if (humans.includes(e.pid)) {  // your stroke ends the slow approach; overheads get the smash cam treatment
         const wasApproach = approach > 0;
         approach = 0; rig.pov(0);
@@ -295,15 +363,31 @@ function handleEvents(events, score, winner) {
           setMusicDuck('rally');
         }
       }
+      // Mid-rally motivational micro-callouts & style points (tasteful: only on special shots or perfect timing)
+      if (isHumanHit && e.shot !== 'serve') {
+        if (e.shot === 'contra') awardStyle(50, '🧱 CONTRAPARED SAVE!', 'wall', 1);
+        else if (e.shot === 'bajada') awardStyle(45, '💥 GLASS BAJADA!', 'wall', 1);
+        else if (wasAfterGlass && e.quality === 'perfect') awardStyle(40, '🧱 OFF THE GLASS!', 'wall', 1);
+        else if (e.quality === 'perfect' && e.shot === 'chiquita') awardStyle(35, '🎯 SILKY CHIQUITA!', null, 1);
+        else if (e.quality === 'perfect' && e.shot === 'volley') awardStyle(30, '⚡ LASER VOLLEY!', null, 1);
+        else if (e.quality === 'perfect' && power > 0.55) awardStyle(25, '✨ PERFECT TIMING!', null, 1);
+      }
+      // Realistic crowd reactions + 3D stand wave during exciting shots
       if (e.shot === 'smash' || e.shot === 'vibora') {
         rallyFlags.smash = true; replay.mark(e.shot); shake = 0.25;
         sfxCrowdReact('ooh');
+        venueGroup?.userData.exciteCrowd?.(0.65);
         if (e.shot === 'smash' && !humans.length) { punchPid = e.pid; slow = 0.9; sfxSmashImpact(false); }
         if (Math.random() < 0.45) speak(e.pid, true);
       } else if (e.shot === 'contra' || e.shot === 'bajada' || wasAfterGlass) {
-        sfxCrowdReact('ooh');
+        sfxCrowdReact('gasp');
+        venueGroup?.userData.exciteCrowd?.(0.5);
+      } else if (rallyFlags.hits >= 10 && rallyFlags.hits % 3 === 1) {
+        sfxCrowdReact('gasp');
+        venueGroup?.userData.exciteCrowd?.(0.55);
       } else if (rallyFlags.hits >= 6 && rallyFlags.hits % 4 === 2) {
         sfxCrowdReact('cheer');
+        venueGroup?.userData.exciteCrowd?.(0.35);
       }
     } else if (e.type === 'contact') {
       sfxContact(e.kind, world?.ball ? Math.hypot(...world.ball.v) : 8);
@@ -315,17 +399,73 @@ function handleEvents(events, score, winner) {
     else if (e.type === 'point') {
       approach = 0; slow = 0; setSmashBanner('');
       setMusicDuck('point');
-      sfxCrowd(Math.min(1, 0.35 + e.rally / 10));
+      const rallyLen = e.rally || rallyFlags.hits || 1;
+      if (rallyLen > styleStats.maxRally) styleStats.maxRally = rallyLen;
+      const myWin = e.team === myTeam;
+      if (myWin) styleStats.streak++; else styleStats.streak = 0;
+      const cleanWinner = lastHitter != null && teamOf(lastHitter) === e.team && e.why === 'double bounce';
+      const wasClutch = score?.board?.label && /GOLDEN|STAR|TIE/i.test(score.board.label);
+      const isEpicPoint = rallyLen >= 8 || (cleanWinner && (rallyFlags.smash || rallyFlags.lastWasGlassSave)) || wasClutch;
+
+      if (isEpicPoint) {
+        sfxCrowdReact('roar');
+        sfxCrowd(1.0);
+        venueGroup?.userData.exciteCrowd?.(1.0);
+      } else {
+        sfxCrowd(Math.min(1, 0.35 + rallyLen / 10));
+        venueGroup?.userData.exciteCrowd?.(Math.min(0.85, 0.35 + rallyLen / 14));
+      }
+
+      // Motivational point-end headline & style reward
+      let kicker = '', bonus = 0;
+      if (myWin && !tut) {
+        if (wasClutch) {
+          bonus = awardStyle(200, '', 'clutch', 2);
+          kicker = `👑 CLUTCH POINT! · +${bonus} PTS`;
+        } else if (rallyLen >= 10) {
+          bonus = awardStyle(160, '', 'iron', 2);
+          kicker = `🔥 MARATHON RALLY! (${rallyLen} SHOTS) · +${bonus} PTS`;
+        } else if (cleanWinner && (rallyFlags.lastShot === 'smash' || rallyFlags.lastShot === 'vibora')) {
+          styleStats.smashes++;
+          bonus = awardStyle(120, '', styleStats.smashes >= 2 ? 'smash' : null, 2);
+          kicker = `💥 UNSTOPPABLE WINNER! · +${bonus} PTS`;
+        } else if (cleanWinner && rallyFlags.lastWasGlassSave) {
+          bonus = awardStyle(130, '', 'wall', 2);
+          kicker = `🧱 GLASS MASTERPIECE! · +${bonus} PTS`;
+        } else if (cleanWinner) {
+          bonus = awardStyle(80, '', null, 1);
+          kicker = `⚡ CLEAN WINNER! · +${bonus} PTS`;
+        } else if (rallyLen >= 7) {
+          bonus = awardStyle(90, '', null, 1);
+          kicker = `👏 GREAT RALLY! (${rallyLen} SHOTS) · +${bonus} PTS`;
+        } else {
+          awardStyle(40, '', null, 1);
+        }
+      } else {
+        renderStyleHud();
+        if (!myWin && rallyLen >= 10) kicker = `🔥 EPIC ${rallyLen}-SHOT RALLY`;
+      }
+
       // last hitter reacts: celebrates a winner, groans at an error
       if (lastHitter != null && Math.random() < 0.75) speak(lastHitter, teamOf(lastHitter) === e.team);
       lastHitter = null;
       const team = e.team === 0 ? $('t0').textContent : $('t1').textContent;
       const WHY = { 'double bounce': 'double bounce', 'bounced own side': 'bounced on own side', 'hit own mesh': 'hit own mesh', 'hit opponent wall directly': 'direct wall out', 'double fault': 'double fault', out: 'out', 'volleyed serve': 'volleyed serve', 'double hit': 'double hit' };
-      if (!tut) flash(`${team}\n${WHY[e.why] || e.why}`);
+      if (!tut) flash(`${team}\n${WHY[e.why] || e.why}`, 2.1, kicker);
       // auto highlight: long rally, smash, or a ball played off the glass
-      if (!tut && (e.rally >= 8 || rallyFlags.smash || rallyFlags.glass)) setTimeout(() => startReplay(true), 900);
+      if (!tut && (rallyLen >= 8 || rallyFlags.smash || rallyFlags.glass)) setTimeout(() => startReplay(true), 900);
       rallyFlags = {};
-      if (!tut && winner != null) flash(`🏆 ${team} WINS!\nEnter / Start: main menu`, 999);
+      if (!tut && winner != null) {
+        const medalsStr = styleStats.medals.length
+          ? 'Medals: ' + styleStats.medals.map(k => `${MEDALS[k][0]} ${MEDALS[k][1]}`).join(' · ')
+          : `Best Rally: ${styleStats.maxRally} shots`;
+        flash(
+          `🏆 ${team} WINS!`,
+          999,
+          `FINAL STYLE SCORE: ${styleStats.pts} PTS`,
+          `${medalsStr} · Press Enter / Start for Main Menu`
+        );
+      }
     }
   }
   events.length = 0;
@@ -517,9 +657,11 @@ function loop(now) {
     else if (nearD < 3.5) { if (sp > 8) sfxWhoosh(Math.min(1, sp / 25) * (1 - nearD / 3.5), tmpV.project(camera).x); nearD = Infinity; }
     lastD = d;
   }
+  venueGroup?.userData.updateCrowd?.(dt);
   rig.update(dt, { ball: view.b, players: view.pl.map(s => ({ p: [s[0], s[1]], f: s[2] })), focus, team: focus < 2 ? 0 : 1 });
   if ($('cam').textContent === '') $('cam').textContent = '🎥 ' + rig.name;
   if (msgTimer > 0 && (msgTimer -= dt) <= 0) $('msg').textContent = '';
+  if (hypeTimer > 0 && (hypeTimer -= dt) <= 0 && $('hypeToast')) $('hypeToast').hidden = true;
   shakeOff.set(0, 0, 0);
   if (shake > 0) { shake -= dt; shakeOff.set(Math.random() - 0.5, Math.random() - 0.5, 0).multiplyScalar(shake * 0.5); }
   camera.position.add(shakeOff);
