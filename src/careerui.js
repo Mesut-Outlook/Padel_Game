@@ -5,6 +5,7 @@ import venues from '../data/venues.json';
 import rackets from '../data/rackets.json';
 import eco from '../data/economy.json';
 import shop from '../data/shop.json';
+import tournaments from '../data/tournaments.json';
 import {
   PROFILE_KEY,
   newProfile,
@@ -19,7 +20,12 @@ import {
   tierOf,
   buyItem,
   equip,
+  tournamentReward,
+  canEnter,
+  aiRankingTable,
+  worldRanking,
 } from './career.js';
+import { createTournament, myMatch, reportResult, simulateOthers, standings, isFinished, placement } from './tournament.js';
 import {
   countryFlag,
   setCareerPreview,
@@ -148,7 +154,7 @@ let startMatchFn = null;
 let careerPanel = null;
 let fileInputEl = null;
 let isOpen = false;
-let curScreen = 'hub'; // 'templates' | 'creator' | 'hub' | 'play' | 'training' | 'shop' | 'locker' | 'reward' | 'profile'
+let curScreen = 'hub'; // 'templates' | 'creator' | 'hub' | 'play' | 'training' | 'shop' | 'locker' | 'reward' | 'profile' | 'tournaments' | 'tpartner' | 'tournament' | 'tresult' | 'ranking'
 
 let profile = null;
 let memProfile = null;
@@ -255,7 +261,7 @@ function buildLeftPanelHtml(ch, stats, p = null) {
       <div class="cr-left-currencies">
         <div class="cr-left-curr"><span>Credits</span><b class="tabular">${p.credits}</b></div>
         <div class="cr-left-curr rp"><span>Ranking points</span><b class="tabular">${p.rankingPoints}</b></div>
-        <div class="cr-left-curr wr"><span>World rank</span><b>—</b></div>
+        <div class="cr-left-curr wr"><span>World rank</span><b class="tabular">${p ? "#" + myWorldRank(p) : "—"}</b></div>
       </div>
     `
     : '';
@@ -511,6 +517,11 @@ function renderCurrentScreen() {
   else if (curScreen === 'shop') renderShopScreen();
   else if (curScreen === 'locker') renderLockerScreen();
   else if (curScreen === 'profile') renderProfileScreen();
+  else if (curScreen === 'tournaments') renderTournamentsScreen();
+  else if (curScreen === 'tpartner') renderTournamentPartnerScreen();
+  else if (curScreen === 'tournament') renderTournamentScreen();
+  else if (curScreen === 'tresult') renderTournamentResultScreen();
+  else if (curScreen === 'ranking') renderRankingScreen();
   else renderHubScreen();
 }
 
@@ -963,6 +974,10 @@ function renderHubScreen() {
     showScreen('reward');
     return;
   }
+  if (profile.tournamentResult) {
+    showScreen('tresult');
+    return;
+  }
 
   const pl = buildEquippedPlayer(profile);
   const rk = equippedRacket(profile);
@@ -978,7 +993,7 @@ function renderHubScreen() {
         <span class="cr-prof-flag">${countryFlag(pl.countryCode)}</span>
         <div>
           <div class="cr-prof-name" lang="en">${escapeHtml(pl.name)}</div>
-          <div class="cr-prof-rank">World rank: — · Tier: ${escapeHtml(curTier)} · Record: ${h.won}W – ${Math.max(0, h.played - h.won)}L (${h.played} played)</div>
+          <div class="cr-prof-rank">World rank: #${myWorldRank(profile)} · Tier: ${escapeHtml(curTier)} · Record: ${h.won}W – ${Math.max(0, h.played - h.won)}L (${h.played} played)</div>
         </div>
       </div>
       <div class="cr-currencies">
@@ -991,8 +1006,8 @@ function renderHubScreen() {
           <span class="cr-curr-val tabular">${profile.rankingPoints}</span>
         </div>
         <div class="cr-curr-box is-wr">
-          <span class="cr-curr-label">World rank: —</span>
-          <span class="cr-curr-val">—</span>
+          <span class="cr-curr-label">World rank</span>
+          <span class="cr-curr-val tabular">#${myWorldRank(profile)}</span>
         </div>
       </div>
     </div>
@@ -1007,10 +1022,10 @@ function renderHubScreen() {
           <div class="pl-card-sub">Play Singles or Doubles against AI to earn Credits.</div>
         </button>
 
-        <button type="button" class="pl-card cr-hub-card is-disabled" disabled>
+        <button type="button" class="pl-card cr-hub-card" id="cr-hub-tournaments">
           <div class="cr-hub-card-top">
             <div class="pl-card-title">🏆 Tournaments</div>
-            <span class="cr-soon-pill">Coming soon</span>
+            <span class="pl-meta-pill">${profile.tournament ? 'In progress' : 'Circuit'}</span>
           </div>
           <div class="pl-card-sub">Americano, Mexicano, Knockout & League ladder.</div>
         </button>
@@ -1039,10 +1054,10 @@ function renderHubScreen() {
           <div class="pl-card-sub">Equip your owned rackets, shoes, kit, headwear and ball.</div>
         </button>
 
-        <button type="button" class="pl-card cr-hub-card is-disabled" disabled>
+        <button type="button" class="pl-card cr-hub-card" id="cr-hub-ranking">
           <div class="cr-hub-card-top">
             <div class="pl-card-title">🌍 Ranking</div>
-            <span class="cr-soon-pill">Coming soon</span>
+            <span class="pl-meta-pill">#${myWorldRank(profile)}</span>
           </div>
           <div class="pl-card-sub">World Padel Tour standings and tier milestones.</div>
         </button>
@@ -1067,6 +1082,8 @@ function renderHubScreen() {
 
   wireBannerButtons();
   careerPanel.querySelector('#cr-hub-play').onclick = () => { flashMsg = null; showScreen('play'); };
+  careerPanel.querySelector('#cr-hub-tournaments').onclick = () => { flashMsg = null; showScreen(profile.tournament ? 'tournament' : 'tournaments'); };
+  careerPanel.querySelector('#cr-hub-ranking').onclick = () => { flashMsg = null; showScreen('ranking'); };
   careerPanel.querySelector('#cr-hub-training').onclick = () => { flashMsg = null; showScreen('training'); };
   careerPanel.querySelector('#cr-hub-shop').onclick = () => { flashMsg = null; shopErrors = {}; showScreen('shop'); };
   careerPanel.querySelector('#cr-hub-locker').onclick = () => { flashMsg = null; showScreen('locker'); };
@@ -1796,7 +1813,7 @@ function renderRewardScreen() {
   contBtn.onclick = () => {
     const { lastReward: _removed, ...clean } = profile;
     persistProfile(clean);
-    showScreen('hub');
+    showScreen(clean.tournamentResult ? 'tresult' : clean.tournament ? 'tournament' : 'hub');
   };
   setTimeout(() => contBtn.focus(), 20);
 }
@@ -1828,7 +1845,7 @@ function renderProfileScreen() {
           <span class="cr-prof-flag">${countryFlag(pl.countryCode)}</span>
           <div>
             <div class="cr-prof-name" lang="en">${escapeHtml(pl.name)}</div>
-            <div class="cr-prof-rank">${escapeHtml(pl.country || '')} · ${pl.hand === 'left' ? 'Left-handed' : 'Right-handed'} · World rank: —</div>
+            <div class="cr-prof-rank">${escapeHtml(pl.country || '')} · ${pl.hand === 'left' ? 'Left-handed' : 'Right-handed'} · World rank: #${myWorldRank(profile)}</div>
           </div>
         </div>
         <div class="cr-currencies">
@@ -1941,6 +1958,374 @@ function renderProfileScreen() {
   }
 }
 
+// 10. Tournaments, Tournament run, Tournament result, World ranking
+const FORMAT_INFO = {
+  americano: 'Partners rotate every round; every rally is a point, first to 16.',
+  mexicano: 'Round 1 is random, then 1st+4th play 2nd+3rd by the table.',
+  knockout: 'Lose once and you are out. One set to 6.',
+  league: 'Everyone plays everyone; table by wins, then game difference.',
+};
+const AI_OFFSET = { rookie: -1.5, club: 0, pro: 1, legend: 2 };
+const isPairFormat = (f) => f === 'knockout' || f === 'league';
+const avgStats = (s) => Object.values(s).reduce((a, b) => a + b, 0) / Object.values(s).length;
+const myRating = (p = profile) => avgStats(p.stats);
+const aiRating = (c, entry) => avgStats(c.stats) + (AI_OFFSET[entry.ai] ?? 0);
+const aiTable = aiRankingTable(characters);
+const myWorldRank = (p = profile) => worldRanking(p, aiTable).findIndex(r => r.id === 'me') + 1;
+const entryById = (id) => tournaments.circuit.find(e => e.id === id);
+const charById = (id) => characters.find(c => c.id === id);
+
+// tournament-screen state (not persisted): the entry waiting for a partner, the chosen partner
+let tState = { entry: null, partnerId: null };
+
+const totalRoundsOf = (T) => ({ americano: 7, mexicano: 5, knockout: Math.log2(T.entrants.length), league: T.entrants.length - (T.entrants.length % 2 ? 0 : 1) })[T.format];
+const roundName = (T, r) => {
+  if (T.format !== 'knockout') return `Round ${r + 1} / ${totalRoundsOf(T)}`;
+  const left = totalRoundsOf(T) - r;
+  return left === 1 ? 'Final' : left === 2 ? 'Semi-finals' : left === 3 ? 'Quarter-finals' : `Round of ${2 ** left}`;
+};
+const sideIds = (x) => [].concat(x);
+const nameOfId = (T, id) => T.entrants.find(e => e.id === id)?.name || id;
+const sideName = (T, x) => sideIds(x).map(id => nameOfId(T, id)).join(' / ');
+
+function lockReason(entry, rank) {
+  const c = canEnter(profile, entry, rank);
+  if (c.ok) return '';
+  if (c.reason === 'invite') return `Invitation: world top ${entry.inviteTop}`;
+  if (c.reason === 'ranking') return `Needs ${entry.minRankingPoints} ranking pts`;
+  return `Needs ${entry.entryFee} Credits`;
+}
+
+// pays the placement reward and clears the run once the tournament is over (called after every state change)
+function settleTournament(p) {
+  const tour = p.tournament;
+  if (!tour || !isFinished(tour.T)) return p;
+  const entry = entryById(tour.entryId);
+  const place = placement(tour.T, 'me');
+  const rw = tournamentReward(entry, place);
+  const old = p.circuit?.[entry.id];
+  return {
+    ...p,
+    credits: p.credits + rw.credits,
+    rankingPoints: p.rankingPoints + rw.rankingPoints,
+    circuit: { ...p.circuit, [entry.id]: old ? Math.min(old, place) : place },
+    tournament: null,
+    tournamentResult: { entryId: entry.id, name: entry.name, place, credits: rw.credits, rankingPoints: rw.rankingPoints },
+  };
+}
+
+function renderTournamentsScreen() {
+  if (!profile) { showScreen('templates'); return; }
+  const pl = buildEquippedPlayer(profile);
+  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), 'TOURNAMENTS');
+  const rank = myWorldRank();
+  const best = (id) => profile.circuit?.[id] ? `Best: #${profile.circuit[id]}` : 'Best: —';
+
+  careerPanel.innerHTML = `
+    ${renderBannersHtml()}
+    <div class="cr-head">
+      <div>
+        <h2 class="cr-title">CAREER · <span>TOURNAMENTS</span></h2>
+        <div class="cr-sub">Climb the circuit. Entry fees are paid in Credits; places pay Credits and ranking points. World rank: #${rank}</div>
+      </div>
+      <div class="cr-head-right">
+        ${renderTopCreditsHtml(profile)}
+        <button type="button" class="cr-btn" id="cr-tour-back">← Back to Hub</button>
+      </div>
+    </div>
+    <div class="cr-body">
+      <div class="cr-tour-list">
+        ${tournaments.circuit.map(e => {
+          const lock = lockReason(e, rank);
+          const rw = tournamentReward(e, 1);
+          return `
+            <div class="cr-tour-row ${lock ? 'is-locked' : ''}">
+              <div class="cr-tour-main">
+                <div class="cr-tour-name">${escapeHtml(e.name)} <span class="pl-meta-pill">${capitalize(e.format)} · ${e.drawSize} ${isPairFormat(e.format) ? 'pairs' : 'players'}</span> <span class="pl-meta-pill">${capitalize(e.ai)}</span></div>
+                <div class="cr-tour-info">${escapeHtml(FORMAT_INFO[e.format])}</div>
+                <div class="cr-tour-info">Entry ${e.entryFee} Credits · Champion +${rw.rankingPoints} pts, +${rw.credits} Credits · ${best(e.id)}</div>
+                ${lock ? `<div class="cr-train-reason" style="align-self:flex-start">${escapeHtml(lock)}</div>` : ''}
+              </div>
+              <button type="button" class="cr-btn cr-btn-acc" data-enter="${e.id}" ${lock ? 'disabled' : ''}>Enter</button>
+            </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+  wireBannerButtons();
+  careerPanel.querySelector('#cr-tour-back').onclick = () => showScreen('hub');
+  careerPanel.querySelectorAll('[data-enter]').forEach(btn => {
+    btn.onclick = () => {
+      const entry = entryById(btn.dataset.enter);
+      if (!canEnter(profile, entry, myWorldRank()).ok) return;
+      if (isPairFormat(entry.format)) {
+        // suggest the strongest roster character
+        const best = characters.slice().sort((a, b) => avgStats(b.stats) - avgStats(a.stats))[0];
+        tState = { entry, partnerId: best.id };
+        showScreen('tpartner');
+      } else {
+        tState = { entry, partnerId: null };
+        startTournament();
+      }
+    };
+  });
+}
+
+function startTournament() {
+  const { entry, partnerId } = tState;
+  if (!entry || !canEnter(profile, entry, myWorldRank()).ok) { showScreen('tournaments'); return; }
+  const pool = characters.filter(c => c.id !== partnerId).sort(() => Math.random() - 0.5);
+  let entrants;
+  if (!isPairFormat(entry.format)) {
+    entrants = [{ id: 'me', name: profile.player.name, rating: myRating() },
+      ...pool.slice(0, entry.drawSize - 1).map(c => ({ id: c.id, name: c.name, rating: aiRating(c, entry) }))];
+  } else {
+    const partner = charById(partnerId);
+    entrants = [{ id: 'me', name: `${profile.player.name} / ${partner.name}`, rating: (myRating() + aiRating(partner, entry)) / 2, members: [partnerId] }];
+    for (let i = 0; i < entry.drawSize - 1; i++) {  // ponytail: roster has 26 characters, a 16-pair draw reuses some AIs in several pairs
+      const a = pool[(2 * i) % pool.length], b = pool[(2 * i + 1) % pool.length];
+      entrants.push({ id: `p${i}`, name: `${a.name} / ${b.name}`, rating: (aiRating(a, entry) + aiRating(b, entry)) / 2, members: [a.id, b.id] });
+    }
+  }
+  const T = createTournament({ format: entry.format, entrants });
+  persistProfile({ ...profile, credits: profile.credits - entry.entryFee, tournament: { entryId: entry.id, T, partner: partnerId } });
+  showScreen('tournament');
+}
+
+function renderTournamentPartnerScreen() {
+  if (!profile || !tState.entry) { showScreen('tournaments'); return; }
+  const entry = tState.entry;
+  const pl = buildEquippedPlayer(profile);
+  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), 'CHOOSE PARTNER');
+  const cur = charById(tState.partnerId) || characters[0];
+  careerPanel.innerHTML = `
+    ${renderBannersHtml()}
+    <div class="cr-head">
+      <div>
+        <h2 class="cr-title">${escapeHtml(entry.name.toUpperCase())} · <span>PARTNER</span></h2>
+        <div class="cr-sub">${escapeHtml(FORMAT_INFO[entry.format])} Entry fee ${entry.entryFee} Credits.</div>
+      </div>
+      <div class="cr-head-right">
+        ${renderTopCreditsHtml(profile)}
+        <button type="button" class="cr-btn" id="cr-tp-back">← Back</button>
+      </div>
+    </div>
+    <div class="cr-body">
+      <div class="pl-section-label">CHOOSE PARTNER (${countryFlag(cur.countryCode)} ${escapeHtml(cur.name)} · rating ${avgStats(cur.stats).toFixed(1)})</div>
+      <div class="cr-partner-grid" id="cr-tp-grid">
+        ${characters.map(c => `
+          <button type="button" class="pl-card cr-partner-card ${c.id === tState.partnerId ? 'is-selected' : ''}" data-pid="${c.id}">
+            <span>${countryFlag(c.countryCode)}</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(c.name)}</span>
+            <span class="pl-check">✓</span>
+          </button>`).join('')}
+      </div>
+    </div>
+    <div class="cr-foot">
+      <div class="cr-foot-row">
+        <div class="pl-summary">${escapeHtml(entry.name)} · ${capitalize(entry.format)} · w/ ${escapeHtml(cur.name)}</div>
+        <button type="button" class="pl-start-btn" id="cr-tp-go">PAY ${entry.entryFee} &amp; ENTER</button>
+      </div>
+    </div>
+  `;
+  wireBannerButtons();
+  careerPanel.querySelector('#cr-tp-back').onclick = () => showScreen('tournaments');
+  careerPanel.querySelector('#cr-tp-go').onclick = () => startTournament();
+  careerPanel.querySelectorAll('[data-pid]').forEach(btn => {
+    btn.onclick = () => { tState.partnerId = btn.dataset.pid; renderTournamentPartnerScreen(); };
+  });
+}
+
+function standingsTableHtml(T) {
+  const rows = standings(T);
+  const key = T.format === 'league' ? 'Wins' : 'Points';
+  return `
+    <table class="cr-tour-table">
+      <tr><th>#</th><th>Name</th><th>${key}</th><th>+/-</th></tr>
+      ${rows.map((r, i) => `<tr class="${r.id === 'me' ? 'is-me' : ''}"><td>${i + 1}</td><td>${escapeHtml(nameOfId(T, r.id))}</td><td>${T.format === 'league' ? r.wins : r.points}</td><td>${r.diff > 0 ? '+' : ''}${r.diff}</td></tr>`).join('')}
+    </table>`;
+}
+
+function matchRowHtml(T, m) {
+  const mine = [...sideIds(m.a), ...sideIds(m.b)].includes('me');
+  return `<div class="cr-tour-match ${mine ? 'is-me' : ''}">
+    <span>${escapeHtml(sideName(T, m.a))}</span>
+    <b class="tabular">${m.score ? `${m.score.a} – ${m.score.b}` : 'vs'}</b>
+    <span>${escapeHtml(sideName(T, m.b))}</span>
+  </div>`;
+}
+
+function bracketHtml(T) {
+  return `<div class="cr-tour-bracket">${T.rounds.map((round, r) => `
+    <div class="cr-tour-col"><div class="pl-section-label">${roundName(T, r)}</div>${round.map(m => matchRowHtml(T, m)).join('')}</div>`).join('')}</div>`;
+}
+
+function renderTournamentScreen() {
+  const tour = profile?.tournament;
+  if (!tour) { showScreen('tournaments'); return; }
+  const T = tour.T, entry = entryById(tour.entryId);
+  const pl = buildEquippedPlayer(profile);
+  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), 'TOURNAMENT');
+  const mine = myMatch(T);
+  const round = T.rounds[T.round];
+
+  careerPanel.innerHTML = `
+    ${renderBannersHtml()}
+    <div class="cr-head">
+      <div>
+        <h2 class="cr-title">${escapeHtml(entry.name.toUpperCase())} · <span>${roundName(T, T.round).toUpperCase()}</span></h2>
+        <div class="cr-sub">${capitalize(T.format)} · ${escapeHtml(FORMAT_INFO[T.format])} Progress saves automatically.</div>
+      </div>
+      <div class="cr-head-right">
+        ${renderTopCreditsHtml(profile)}
+        <button type="button" class="cr-btn" id="cr-t-back">← Back to Hub</button>
+      </div>
+    </div>
+    <div class="cr-body">
+      ${T.format === 'knockout' ? bracketHtml(T) : `
+        <div class="pl-section-label">${roundName(T, T.round).toUpperCase()}</div>
+        <div class="cr-tour-matches">${round.map(m => matchRowHtml(T, m)).join('')}</div>
+        <div class="pl-section-label">TABLE</div>
+        ${standingsTableHtml(T)}`}
+    </div>
+    <div class="cr-foot">
+      <div class="cr-foot-row">
+        <div class="pl-summary">${mine ? `Your match: ${escapeHtml(sideName(T, mine.a))} vs ${escapeHtml(sideName(T, mine.b))}` : 'No match for you this round.'}</div>
+        ${mine
+          ? '<button type="button" class="pl-start-btn" id="cr-t-play">PLAY YOUR MATCH</button>'
+          : '<button type="button" class="cr-btn" id="cr-t-end">Simulate to end</button> <button type="button" class="pl-start-btn" id="cr-t-sim">SIMULATE ROUND</button>'}
+      </div>
+    </div>
+  `;
+  wireBannerButtons();
+  careerPanel.querySelector('#cr-t-back').onclick = () => showScreen('hub');
+  const sim = (all) => {
+    let next = T;
+    do { next = simulateOthers(next); } while (all && !isFinished(next));
+    persistProfile(settleTournament({ ...profile, tournament: { ...tour, T: next } }));
+    showScreen(profile.tournamentResult ? 'tresult' : 'tournament');
+  };
+  if (mine) careerPanel.querySelector('#cr-t-play').onclick = () => launchTournamentMatch(mine);
+  else {
+    careerPanel.querySelector('#cr-t-sim').onclick = () => sim(false);
+    careerPanel.querySelector('#cr-t-end').onclick = () => sim(true);
+  }
+}
+
+async function launchTournamentMatch(m) {
+  if (!startMatchFn || !profile?.tournament) return;
+  const tour = profile.tournament, T = tour.T, entry = entryById(tour.entryId);
+  const swapped = sideIds(m.b).includes('me');  // the human is always team 0 in startMatch
+  const mySide = swapped ? m.b : m.a, oppSide = swapped ? m.a : m.b;
+  const members = (x) => sideIds(x).flatMap(id => id === 'me' ? [] : (T.entrants.find(e => e.id === id)?.members || [id]));
+  // pair formats: your side is the pair 'me', so the partner comes from the entry choice; americano/mexicano: the other id on your side
+  const partner = charById(sideIds(mySide).includes('me') && sideIds(mySide).length === 1 ? tour.partner : members(mySide)[0]) || characters[0];
+  const [o1, o2] = members(oppSide).map(charById);
+
+  const myRacket = rackets.find(r => r.id === profile.equipped?.racket) || rackets[0];
+  const kit = equippedKit(profile), shoeItem = equippedShoes(profile), ballItem = equippedBall(profile), hwItem = equippedHeadwearItem(profile);
+  const me = {
+    ...profile.player, stats: { ...profile.stats },
+    outfit: { shirt: kit.shirt, shorts: kit.shorts, shoes: shoeItem.color },
+    headwear: hwItem ? hwItem.headwear : profile.player.headwear,
+  };
+  const rr = () => rackets[Math.floor(Math.random() * rackets.length)];
+  const rally = T.format === 'americano' || T.format === 'mexicano';
+  const quick = new URLSearchParams(location.search).has('quick');
+
+  await startMatchFn({
+    players: 4, humans: 1, ai: entry.ai,
+    match: rally ? { pointsTo: quick ? 4 : 16 } : { sets: 1, goldenPoint: true, superTiebreak: false, starPoint: false },
+    roster: { 0: me, 1: partner, 2: o1 || characters[0], 3: o2 || characters[1] },
+    rackets: { 0: myRacket, 1: rr(), 2: rr(), 3: rr() },
+    shoes: { 0: { speed: shoeItem.speed, agility: shoeItem.agility } },
+    ball: { speed: ballItem.speed, bounce: ballItem.bounce },
+    venue: venues.find(v => v.id === entry.venue) || venues[0],
+    onEnd(result) {
+      const reward = matchReward(result, eco);
+      let updated = applyReward(profile, reward, result);
+      const [t0, t1] = rally ? result.points : result.games;
+      const fixed = result.won === (t0 > t1) ? [t0, t1] : result.won ? [t1 + 1, t1] : [t0, t0 + 1];  // guard against a tie
+      const score = swapped ? { a: fixed[1], b: fixed[0] } : { a: fixed[0], b: fixed[1] };
+      const next = simulateOthers(reportResult(T, m, score));
+      updated.lastReward = {
+        lines: reward.lines, mult: reward.mult, credits: reward.credits, won: result.won, ai: result.ai || entry.ai,
+        score: rally ? `${t0}-${t1}` : (result.score?.sets || `${t0}-${t1}`),
+      };
+      updated = settleTournament({ ...updated, tournament: { ...tour, T: next } });
+      persistProfile(updated);
+    },
+  });
+}
+
+function renderTournamentResultScreen() {
+  const r = profile?.tournamentResult;
+  if (!r) { showScreen('hub'); return; }
+  const pl = buildEquippedPlayer(profile);
+  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), r.place === 1 ? 'CHAMPION' : 'TOURNAMENT OVER');
+  careerPanel.innerHTML = `
+    ${renderBannersHtml()}
+    <div class="cr-head">
+      <div>
+        <h2 class="cr-title">TOURNAMENT <span>RESULT</span></h2>
+        <div class="cr-sub">${escapeHtml(r.name)}</div>
+      </div>
+      <div class="cr-head-right">${renderTopCreditsHtml(profile)}</div>
+    </div>
+    <div class="cr-body">
+      <div class="cr-reward-box">
+        <div class="cr-reward-head">
+          <div class="cr-reward-outcome ${r.place === 1 ? '' : 'is-loss'}">${r.place === 1 ? '🏆 CHAMPION' : `PLACE #${r.place}`}</div>
+          <div class="cr-reward-score">${escapeHtml(r.name)}</div>
+        </div>
+        <div class="cr-reward-lines">
+          <div class="cr-reward-row"><span>Credits</span><b class="tabular">+${r.credits}</b></div>
+          <div class="cr-reward-row"><span>Ranking points</span><b class="tabular">+${r.rankingPoints}</b></div>
+        </div>
+        <div class="cr-reward-balance"><span>New world rank</span><b class="tabular">#${myWorldRank()}</b></div>
+        <button type="button" class="pl-start-btn" id="cr-tr-continue" style="width:100%;margin-top:4px">Continue</button>
+      </div>
+    </div>
+  `;
+  wireBannerButtons();
+  const btn = careerPanel.querySelector('#cr-tr-continue');
+  btn.onclick = () => {
+    const { tournamentResult: _x, ...clean } = profile;
+    persistProfile(clean);
+    showScreen('hub');
+  };
+  setTimeout(() => btn.focus(), 20);
+}
+
+function renderRankingScreen() {
+  if (!profile) { showScreen('templates'); return; }
+  const pl = buildEquippedPlayer(profile);
+  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), 'WORLD RANKING');
+  const table = worldRanking(profile, aiTable);
+  careerPanel.innerHTML = `
+    ${renderBannersHtml()}
+    <div class="cr-head">
+      <div>
+        <h2 class="cr-title">CAREER · <span>WORLD RANKING</span></h2>
+        <div class="cr-sub">Your rank: #${myWorldRank()} of ${table.length}. Win tournaments to climb.</div>
+      </div>
+      <div class="cr-head-right">
+        ${renderTopCreditsHtml(profile)}
+        <button type="button" class="cr-btn" id="cr-rank-back">← Back to Hub</button>
+      </div>
+    </div>
+    <div class="cr-body">
+      <table class="cr-tour-table">
+        <tr><th>#</th><th>Name</th><th>Points</th></tr>
+        ${table.map((r, i) => `<tr class="${r.id === 'me' ? 'is-me' : ''}" ${r.id === 'me' ? 'id="cr-rank-me"' : ''}><td>${i + 1}</td><td>${escapeHtml(r.name)}</td><td>${r.points}</td></tr>`).join('')}
+      </table>
+    </div>
+  `;
+  wireBannerButtons();
+  careerPanel.querySelector('#cr-rank-back').onclick = () => showScreen('hub');
+  careerPanel.querySelector('#cr-rank-me')?.scrollIntoView({ block: 'center' });
+}
+
 // Navigation: Back action & focus movement (Keyboard + Xbox Controller)
 function goBack() {
   if (!isOpen) return;
@@ -1954,11 +2339,19 @@ function goBack() {
     curScreen === 'profile' ||
     curScreen === 'training' ||
     curScreen === 'shop' ||
-    curScreen === 'locker'
+    curScreen === 'locker' ||
+    curScreen === 'tournaments' ||
+    curScreen === 'tournament' ||
+    curScreen === 'ranking'
   ) {
     flashMsg = null;
     shopErrors = {};
     showScreen('hub');
+    return;
+  }
+  if (curScreen === 'tpartner') { showScreen('tournaments'); return; }
+  if (curScreen === 'tresult') {
+    careerPanel?.querySelector('#cr-tr-continue')?.click();
     return;
   }
   if (curScreen === 'creator') {
@@ -1989,7 +2382,7 @@ function moveCareerFocus(dx, dy) {
     active.dispatchEvent(new Event('input'));
     return;
   }
-  const cols = curScreen === 'templates' ? 4 : curScreen === 'training' ? 1 : 2;
+  const cols = curScreen === 'templates' ? 4 : curScreen === 'training' || curScreen === 'ranking' ? 1 : curScreen === 'tpartner' ? 4 : 2;
   let nextIdx = idx + (dx !== 0 ? dx : dy * cols);
   nextIdx = Math.max(0, Math.min(focusables.length - 1, nextIdx));
   focusables[nextIdx]?.focus();
@@ -2035,6 +2428,9 @@ function handleCareerGamepad(pad) {
   padPrevY = sy;
 }
 
+// where a (re)opened career lands: pending reward first, then the tournament in progress
+const startScreen = () => profile.lastReward ? 'reward' : profile.tournamentResult ? 'tresult' : profile.tournament ? 'tournament' : 'hub';
+
 export function openCareer() {
   const menuEl = document.getElementById('menu');
   const shell = menuEl?.querySelector('.pl-shell');
@@ -2056,9 +2452,9 @@ export function openCareer() {
   flashMsg = null;
   const status = syncProfileFromStorage();
   if (status === 'ok' && profile) {
-    showScreen(profile.lastReward ? 'reward' : 'hub');
+    showScreen(startScreen());
   } else if (status === 'unavailable' && profile) {
-    showScreen(profile.lastReward ? 'reward' : 'hub');
+    showScreen(startScreen());
   } else {
     showScreen('templates');
   }
