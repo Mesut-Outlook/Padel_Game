@@ -25,6 +25,7 @@ import {
   aiRankingTable,
   worldRanking,
 } from './career.js';
+import { listRooms } from './net.js';
 import { createTournament, myMatch, reportResult, simulateOthers, standings, isFinished, placement } from './tournament.js';
 import {
   countryFlag,
@@ -151,10 +152,11 @@ function getStore() {
 }
 
 let startMatchFn = null;
+let startOnlineFn = null;
 let careerPanel = null;
 let fileInputEl = null;
 let isOpen = false;
-let curScreen = 'hub'; // 'templates' | 'creator' | 'hub' | 'play' | 'training' | 'shop' | 'locker' | 'reward' | 'profile' | 'tournaments' | 'tpartner' | 'tournament' | 'tresult' | 'ranking'
+let curScreen = 'hub'; // 'templates' | 'creator' | 'hub' | 'play' | 'training' | 'shop' | 'locker' | 'reward' | 'profile' | 'tournaments' | 'tpartner' | 'tournament' | 'tresult' | 'ranking' | 'online'
 
 let profile = null;
 let memProfile = null;
@@ -522,6 +524,7 @@ function renderCurrentScreen() {
   else if (curScreen === 'tournament') renderTournamentScreen();
   else if (curScreen === 'tresult') renderTournamentResultScreen();
   else if (curScreen === 'ranking') renderRankingScreen();
+  else if (curScreen === 'online') renderOnlineScreen();
   else renderHubScreen();
 }
 
@@ -1030,6 +1033,14 @@ function renderHubScreen() {
           <div class="pl-card-sub">Americano, Mexicano, Knockout & League ladder.</div>
         </button>
 
+        <button type="button" class="pl-card cr-hub-card" id="cr-hub-online">
+          <div class="cr-hub-card-top">
+            <div class="pl-card-title">🌐 Play Online</div>
+            <span class="pl-meta-pill">×${eco.mult.online ?? 1} Credits</span>
+          </div>
+          <div class="pl-card-sub">Join a public room, create one, or enter a room code.</div>
+        </button>
+
         <button type="button" class="pl-card cr-hub-card" id="cr-hub-training">
           <div class="cr-hub-card-top">
             <div class="pl-card-title">💪 Training</div>
@@ -1084,6 +1095,7 @@ function renderHubScreen() {
   careerPanel.querySelector('#cr-hub-play').onclick = () => { flashMsg = null; showScreen('play'); };
   careerPanel.querySelector('#cr-hub-tournaments').onclick = () => { flashMsg = null; showScreen(profile.tournament ? 'tournament' : 'tournaments'); };
   careerPanel.querySelector('#cr-hub-ranking').onclick = () => { flashMsg = null; showScreen('ranking'); };
+  careerPanel.querySelector('#cr-hub-online').onclick = () => { flashMsg = null; onlineState.status = ''; onlineState.lobby = null; showScreen('online'); };
   careerPanel.querySelector('#cr-hub-training').onclick = () => { flashMsg = null; showScreen('training'); };
   careerPanel.querySelector('#cr-hub-shop').onclick = () => { flashMsg = null; shopErrors = {}; showScreen('shop'); };
   careerPanel.querySelector('#cr-hub-locker').onclick = () => { flashMsg = null; showScreen('locker'); };
@@ -2326,6 +2338,157 @@ function renderRankingScreen() {
   careerPanel.querySelector('#cr-rank-me')?.scrollIntoView({ block: 'center' });
 }
 
+// 11. Play Online (room list, create, join by code). The match itself runs through main.js startOnline.
+const onlineState = { rooms: null, busy: false, players: 4, isPublic: true, venueIdx: 0, ballId: 'ball_standard', code: '', status: '', lobby: null, net: null };
+
+function onlineUrl() {
+  const q = new URLSearchParams(location.search).get('server');
+  if (q) return q;
+  if (location.hostname.endsWith('github.io')) return null;  // static build: no game server
+  return location.port === '5173' ? `ws://${location.hostname}:8080` : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
+}
+const NO_SERVER = 'Online mode requires a game server, which is not included in this static web build. You can play against the AI.';
+
+function setOnlineStatus(text, lobby) {
+  onlineState.status = text;
+  if (lobby) onlineState.lobby = lobby;
+  const el = careerPanel?.querySelector('#cr-on-status');
+  if (el) { el.innerHTML = text; el.style.display = text ? '' : 'none'; }
+  const go = careerPanel?.querySelector('#cr-on-start');
+  if (go) go.hidden = !onlineState.lobby || onlineState.lobby.started;
+}
+
+function leaveOnline() {
+  if (onlineState.net) {  // a joined room lives in main.js state: reload to drop it cleanly
+    onlineState.net.ws.onclose = onlineState.net.ws.onerror = null;
+    onlineState.net.ws.close();
+    location.hash = 'career';
+    location.reload();
+    return;
+  }
+  showScreen('hub');
+}
+
+async function refreshRooms() {
+  const url = onlineUrl();
+  if (!url) { onlineState.rooms = []; setOnlineStatus(NO_SERVER); return; }
+  onlineState.busy = true;
+  setOnlineStatus('Looking for rooms…');
+  try { onlineState.rooms = await listRooms(url); onlineState.status = ''; }
+  catch (e) { onlineState.rooms = []; onlineState.status = escapeHtml(e.message); }
+  onlineState.busy = false;
+  if (curScreen === 'online') renderOnlineScreen();
+}
+
+function joinOnlineRoom(code, create) {
+  code = String(code || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  if (!code) { setOnlineStatus('Enter a room code first.'); return; }
+  if (!profile || onlineState.net) return;
+  const { stats: _s, ...look } = buildEquippedPlayer(profile);
+  const shoeItem = equippedShoes(profile);
+  const myRacket = rackets.find(r => r.id === profile.equipped?.racket) || rackets[0];
+  const ballItem = shop.items.find(i => i.id === onlineState.ballId) || equippedBall(profile);
+  const venue = venues[onlineState.venueIdx] || venues[0];
+  const net = startOnlineFn({
+    url: onlineUrl() || undefined, code, players: onlineState.players,
+    venue: venues.indexOf(venue), ai: 'club',
+    match: { sets: 1, goldenPoint: true, superTiebreak: false, starPoint: false },
+    char: 0, stats: { ...profile.stats }, racket: { ...myRacket.stats },
+    public: create && onlineState.isPublic, name: profile.player.name, look,
+    shoes: { speed: shoeItem.speed, agility: shoeItem.agility },
+    ball: create ? { speed: ballItem.speed, bounce: ballItem.bounce } : undefined,
+    status: (t, l) => setOnlineStatus(t, l),
+    onEnd(result) {
+      const reward = matchReward(result, eco);
+      const updated = applyReward(profile, reward, result);
+      updated.lastReward = {
+        lines: reward.lines, mult: reward.mult, credits: reward.credits, won: result.won, ai: 'online',
+        score: result.score?.sets || '',
+      };
+      persistProfile(updated);
+    },
+  });
+  onlineState.net = net;
+}
+
+function renderOnlineScreen() {
+  if (!profile) { showScreen('templates'); return; }
+  const pl = buildEquippedPlayer(profile);
+  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), 'PLAY ONLINE');
+  if (onlineState.rooms === null && !onlineState.busy && !onlineState.net) refreshRooms();
+  const joined = !!onlineState.net;
+  const balls = shop.items.filter(i => i.type === 'ball' && profile.inventory.includes(i.id));
+  if (!balls.some(b => b.id === onlineState.ballId)) onlineState.ballId = balls[0]?.id || 'ball_standard';
+  const rooms = onlineState.rooms || [];
+
+  careerPanel.innerHTML = `
+    ${renderBannersHtml()}
+    <div class="cr-head">
+      <div>
+        <h2 class="cr-title">CAREER · <span>PLAY ONLINE</span></h2>
+        <div class="cr-sub">1 Set · Golden Point · empty seats are filled by AI · Credits ×${eco.mult.online ?? 1}</div>
+      </div>
+      <div class="cr-head-right">
+        ${renderTopCreditsHtml(profile)}
+        <button type="button" class="cr-btn" id="cr-on-back">← ${joined ? 'Leave room' : 'Back to Hub'}</button>
+      </div>
+    </div>
+    <div class="cr-body">
+      <div class="cr-msg cr-msg-ok" id="cr-on-status" style="${onlineState.status ? '' : 'display:none'}">${onlineState.status}</div>
+      <button type="button" class="pl-start-btn" id="cr-on-start" ${onlineState.lobby && !onlineState.lobby.started ? '' : 'hidden'}>START MATCH</button>
+      ${joined ? '' : `
+      <div class="pl-section-label">PUBLIC ROOMS <button type="button" class="cr-btn" id="cr-on-refresh" ${onlineState.busy ? 'disabled' : ''}>Refresh</button></div>
+      <div class="cr-tour-list">
+        ${rooms.length ? rooms.map(r => `
+          <div class="cr-tour-row">
+            <div class="cr-tour-main">
+              <div class="cr-tour-name">${escapeHtml(r.host || 'Player')}'s room <span class="pl-meta-pill">${r.players - r.free}/${r.players} players</span></div>
+              <div class="cr-tour-info">${escapeHtml(venues[r.venue]?.name || '—')} · ${r.free} free seat${r.free === 1 ? '' : 's'} · ${escapeHtml(r.code)}</div>
+            </div>
+            <button type="button" class="cr-btn cr-btn-acc" data-join="${escapeHtml(r.code)}">Join</button>
+          </div>`).join('') : `<div class="cr-tour-info">${onlineState.busy ? 'Loading…' : 'No public rooms right now.'}</div>`}
+      </div>
+
+      <div class="pl-section-label">CREATE ROOM</div>
+      <div class="pl-seg-row" id="cr-on-mode">
+        <button type="button" class="pl-seg-btn ${onlineState.players === 4 ? 'is-selected' : ''}" data-players="4">Doubles (2v2)</button>
+        <button type="button" class="pl-seg-btn ${onlineState.players === 2 ? 'is-selected' : ''}" data-players="2">Singles (1v1)</button>
+      </div>
+      <div class="pl-seg-row" id="cr-on-vis">
+        <button type="button" class="pl-seg-btn ${onlineState.isPublic ? 'is-selected' : ''}" data-public="1">Public</button>
+        <button type="button" class="pl-seg-btn ${onlineState.isPublic ? '' : 'is-selected'}" data-public="0">Private</button>
+      </div>
+      <div class="cr-form-grid">
+        <label class="cr-field"><span class="cr-field-head">Venue</span>
+          <select class="cr-select" id="cr-on-venue">${venues.map((v, i) => `<option value="${i}" ${i === onlineState.venueIdx ? 'selected' : ''}>${escapeHtml(v.name)} — ${escapeHtml(v.city)}</option>`).join('')}</select></label>
+        <label class="cr-field"><span class="cr-field-head">Match ball</span>
+          <select class="cr-select" id="cr-on-ball">${balls.map(b => `<option value="${b.id}" ${b.id === onlineState.ballId ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('')}</select></label>
+      </div>
+      <button type="button" class="cr-btn cr-btn-acc" id="cr-on-create">Create room</button>
+
+      <div class="pl-section-label">JOIN BY CODE</div>
+      <div class="cr-foot-row" style="justify-content:flex-start;gap:8px">
+        <input type="text" class="cr-input" id="cr-on-code" maxlength="6" placeholder="ROOM CODE" value="${escapeHtml(onlineState.code)}" style="max-width:180px;text-transform:uppercase" />
+        <button type="button" class="cr-btn cr-btn-acc" id="cr-on-join">Join</button>
+      </div>`}
+    </div>
+  `;
+  wireBannerButtons();
+  const q = (sel) => careerPanel.querySelector(sel);
+  q('#cr-on-back').onclick = () => leaveOnline();
+  q('#cr-on-start').onclick = () => onlineState.net?.start();
+  if (joined) return;
+  q('#cr-on-refresh').onclick = () => refreshRooms();
+  careerPanel.querySelectorAll('[data-join]').forEach(b => { b.onclick = () => joinOnlineRoom(b.dataset.join, false); });
+  careerPanel.querySelectorAll('#cr-on-mode [data-players]').forEach(b => { b.onclick = () => { onlineState.players = +b.dataset.players; renderOnlineScreen(); }; });
+  careerPanel.querySelectorAll('#cr-on-vis [data-public]').forEach(b => { b.onclick = () => { onlineState.isPublic = b.dataset.public === '1'; renderOnlineScreen(); }; });
+  q('#cr-on-venue').onchange = (e) => { onlineState.venueIdx = +e.target.value; };
+  q('#cr-on-ball').onchange = (e) => { onlineState.ballId = e.target.value; };
+  q('#cr-on-code').oninput = (e) => { onlineState.code = e.target.value; };
+  q('#cr-on-create').onclick = () => joinOnlineRoom(Math.random().toString(36).slice(2, 6).toUpperCase(), true);
+  q('#cr-on-join').onclick = () => joinOnlineRoom(onlineState.code, false);
+}
+
 // Navigation: Back action & focus movement (Keyboard + Xbox Controller)
 function goBack() {
   if (!isOpen) return;
@@ -2349,6 +2512,7 @@ function goBack() {
     showScreen('hub');
     return;
   }
+  if (curScreen === 'online') { leaveOnline(); return; }
   if (curScreen === 'tpartner') { showScreen('tournaments'); return; }
   if (curScreen === 'tresult') {
     careerPanel?.querySelector('#cr-tr-continue')?.click();
@@ -2382,7 +2546,7 @@ function moveCareerFocus(dx, dy) {
     active.dispatchEvent(new Event('input'));
     return;
   }
-  const cols = curScreen === 'templates' ? 4 : curScreen === 'training' || curScreen === 'ranking' ? 1 : curScreen === 'tpartner' ? 4 : 2;
+  const cols = curScreen === 'templates' ? 4 : curScreen === 'training' || curScreen === 'ranking' || curScreen === 'online' ? 1 : curScreen === 'tpartner' ? 4 : 2;
   let nextIdx = idx + (dx !== 0 ? dx : dy * cols);
   nextIdx = Math.max(0, Math.min(focusables.length - 1, nextIdx));
   focusables[nextIdx]?.focus();
@@ -2483,8 +2647,9 @@ export function closeCareer() {
   restoreQuickMatchPreview();
 }
 
-export function initCareer({ startMatch }) {
+export function initCareer({ startMatch, startOnline }) {
   startMatchFn = startMatch;
+  startOnlineFn = startOnline;
   const menuEl = document.getElementById('menu');
   const shell = menuEl?.querySelector('.pl-shell');
   const mainEl = shell?.querySelector('.pl-main');

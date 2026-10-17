@@ -23,5 +23,6 @@ Read `CLAUDE.md` — it is the shared guide for every agent (Claude, Antigravity
 | `agy-10` | Career Mode: Hub, Character Creator, Profile & Reward screens | `agents/reports/agy-10-career-hub.md` | Completed, Opus reviewed (partner grid fix) |
 | `agy-11` | Career: Training, Shop, Locker; equipment into matches | `agents/reports/agy-11-career-shop.md` | Completed, Opus reviewed |
 | `agy-12` | Career: Tournaments, tournament run, Ranking (done by a Sonnet subagent — agy quota) | `agents/reports/agy-12-career-tournaments.md` | Completed, Opus reviewed (partner fix) |
+| `agy-13` | Career: Play Online (room list, create/join, looks) (Sonnet subagent — agy quota) | `agents/reports/agy-13-career-online.md` | Completed, Opus reviewed |
 
 

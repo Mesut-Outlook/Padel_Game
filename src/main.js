@@ -26,7 +26,7 @@ fill($('char'), characters, c => `${c.name} (${c.countryCode}, ${c.gender === 'f
 fill($('venue'), venues, v => `${v.name} — ${v.city}`);
 fill($('racket'), rackets, r => `${r.name} · ${r.shape} · P${r.stats.power}/C${r.stats.control}`);
 initMenu();
-initCareer({ startMatch });
+initCareer({ startMatch, startOnline });
 mountKeyHelp($('help'));
 addEventListener('pointerdown', unlockAudio, { once: true });
 addEventListener('keydown', unlockAudio, { once: true });
@@ -127,33 +127,50 @@ async function setupScene(venue, ids, roster, rk) {
   if (!looping) { looping = true; requestAnimationFrame(loop); }  // a restart reuses the running loop
 }
 
-$('online').onclick = () => {
+// Online entry for the menu button and for Career. url defaults to ?server= / :8080 / same host. look = remote-visible appearance (its stats are ignored).
+// status(text, lobby?) mirrors the #lobby line for callers that show their own panel; returns the net handle (or null if it did not connect).
+export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, onEnd: end, status } = {}) {
   unlockAudio();
   control = $('control').value;
+  const say = (t, l) => { $('lobby').innerHTML = t; status?.(t, l); };
   // the static GitHub Pages build has no game server; ?server=wss://... points it at one
   if (!new URLSearchParams(location.search).get('server') && location.hostname.endsWith('github.io')) {
-    $('lobby').textContent = 'Online mode requires a game server, which is not included in this static web build. You can play against the AI.';
-    return;
+    say('Online mode requires a game server, which is not included in this static web build. You can play against the AI.');
+    return null;
   }
-  const code = $('room').value.trim().toUpperCase();
-  if (!code) { $('lobby').textContent = 'Enter a room code first.'; return; }
-  const me = +$('char').value, players = +$('mode').value;
-  const url = new URLSearchParams(location.search).get('server') ||
+  code = String(code || '').trim().toUpperCase();
+  if (!code) { say('Enter a room code first.'); return null; }
+  url ||= new URLSearchParams(location.search).get('server') ||
     (location.port === '5173' ? `ws://${location.hostname}:8080` : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
+  onEnd = end || null; pointsWon = [0, 0];
   net = connect({
-    url, code, char: me, stats: characters[me].stats, racket: rackets[+$('racket').value].stats,
-    cfg: { players, ...matchOpts(), ai: $('ai').value, venue: +$('venue').value },
-    onError: (e) => { $('lobby').textContent = e; },
+    url, code, char, stats, racket, public: isPublic, name, look, shoes, ball,
+    cfg: { players, ...match, ai, venue },
+    onError: (e) => say(escapeText(e)),
     onLobby: (l) => {
-      $('lobby').innerHTML = `Room <b>${l.code}</b> · your seat: ${net.seat} · players: ${l.taken.length}/${l.seats.length} (empty = AI)` +
-        (l.started ? '' : ' — <b>click “START MATCH” when everyone is ready</b>');
+      say(`Room <b>${l.code}</b> · your seat: ${net.seat} · players: ${l.taken.length}/${l.seats.length} (empty = AI)` +
+        (l.started ? '' : ' — <b>click “START MATCH” when everyone is ready</b>'), l);
       if (l.started && !avatars.length) {
         const ids = l.seats, roster = {}, rk = {};
-        for (const id of ids) { roster[id] = characters[l.chars[id] ?? (id * 3 + 1) % characters.length]; rk[id] = rackets[id % rackets.length]; }
+        for (const id of ids) {
+          const base = characters[l.chars[id] ?? (id * 3 + 1) % characters.length], { stats: _ignored, ...lk } = l.looks?.[id] || {};
+          roster[id] = { ...base, ...lk, ...(l.names?.[id] ? { name: l.names[id] } : {}) };
+          rk[id] = rackets[id % rackets.length];
+        }
         humans = [net.seat];
         setupScene(venues[l.cfg.venue] || venues[0], ids, roster, rk);
       }
     },
+  });
+  return net;
+}
+const escapeText = (t) => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+
+$('online').onclick = () => {
+  const me = +$('char').value;
+  startOnline({
+    code: $('room').value, char: me, stats: characters[me].stats, racket: rackets[+$('racket').value].stats,
+    players: +$('mode').value, match: matchOpts(), ai: $('ai').value, venue: +$('venue').value,
   });
 };
 
@@ -473,7 +490,12 @@ function handleEvents(events, score, winner) {
       if (!tut && (rallyLen >= 8 || rallyFlags.smash || rallyFlags.glass)) setTimeout(() => startReplay(true), 900);
       rallyFlags = {};
       if (!tut && winner != null) {
-        if (onEnd && world) {
+        if (onEnd && net) {  // online: no local world, the server's score decides
+          const done = onEnd; onEnd = null;
+          const sets = net.score?.board?.sets || [];
+          done({ won: winner === myTeam, gamesWon: sets.reduce((n, g) => n + g[myTeam], 0), pointsWon: pointsWon[myTeam], scoring: 'sets', ai: 'online', style: styleStats.pts, score: net.score });
+          onEnd = () => {};
+        } else if (onEnd && world) {
           const done = onEnd; onEnd = null;
           done({ won: winner === 0, gamesWon: world.match.sets.reduce((n, g) => n + g[0], 0), pointsWon: pointsWon[0], points: [...pointsWon], style: styleStats.pts, games: world.match.sets.reduce((g, s) => [g[0] + s[0], g[1] + s[1]], [0, 0]), scoring: world.match.opts.pointsTo ? 'rally' : 'sets', ai: aiLevel, score: scoreText(world.match) });
           onEnd = () => {};  // keeps toMenu pointed at #career without paying twice
