@@ -218,12 +218,12 @@ export function sfxCrowd(intensity) {
   burst({ freq: 1350, q: 0.55, vol: 0.10 * k, dur: 1.1 + k * 0.8, delay: 0.08, pan: 0.25 });
 }
 
-// Mid-rally spectator reactions ("ooh" on smashes/saves, "cheer" on long rallies, "murmur" between points)
+// Mid-rally & big-point spectator reactions ("ooh" on smashes/saves, "gasp" on deep rally saves, "cheer" on long rallies, "roar" on big winners, "murmur" between points)
 let lastReactAt = 0;
 export function sfxCrowdReact(kind = 'ooh') {
   if (!ctx || muted) return;
   const now = ctx.currentTime;
-  if (now - lastReactAt < 1.1) return; // avoid overlapping crowd reactions
+  if (kind !== 'roar' && now - lastReactAt < 0.95) return; // avoid overlapping mid-rally crowd reactions
   lastReactAt = now;
 
   if (kind === 'ooh') {
@@ -244,16 +244,72 @@ export function sfxCrowdReact(kind = 'ooh') {
     for (let i = 0; i < 6; i++) {
       burst({ freq: 1400 + Math.random() * 1200, q: 1.4, vol: 0.045, dur: 0.05, delay: 0.15 + Math.random() * 0.45, pan: Math.random() * 1.4 - 0.7 });
     }
+  } else if (kind === 'gasp') {
+    // Sharp collective intake "Aaah!" on dramatic saves / 10+ shot rallies
+    for (const [f0, f1, pan] of [[520, 880, -0.4], [640, 1080, 0.4]]) {
+      const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(), p = ctx.createStereoPanner();
+      src.buffer = noise; f.type = 'bandpass'; f.Q.value = 3.6;
+      f.frequency.setValueAtTime(f0, now);
+      f.frequency.exponentialRampToValueAtTime(f1, now + 0.16);
+      f.frequency.exponentialRampToValueAtTime(f0 * 0.9, now + 0.42);
+      g.gain.setValueAtTime(0.001, now);
+      g.gain.linearRampToValueAtTime(0.13, now + 0.07);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.46);
+      p.pan.value = pan;
+      src.connect(f).connect(g).connect(p).connect(out);
+      src.start(now, Math.random() * 0.4, 0.5);
+    }
+    for (let i = 0; i < 8; i++) {
+      burst({ freq: 1300 + Math.random() * 1300, q: 1.3, vol: 0.05, dur: 0.05, delay: 0.1 + Math.random() * 0.35, pan: Math.random() * 1.5 - 0.75 });
+    }
   } else if (kind === 'cheer') {
     // Mid-rally excitement claps & short cheer
     for (let i = 0; i < 12; i++) {
       burst({ freq: 1200 + Math.random() * 1500, q: 1.2, vol: 0.055, dur: 0.05, delay: Math.random() * 0.55, pan: Math.random() * 1.6 - 0.8 });
     }
     burst({ freq: 980, q: 0.6, vol: 0.09, dur: 0.75 });
+  } else if (kind === 'roar') {
+    // Stadium roar + rhythmic applause on marathon rallies, clean winners, or clutch points
+    for (const [f0, fPeak, dur, pan] of [[420, 760, 1.6, -0.5], [680, 1180, 1.5, 0.5], [540, 920, 1.7, 0]]) {
+      const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(), p = ctx.createStereoPanner();
+      src.buffer = noise; f.type = 'bandpass'; f.Q.value = 1.6;
+      f.frequency.setValueAtTime(f0, now);
+      f.frequency.exponentialRampToValueAtTime(fPeak, now + 0.28);
+      f.frequency.exponentialRampToValueAtTime(f0 * 1.1, now + dur);
+      g.gain.setValueAtTime(0.001, now);
+      g.gain.linearRampToValueAtTime(0.16, now + 0.16);
+      g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+      p.pan.value = pan;
+      src.connect(f).connect(g).connect(p).connect(out);
+      src.start(now, Math.random() * 0.3, dur + 0.05);
+    }
+    for (let i = 0; i < 30; i++) {
+      burst({ freq: 1150 + Math.random() * 1800, q: 1.3, vol: 0.065, dur: 0.055, delay: Math.random() * 1.4, pan: Math.random() * 1.7 - 0.85 });
+    }
   } else if (kind === 'murmur') {
     // Subtle stadium chatter / light claps between points
     burst({ freq: 620, q: 0.5, vol: 0.045, dur: 0.9, pan: -0.3 });
     burst({ freq: 880, q: 0.6, vol: 0.035, dur: 0.8, delay: 0.1, pan: 0.3 });
+  }
+}
+
+// Tasteful harmonic chime when the player earns style points or unlocks a medal (tier 1 = micro-callout, tier 2 = big point/medal)
+export function sfxReward(tier = 1) {
+  if (!ctx || muted) return;
+  const t0 = ctx.currentTime;
+  const notes = tier >= 2
+    ? [[587.33, 0, 0.16, 0.07], [739.99, 0.07, 0.18, 0.075], [880.00, 0.14, 0.26, 0.085], [1174.66, 0.22, 0.38, 0.09]] // D5 F#5 A5 D6
+    : [[587.33, 0, 0.14, 0.055], [880.00, 0.065, 0.22, 0.065]]; // D5 A5
+  for (const [freq, delay, dur, vol] of notes) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(freq, t0 + delay);
+    g.gain.setValueAtTime(0.001, t0 + delay);
+    g.gain.linearRampToValueAtTime(vol, t0 + delay + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + delay + dur);
+    o.connect(g).connect(out);
+    o.start(t0 + delay);
+    o.stop(t0 + delay + dur + 0.02);
   }
 }
 

@@ -49,6 +49,8 @@ Kullanıcının sözleri: "Yeni girenlerin değerleri oynadıkça artan… kıya
 
 ### 4.2 Karakter yaratma *(Opus kararı — kullanıcı "sen nasıl dersen")*
 - Oyuncu mevcut 26 karakterden birini **şablon** seçer, sonra: isim, ülke, cinsiyet (şablona göre), ten rengi, vücut tipi, saç modeli + rengi, sakal, gözlük, sağlak/solak düzenler. Görünüm alanları `characters.json` şemasıyla aynı → `createAvatar` değişmeden çalışır.
+- Düzenlenebilen görünüm (bugünkü avatar sisteminin desteklediği her şey): saç modeli (kısa/yandan ayrık, kazınmış, uzun, topuz, at kuyruğu, samuray topuzu, kel; uzun saçta kesim boyu ile küt), **saç rengi** (serbest renk seçici + hazır tonlar), **sakal** (yok / hafif / tam / keçi) ve **sakal rengi**, ten rengi, vücut tipi (ince, atletik, kaslı, iri, uzun, minyon) ve boy, yüz genişliği, gözlük ve çerçeve rengi, makyaj, saç bandı / vizör.
+- Görünüm **istendiği an ücretsiz** değiştirilebilir (Profile → Edit look); oyun gücüne etkisi yoktur. *(Opus kararı; kullanıcı saç/sakal/renk değişikliğini istedi)*
 - Başlangıç özellikleri şablondan **bağımsız**: hepsi 4 (AI "club" ≈ 6). Böylece gelişim hissedilir.
 - Forma/şort/ayakkabı rengi başlangıçta "starter kit"; daha fazlası marketten.
 

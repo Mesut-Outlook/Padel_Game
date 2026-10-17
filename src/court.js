@@ -134,12 +134,45 @@ export function buildVenue(scene, venue) {
     const n = Math.min(seats.length, Math.round(venue.crowd * 300));
     const meshes = parts.map(([geo]) => { const m = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial(), n); g.add(m); return m; });
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), col = new THREE.Color();
+    const baseSpec = [];
     for (let i = 0; i < n; i++) {
       const [side, row, z] = seats[i], k = 0.9 + Math.random() * 0.15;
+      const px = side * (7.5 + row * 0.9), py = row * 0.5, pz = z + (Math.random() - 0.5) * 0.15;
       q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -side * Math.PI / 2 + (Math.random() - 0.5) * 0.6);  // face the court
-      m4.compose(p.set(side * (7.5 + row * 0.9), row * 0.5, z + (Math.random() - 0.5) * 0.15), q, s.set(k, k, k));
+      m4.compose(p.set(px, py, pz), q, s.set(k, k, k));
       meshes.forEach((m, j) => { m.setMatrixAt(i, m4); m.setColorAt(i, parts[j][1]()); });
+      baseSpec.push({ px, py, pz, q: q.clone(), k, phase: Math.random() * Math.PI * 2, speed: 12 + Math.random() * 6 });
     }
+    let crowdT = 0, crowdAmp = 0, crowdClock = 0, wasActive = false;
+    g.userData.exciteCrowd = (intensity = 0.6) => {
+      crowdT = Math.max(crowdT, 0.9 + intensity * 0.9);
+      crowdAmp = Math.max(crowdAmp, Math.min(1, intensity));
+    };
+    g.userData.updateCrowd = (dt) => {
+      if (crowdT <= 0) {
+        if (wasActive) {
+          for (let i = 0; i < n; i++) {
+            const b = baseSpec[i];
+            m4.compose(p.set(b.px, b.py, b.pz), b.q, s.set(b.k, b.k, b.k));
+            for (const m of meshes) m.setMatrixAt(i, m4);
+          }
+          for (const m of meshes) m.instanceMatrix.needsUpdate = true;
+          wasActive = false; crowdAmp = 0;
+        }
+        return;
+      }
+      wasActive = true;
+      crowdT = Math.max(0, crowdT - dt);
+      crowdClock += dt;
+      const env = Math.min(1, crowdT / 0.35) * crowdAmp;
+      for (let i = 0; i < n; i++) {
+        const b = baseSpec[i];
+        const hop = Math.max(0, Math.sin(crowdClock * b.speed + b.phase)) * 0.14 * env;
+        m4.compose(p.set(b.px, b.py + hop, b.pz), b.q, s.set(b.k, b.k, b.k));
+        for (const m of meshes) m.setMatrixAt(i, m4);
+      }
+      for (const m of meshes) m.instanceMatrix.needsUpdate = true;
+    };
     for (const side of [1, -1]) for (let row = 0; row < 5; row++) {
       const step = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5 * (row + 1), 28), new THREE.MeshLambertMaterial({ color: 0x3a3f44 }));
       step.position.set(side * (7.5 + row * 0.9), 0.25 * (row + 1) - 0.5, 0); g.add(step);
