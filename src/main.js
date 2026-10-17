@@ -42,7 +42,7 @@ camera.position.set(0, 7, 17);
 const resize = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
 addEventListener('resize', resize); resize();
 
-window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorld, inputs , tut });
+window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorld, inputs, tut, humans });
 const rig = createCameraRig(camera, renderer.domElement);
 const replay = createReplay(15, 60);
 let onEnd = null, pointsWon = [0, 0];
@@ -174,6 +174,7 @@ $('start').onclick = async () => {
 
   await startMatch({
     players, humans: tutorial ? 1 : Math.min(+$('humans').value, players), ai: tutorial ? 'rookie' : $('ai').value,
+    sameTeam: !tutorial && players === 4 && $('sides').value === 'same',
     match: matchOpts(), roster, rackets: rk, venue: venues[+$('venue').value],
   });
   if (tutorial) {
@@ -181,14 +182,14 @@ $('start').onclick = async () => {
   }
 };
 
-// One entry for every offline match. cfg = { players, humans, ai, match, roster: {id: Character}, rackets: {id: racket}, venue, shoes?: {id: {speed, agility}}, ball?: {speed, bounce}, onEnd? }.
+// One entry for every offline match. cfg = { players, humans, ai, match, roster: {id: Character}, rackets: {id: racket}, venue, shoes?: {id: {speed, agility}}, ball?: {speed, bounce}, sameTeam?, onEnd? }.
 // onEnd gets team 0's MatchResult (+ score text) once; the menu key then returns to #career instead of the plain menu.
 export async function startMatch(cfg) {
   unlockAudio();
   aiLevel = cfg.ai;
   onEnd = cfg.onEnd || null; pointsWon = [0, 0];
   const ids = cfg.players === 2 ? [0, 2] : [0, 2, 1, 3];
-  humans = ids.slice(0, cfg.humans);
+  humans = (cfg.sameTeam && cfg.humans === 2 ? [0, 1] : ids).slice(0, cfg.humans);  // P2 partners P1 instead of facing them
   // keyboard + controller: with several local humans the keyboard is P1's alone so the first pad goes to P2
   if (control === 'auto' && humans.length > 1) control = 'kb';
   world = newWorld({

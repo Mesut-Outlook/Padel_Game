@@ -134,6 +134,14 @@ export function initMenu() {
               <button type="button" class="pl-seg-btn" data-val="4">4</button>
             </div>
 
+            <div id="pl-sides-wrap" hidden>
+              <div class="pl-section-label">TWO PLAYERS</div>
+              <div class="pl-seg-row" id="pl-sides-seg">
+                <button type="button" class="pl-seg-btn is-selected" data-val="opp">Opponents</button>
+                <button type="button" class="pl-seg-btn" data-val="same">Same team (vs 2 AI)</button>
+              </div>
+            </div>
+
             <div class="pl-section-label">CONTROLS (PLAYER 1)</div>
             <div class="pl-ctrl-grid">
               <button type="button" class="pl-card pl-ctrl-card is-selected" data-ctrl="auto">
@@ -616,6 +624,7 @@ export function initMenu() {
           shell.querySelectorAll('#pl-humans-seg .pl-seg-btn').forEach(b => b.classList.toggle('is-selected', b.dataset.val === '1'));
         }
       }
+      syncSides();
       updateSummary();
     };
   });
@@ -626,6 +635,16 @@ export function initMenu() {
       if ($('humans')) { $('humans').value = val; $('humans').dispatchEvent(new Event('change')); }
       shell.querySelectorAll('#pl-humans-seg .pl-seg-btn').forEach(b => b.classList.remove('is-selected'));
       btn.classList.add('is-selected');
+      syncSides();
+    };
+  });
+
+  // two humans in doubles: play against each other or side by side
+  const syncSides = () => { shell.querySelector('#pl-sides-wrap').hidden = !($('mode')?.value === '4' && $('humans')?.value === '2'); };
+  shell.querySelectorAll('#pl-sides-seg .pl-seg-btn').forEach(btn => {
+    btn.onclick = () => {
+      if ($('sides')) $('sides').value = btn.dataset.val;
+      shell.querySelectorAll('#pl-sides-seg .pl-seg-btn').forEach(b => b.classList.toggle('is-selected', b === btn));
     };
   });
 
