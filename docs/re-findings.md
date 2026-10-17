@@ -15,6 +15,7 @@
 | Kort | 10 × 20 m, file 0.88 m, servis çizgisi fileden 6.95 m | FIP |
 | Arka duvar | 3 m cam + 1 m tel | FIP |
 | Yan duvar | 2 m bölümler 3 m ve 2 m cam, kalan tel | FIP |
+| Kort kapıları | Filenin iki yanı, z 0.08–1.08 m, yükseklik 2.2 m, beyaz koruma pedi | FIP (agy-05) |
 | Zemin sekme (dikey) | 0.74 | FIP top testi (2.54 m'den ~1.35–1.45 m sekme) |
 | Cam | e 0.72 | tahmini, rea ile doğrulanacak |
 | Tel | e 0.35 + rastgele sapma | tahmini |

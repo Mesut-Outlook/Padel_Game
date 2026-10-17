@@ -63,3 +63,12 @@
 
 - **Birim Testler (`npm test`):** 38 / 38 test başarıyla geçti (`0` hata).
 - **Üretim Derlemesi (`npx vite build`):** `dist/` klasörüne hatasız derlendi.
+
+---
+
+## 4. Git Durumu ve Terminal Özeti
+
+- **Commit:** `d40bd89` (`Smash slow-mo fix & banner/melody, crowd reactions, background music, and full English UI`)
+- **Remote:** `main -> origin/main` başarıyla pushlandı.
+- **Terminal Durumu:** Tüm hedefler tamamlandı, testler yeşil, değişiklikler uzaktaki GitHub reposuna yüklendi.
+

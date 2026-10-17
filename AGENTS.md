@@ -6,3 +6,16 @@ Read `CLAUDE.md` — it is the shared guide for every agent (Claude, Antigravity
 2. Run `npm test` after any change; add a test for new rules or physics.
 3. Claude Opus reviews Antigravity work: put task results in `agents/reports/<task-id>.md` and list changed files there.
 4. Never copy code or assets from commercial games; rea is for behaviour analysis only.
+
+## Task Status
+
+| Task | Topic | Report | Status |
+|---|---|---|---|
+| `agy-01` | Padel research & asset guide | `agents/reports/agy-01-research.md` | Completed |
+| `agy-02` | Balance simulator & FIP bounce | `agents/reports/agy-02-balance-sim.md` | Completed |
+| `agy-03` | Rules verification | `agents/reports/agy-03-rule-verification.md` | Completed |
+| `agy-04` | 3D visual menu & player preview | `agents/reports/agy-04-menu.md` | Completed |
+| `agy-05` | FIP court doors & door padding | `agents/reports/agy-05-court-doors.md` | Completed |
+| `agy-06` | Pause menu fixes (DOM churn & restart) | `agents/reports/agy-06-pause-menu.md` | Completed |
+| `agy-07` | Smash slow-mo, banner/sfx, music, English UI | `agents/reports/agy-07-smash-english-audio.md` | Completed (`d40bd89`) |
+

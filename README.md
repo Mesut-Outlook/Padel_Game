@@ -61,10 +61,11 @@ Kolun tarayıcıda nasıl göründüğünü test etmek için: http://localhost:5
 - **Giriş ekranı** (`src/menu.js`, `src/thumbs.js`): 5 sekmeli görsel menü (Mod · Oyuncu · Mekan · Raket · Maç). Karakter portreleri, mekan ve raket görselleri oyunun kendi 3D modellerinden üretilir. Solda seçili oyuncunun dönen 3D önizlemesi var. Fare, klavye ve Xbox koluyla gezilir (LB/RB sekme, A seç, B geri, Start başla).
 
 - **Kurallar** (`src/rules.js`): FIP kortu, alttan çapraz servis, let, altın sayı / avantaj / Star Point (FIP 2026), tie-break (sonraki seti ilk karşılayan açar), süper tie-break, cam ve tel kuralları, servise vole yasağı.
-- **Fizik** (`src/physics.js`): sürtünme, Magnus (topspin/slice), zemin/cam/tel ayrı sekme katsayıları, camda spin etkisi, filenin iki yanında yan kapılar (sekmeden sonra kapıdan çıkan top vurana sayı).
-- **Vuruş pozları** (`src/player.js`): top yaklaşırken forehand / backhand / üstten (smaç, bandeja) hazırlığı, alçak topta eğilme; her vuruş hazırlık → temas → takip.
+- **Fizik** (`src/physics.js`, `src/court.js`): sürtünme, Magnus (topspin/slice), zemin/cam/tel ayrı sekme katsayıları, camda spin etkisi, filenin iki yanında FIP standartlarında 1 metrelik yan kapılar (`z: 0.08–1.08m, h: 2.2m`) ve beyaz koruyucu dolgu süngerleri (`door padding`). Sekmeden sonra kapıdan çıkan top vurana sayı, sekmeden önce çıkan top dışarı (`out`).
+- **Vuruş pozları** (`src/player.js`): top yaklaşırken forehand / backhand / üstten (smaç, bandeja) hazırlığı, alçak topta eğilme; her vuruş hazırlık → temas → takip. Smaç yavaş çekiminde fizik adımı senkronizasyonu ile raket hazırlık kilitlenmesi (jitter çözümü), `idleQuats` üst gövde sabitlemesi ve doğal trophy pose açıları.
 - **Vuruş koçu** (`src/main.js`): sana servis çizgisinin içinde üstten vurulabilecek bir top gelirse oyun yavaşlar, kamera oyuncunun arkasından topa bakar ve altta tuş önerisi çıkar (SMAÇ L · VÍBORA I · BANDEJA Space; kolda Y / RB / A). Gerideki yüksek toplarda, camdan dönen toplarda (bajada) ve rakipler fileyken (lob) yalnızca öneri gösterilir.
-- **His** (`src/audio.js`, `src/main.js`): smaçta vurucunun arkasından alçak açı + yavaş çekim, hızlı topta hız izi ve yanından geçerken "vuuş" sesi; dosyasız WebAudio sesleri (raket, zemin, cam, tel, file, alkış), vuruşta kısa duraklama, smaçta kamera sarsıntısı, oyuncuların kısa sözleri (konuşma balonu + tarayıcı sesi).
+- **His & Ses Dünyası** (`src/audio.js`, `src/main.js`): smaçta vurucunun arkasından alçak açı + yavaş çekim, dinamik odak efekti (`#smashVignette`) ve ekran pankartı (`#smashBanner`: hız `KM/H`, `PERFECT TIMING`, `SUPER SMASH!`), zaman bükülmesi bas düşüşü + D-Dorian fanfar melodisi (`sfxSmashSlowMo` & `sfxSmashImpact`); ralli içi seyirci tepkileri (smaç ve camda `'ooh'`, uzun rallide alkış ve ıslık `'cheer'`, servis hatasında mırıltı `'murmur'`); 116 BPM prosedürel WebAudio "Padel Tour" synth arka plan müziği; hızlı topta hız izi ve yanından geçerken "vuuş" sesi; dosyasız WebAudio vuruş sesleri, vuruşta kısa duraklama, smaçta kamera sarsıntısı, oyuncuların İngilizce kısa sözleri (konuşma balonu + tarayıcı sesi). `M` tuşu tüm ses ve müziği açıp kapatır.
+- **Arayüz & Dil Desteği** (Tam İngilizce): Menüler (`src/menu.js`), oyun içi HUD (`SET`, `PTS`, `GOLDEN POINT`, `ADVANTAGE`), duraklatma menüsü (`Resume`, `Restart match`, `Main menu` — DOM churn korumalı), klavye yardımı (`src/helpkeys.js`), 14 derslik eğitim (`src/tutorial.js`), kontroller sayfası (`public/kontroller.html`), gamepad test aracı (`tools/padtest.html`) ve ağ mesajları tamamen İngilizce olarak sunulur.
 - **AI** (`src/ai.js`): 4 seviye (çaylak → efsane), çiftlerde birlikte fileye çıkma/çekilme, top tahmini, vuruş seçimi, boşluğa nişan.
 - **Karakterler** (`src/player.js`): kadın/erkek ince-atletik tenisçi gövdesi, 6 vücut tipi (ince, atletik, kaslı, iri, uzun, minyon), ten rengi, her karaktere özel görünüm (`data/characters.json`): saç (uzun, küt, topuz, at kuyruğu, kısa, seyrek, kel, samuray topuzu) ve rengi, sakal (tam / hafif / keçi) ve rengi, gözlük, makyaj, yüz genişliği, omuz genişliği, saç bandı / vizör, gerçek forma ve şort (vücutla hareket eden, yuvarlak yakalı, şeritli kumaş modelleri; kumaş vücut hatlarını göstermez), padel ayakkabısı, elde raket (yüzü önde, sap avuçta), solak/sağlak.
 - **İçerik** (`data/`): 10 ülke/mekan, 26 karakter, 12 raket (yuvarlak/gözyaşı/elmas), turnuva formatları (Americano, Mexicano, King of the Court, lig, eleme) ve amatörden Premier Finals'a kariyer basamakları.
@@ -75,11 +76,11 @@ Geliştirici ve ana sponsor: **Mesut** (kort reklamları, file bandı, menü, sk
 
 ```
 src/      game.js (paylaşılan simülasyon), physics.js, rules.js, ai.js, player.js, court.js,
-          camera.js, replay.js, input.js, net.js, main.js
+          camera.js, replay.js, input.js, net.js, main.js, audio.js, helpkeys.js, tutorial.js
 server/   server.js — otoriter oda sunucusu + dist/ statik servis
 data/     rackets, venues, tournaments, characters (JSON)
 public/assets/  ubc/ karakter modelleri, anims/ animasyonlar
-agents/   Antigravity görev ve raporları
+agents/   Antigravity görev (tasks/) ve raporları (reports/)
 docs/     re-findings.md (rea tersine mühendislik notları)
 ```
 
@@ -88,6 +89,9 @@ docs/     re-findings.md (rea tersine mühendislik notları)
 - [x] Faz 1 — oynanabilir maç, kameralar, tekrar
 - [x] Faz 2 — online odalar
 - [x] Gerçekçi karakterler + raket
+- [x] FIP kort kapıları ve beyaz koruma çerçevesi (`agy-05`)
+- [x] Duraklatma menüsü tıklama ve yeniden başlatma stabilizasyonu (`agy-06`)
+- [x] Smaç slow-mo jitter çözümü, efekt yazısı & melodisi, seyirci tepkileri, oyun müziği ve tam İngilizce UI (`agy-07`)
 - [ ] Faz 3 — kariyer (puan + para), raket/ayakkabı mağazası, turnuva akışı
 - [ ] rea ile Red Bull Padel APK davranış analizi → fizik ayarı (`docs/re-findings.md`)
 - [ ] Gerçek tenis/padel vuruş animasyonları (şu an kılıç vuruşu klibi + prosedürel vurgular)
