@@ -26,6 +26,7 @@ import {
   worldRanking,
 } from './career.js';
 import { listRooms } from './net.js';
+import { padDir, spatialFocus } from './padnav.js';
 import { createTournament, myMatch, reportResult, simulateOthers, simulateUntilMine, standings, isFinished, placement } from './tournament.js';
 import {
   countryFlag,
@@ -2540,15 +2541,7 @@ function goBack() {
 
 function moveCareerFocus(dx, dy) {
   if (!careerPanel || careerPanel.hidden) return;
-  const focusables = Array.from(careerPanel.querySelectorAll('button, input:not([type="file"]), select'))
-    .filter(el => el.offsetParent != null && !el.disabled);
-  if (!focusables.length) return;
   const active = document.activeElement;
-  const idx = focusables.indexOf(active);
-  if (idx < 0) {
-    focusables[0].focus();
-    return;
-  }
   // Allow range sliders to adjust with left/right
   if (active?.tagName === 'INPUT' && active.type === 'range' && dx !== 0 && dy === 0) {
     const step = parseFloat(active.step) || 0.01;
@@ -2559,10 +2552,7 @@ function moveCareerFocus(dx, dy) {
     active.dispatchEvent(new Event('input'));
     return;
   }
-  const cols = curScreen === 'templates' ? 4 : curScreen === 'training' || curScreen === 'ranking' || curScreen === 'online' ? 1 : curScreen === 'tpartner' ? 4 : 2;
-  let nextIdx = idx + (dx !== 0 ? dx : dy * cols);
-  nextIdx = Math.max(0, Math.min(focusables.length - 1, nextIdx));
-  focusables[nextIdx]?.focus();
+  spatialFocus(careerPanel, dx, dy);
 }
 
 let padPrevA = false, padPrevB = false, padPrevLB = false, padPrevRB = false, padPrevX = 0, padPrevY = 0;
@@ -2572,8 +2562,7 @@ function handleCareerGamepad(pad) {
   const b = !!pad.buttons[1]?.pressed;
   const lb = !!pad.buttons[4]?.pressed;
   const rb = !!pad.buttons[5]?.pressed;
-  const sx = pad.axes[0] || (pad.buttons[15]?.pressed ? 1 : pad.buttons[14]?.pressed ? -1 : 0);
-  const sy = pad.axes[1] || (pad.buttons[13]?.pressed ? 1 : pad.buttons[12]?.pressed ? -1 : 0);
+  const [sx, sy] = padDir(pad);
 
   if (curScreen === 'shop') {
     const curIdx = SHOP_TABS.findIndex(t => t.id === shopTab);

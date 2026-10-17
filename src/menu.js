@@ -8,6 +8,7 @@ import rackets from '../data/rackets.json';
 import { createAvatar } from './player.js';
 import { getPortraitThumb, getVenueThumb, getRacketThumb, disposeThumbs } from './thumbs.js';
 import { openCareer } from './careerui.js';
+import { padDir, spatialFocus } from './padnav.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -781,12 +782,13 @@ export function initMenu() {
       const start = pad.buttons[9]?.pressed;
 
       if (start && !lastPadStart) { cleanUp(); $('start')?.click(); }
+      const prevStep = curStep;
       if (lb && !lastPadLB) switchStep(curStep - 1);
       if (rb && !lastPadRB) switchStep(curStep + 1);
       if (b && !lastPadB && curStep > 0) switchStep(curStep - 1);
+      if (curStep !== prevStep) spatialFocus(shell.querySelector(`.pl-step[data-step="${curStep}"]`), 0, 0);  // land on the new page, not the top bar
 
-      const sx = pad.axes[0] || (pad.buttons[15]?.pressed ? 1 : pad.buttons[14]?.pressed ? -1 : 0);
-      const sy = pad.axes[1] || (pad.buttons[13]?.pressed ? 1 : pad.buttons[12]?.pressed ? -1 : 0);
+      const [sx, sy] = padDir(pad);
 
       if (Math.abs(sx) > 0.6 && Math.abs(lastStickX) <= 0.6) {
         navigateFocus(Math.sign(sx), 0);
@@ -808,22 +810,8 @@ export function initMenu() {
   }
   gpTimer = requestAnimationFrame(pollGamepads);
 
-  function navigateFocus(dx, dy) {
-    const curStepEl = shell.querySelector(`.pl-step[data-step="${curStep}"]`);
-    if (!curStepEl) return;
-    const focusables = Array.from(curStepEl.querySelectorAll('button, input')).filter(el => el.offsetParent != null && !el.disabled);
-    if (!focusables.length) return;
-    const curIdx = focusables.indexOf(document.activeElement);
-    if (curIdx < 0) { focusables[0].focus(); return; }
-
-    const cols = curStepEl.querySelector('.pl-char-grid') ? 4 : curStepEl.querySelector('.pl-venue-grid') || curStepEl.querySelector('.pl-racket-grid') ? 3 : 2;
-    let nextIdx = curIdx;
-    if (dx !== 0) nextIdx += dx;
-    if (dy !== 0) nextIdx += dy * cols;
-    if (nextIdx >= 0 && nextIdx < focusables.length) {
-      focusables[nextIdx].focus();
-    }
-  }
+  // whole visible menu (tabs, current step, footer with Training / Start): nearest control in that direction
+  function navigateFocus(dx, dy) { spatialFocus(shell, dx, dy); }
 
   // free the preview's WebGL context and thumbnails as soon as the menu hides (offline start or online lobby start)
   new MutationObserver(() => { if (menuEl.hidden) cleanUp(); }).observe(menuEl, { attributes: true, attributeFilter: ['hidden'] });
