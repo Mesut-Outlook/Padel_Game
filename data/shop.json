@@ -1,0 +1,28 @@
+{
+  "tiers": { "amateur": 0, "club": 10, "regional": 60, "national": 200, "pro": 600, "elite": 1500 },
+  "items": [
+    { "id": "shoe_starter", "type": "shoes", "name": "Starter Court", "tier": "amateur", "price": 0, "speed": 0, "agility": 0, "color": "#1B1B1E" },
+    { "id": "shoe_grip", "type": "shoes", "name": "Clay Grip", "tier": "amateur", "price": 300, "speed": 0.02, "agility": 0.06, "color": "#E8E8E8" },
+    { "id": "shoe_herringbone", "type": "shoes", "name": "Herringbone Pro", "tier": "club", "price": 1000, "speed": 0.04, "agility": 0.12, "color": "#2E86DE" },
+    { "id": "shoe_flash", "type": "shoes", "name": "Flash Omni", "tier": "regional", "price": 2400, "speed": 0.07, "agility": 0.18, "color": "#F39C12" },
+    { "id": "shoe_tour", "type": "shoes", "name": "Tour Lite", "tier": "national", "price": 4500, "speed": 0.09, "agility": 0.23, "color": "#C0392B" },
+    { "id": "shoe_elite", "type": "shoes", "name": "Elite Carbon", "tier": "pro", "price": 7500, "speed": 0.12, "agility": 0.3, "color": "#111111" },
+
+    { "id": "ball_standard", "type": "ball", "name": "Standard ball", "tier": "amateur", "price": 0, "speed": 1, "bounce": 1 },
+    { "id": "ball_pro", "type": "ball", "name": "Pro ball", "tier": "club", "price": 800, "speed": 1.06, "bounce": 1.04 },
+    { "id": "ball_pro_s", "type": "ball", "name": "Pro S ball", "tier": "national", "price": 3000, "speed": 1.12, "bounce": 1.07 },
+
+    { "id": "kit_starter", "type": "kit", "name": "Starter kit", "tier": "amateur", "price": 0, "shirt": "#FFFFFF", "shorts": "#1D3557", "shoes": "#1B1B1E" },
+    { "id": "kit_lime", "type": "kit", "name": "Lime court", "tier": "amateur", "price": 150, "shirt": "#C6F432", "shorts": "#222222", "shoes": "#FFFFFF" },
+    { "id": "kit_navy", "type": "kit", "name": "Navy classic", "tier": "amateur", "price": 150, "shirt": "#1D3557", "shorts": "#FFFFFF", "shoes": "#1D3557" },
+    { "id": "kit_sunset", "type": "kit", "name": "Sunset", "tier": "club", "price": 400, "shirt": "#FF6B35", "shorts": "#2B2D42", "shoes": "#FFFFFF" },
+    { "id": "kit_royal", "type": "kit", "name": "Royal", "tier": "regional", "price": 900, "shirt": "#5E2CA5", "shorts": "#F1C40F", "shoes": "#111111" },
+    { "id": "kit_crimson", "type": "kit", "name": "Crimson tour", "tier": "national", "price": 1500, "shirt": "#B3001B", "shorts": "#111111", "shoes": "#B3001B" },
+    { "id": "kit_black_gold", "type": "kit", "name": "Black & gold", "tier": "elite", "price": 4000, "shirt": "#111111", "shorts": "#111111", "shoes": "#D4AF37" },
+
+    { "id": "hw_band_red", "type": "headwear", "name": "Red headband", "tier": "amateur", "price": 80, "headwear": { "type": "headband", "color": "#E63946" } },
+    { "id": "hw_band_white", "type": "headwear", "name": "White headband", "tier": "amateur", "price": 80, "headwear": { "type": "headband", "color": "#FFFFFF" } },
+    { "id": "hw_visor_navy", "type": "headwear", "name": "Navy visor", "tier": "club", "price": 250, "headwear": { "type": "visor", "color": "#1D3557" } },
+    { "id": "hw_visor_white", "type": "headwear", "name": "White visor", "tier": "regional", "price": 400, "headwear": { "type": "visor", "color": "#FFFFFF" } }
+  ]
+}

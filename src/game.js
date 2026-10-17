@@ -26,8 +26,9 @@ export function newWorld(opts = {}) {
     p: [0, 0], f: 0, swing: null, anim: 'idle', want: null, wantT: 0,
     stats: { speed: 6, power: 6, control: 6, volley: 6, smash: 6, stamina: 6, ...(opts.stats?.[id] || {}) },
     racket: { power: 6, control: 6, spin: 6, sweetSpot: 6, ...(opts.rackets?.[id] || {}) },
+    shoes: { speed: 0, agility: 0, ...(opts.shoes?.[id] || {}) },
   }));
-  const w = { t: 0, ball: newBall(), match: newMatch({ players: opts.players || 4, ...opts.match }), players,
+  const w = { t: 0, ballSpec: { speed: 1, bounce: 1, ...opts.ball }, ball: newBall(), match: newMatch({ players: opts.players || 4, ...opts.match }), players,
     state: 'serve', timer: 0, events: [], rally: 0, opts };
   resetPositions(w);
   return w;
@@ -49,6 +50,7 @@ function resetPositions(w) {
   }
   const s = w.players[sid];
   w.ball = newBall();
+  w.ball.bounce = w.ballSpec.bounce;
   w.ball.p = serveBall(s);
   w.state = 'serve'; w.timer = 0; w.rally = 0;
 }
@@ -100,6 +102,7 @@ function strike(w, pl, kind, aimX = 0) {
   if (kind === 'smash' || kind === 'bajada') t *= 1.25 - pow * 0.5;
   if (kind === 'drive') t *= 1.15 - pow * 0.3;
   if (quality === 'perfect') t *= 0.92;
+  t /= w.ballSpec.speed;
 
   let err = (1 - ctl) * 1.4 * statK;
   if (quality === 'perfect') err *= 0.6;
@@ -166,7 +169,8 @@ export function stepWorld(w, inputs, dt) {
     const mv = inp.move || [0, 0];
     const len = Math.min(1, Math.hypot(mv[0], mv[1]));
     // feet planted while a stroke is pending or under way: aiming with the move keys must not walk you off the ball
-    const spd = SPEED * (0.75 + pl.stats.speed / 24) * (pl.swing || pl.want ? 0.35 : 1);
+    // (agile shoes keep a little more footwork during the stroke)
+    const spd = SPEED * (0.75 + pl.stats.speed / 24) * (1 + pl.shoes.speed) * (pl.swing || pl.want ? 0.35 + pl.shoes.agility : 1);
     const tossing = w.state === 'toss' && pl.id === serverId(w.match);
     if (len > 0.05 && !tossing) {
       pl.p[0] += mv[0] / Math.hypot(...mv) * len * spd * dt;

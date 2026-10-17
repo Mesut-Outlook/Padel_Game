@@ -71,3 +71,17 @@ export function buyTraining(profile, stat, eco) {
   if (profile.credits < cost) return { ok: false, reason: 'credits' };
   return { ok: true, profile: { ...profile, credits: profile.credits - cost, stats: { ...profile.stats, [stat]: level + 1 } } };
 }
+
+// shop: { tiers: {name: rankingPoints}, items }. Items unlock by tier; rackets come from data/rackets.json with the same fields.
+export function tierOf(rankingPoints, shop) {
+  return Object.entries(shop.tiers).filter(([, min]) => rankingPoints >= min).sort((a, b) => b[1] - a[1])[0][0];
+}
+
+export function buyItem(profile, item, shop) {
+  if (profile.inventory.includes(item.id)) return { ok: false, reason: 'owned' };
+  if (profile.rankingPoints < shop.tiers[item.tier]) return { ok: false, reason: 'tier' };
+  if (profile.credits < item.price) return { ok: false, reason: 'credits' };
+  return { ok: true, profile: { ...profile, credits: profile.credits - item.price, inventory: [...profile.inventory, item.id] } };
+}
+
+export const equip = (profile, slot, id) => profile.inventory.includes(id) ? { ...profile, equipped: { ...profile.equipped, [slot]: id } } : profile;

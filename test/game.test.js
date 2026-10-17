@@ -150,3 +150,29 @@ test('stats at 6 keep today\'s behaviour (volley/smash/stamina are centred)', ()
   const o = { swing: 'volley', bounces: 0, rally: 14 };
   assert.equal(meanStray({ ...o, stats: {} }), meanStray({ ...o, stats: { volley: 6, smash: 6, stamina: 6 } }));
 });
+
+test('shoes: speed 0.12 covers more ground in 1 s than starter shoes', () => {
+  const run = (speed) => {
+    const w = newWorld({ shoes: { 0: { speed, agility: 0 } } }); w.state = 'play';
+    const p = w.players[0]; p.p = [-4, 8];
+    Object.assign(w.ball, { p: [0, -5, 0], v: [0, 0, 0], live: false });
+    for (let i = 0; i < 60; i++) stepWorld(w, { 0: { move: [1, 0] } }, 1 / 60);
+    return p.p[0] + 4;
+  };
+  assert.ok(run(0.12) > run(0), `${run(0.12)} vs ${run(0)}`);
+});
+
+test('ball spec: a faster ball reaches the opponent sooner and is set on every new ball', () => {
+  const rnd = Math.random; Math.random = () => 0.5;  // no aim noise, no unforced error
+  const flight = (speed) => {
+    const w = newWorld({ ball: { speed, bounce: 1.04 } });
+    assert.equal(w.ball.bounce, 1.04);
+    w.state = 'play';
+    Object.assign(w.match.rally, { phase: 'rally', lastHitTeam: 1, bouncesSinceHit: 1 });
+    w.players[0].p = [0, 6];
+    Object.assign(w.ball, { p: [0.85, 1.0, 6], v: [0, 0, 0], w: [0, 0, 0], live: true });
+    for (let i = 0; i < 20 && !w.events.some(e => e.type === 'hit'); i++) stepWorld(w, { 0: { swing: i === 0 ? 'drive' : null, aim: 0 } }, 1 / 60);
+    return Math.abs(w.ball.v[2]);
+  };
+  try { const fast = flight(1.12), std = flight(1); assert.ok(fast > std, `${fast} vs ${std}`); } finally { Math.random = rnd; }
+});

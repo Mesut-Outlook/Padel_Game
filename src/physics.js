@@ -84,7 +84,7 @@ export function stepBall(b, dt) {
     b.p[1] = BALL_R;
     const s = K.floor;
     const vIn = Math.abs(b.v[1]);
-    b.v[1] = vIn * s.e;
+    b.v[1] = vIn * s.e * (b.bounce ?? 1);  // b.bounce: livelier match balls (career shop)
     b.v[0] *= s.f;
     b.v[2] *= s.f;
     spinKick(b, 1, 'floor');
@@ -103,7 +103,7 @@ export function stepBall(b, dt) {
     if (b.p[1] > w.h) kind = 'mesh';
     const s = K[kind];
     b.p[axis] = Math.sign(b.p[axis]) * lim[i];
-    b.v[axis] *= -s.e;
+    b.v[axis] *= -s.e * (kind === 'glass' ? b.bounce ?? 1 : 1);
     for (const o of [0, 1, 2]) if (o !== axis) b.v[o] *= s.f;
     spinKick(b, axis, kind);
     if (kind === 'mesh') { b.v[0] += (Math.random() - 0.5) * 0.6; b.v[1] += (Math.random() - 0.5) * 0.4; }

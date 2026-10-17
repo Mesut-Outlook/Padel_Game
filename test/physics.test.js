@@ -98,3 +98,15 @@ test('contrapared: ball off own back glass or side glass lands in the opposite c
     if (wall) assert.ok(Math.sign(c[0].p[0]) === wall, 'hit the chosen side glass');
   }
 });
+
+test('a livelier ball (bounce 1.07) rebounds higher from 2.54 m than a standard one', () => {
+  const peak = (bounce) => {
+    const b = newBall(); b.p = [0, 2.54, 3]; b.live = true; b.bounce = bounce;
+    let top = 0, bounced = false;
+    for (let i = 0; i < 960; i++) { const vy = b.v[1]; stepBall(b, 1 / 240); if (vy < 0 && b.v[1] > 0) { if (bounced) break; bounced = true; } if (bounced) top = Math.max(top, b.p[1]); }
+    return top;
+  };
+  const std = peak(1), pro = peak(1.07);
+  assert.ok(pro > std, `pro ${pro} std ${std}`);
+  for (const h of [std, pro]) assert.ok(h > 1.2 && h < 1.7, String(h));
+});
