@@ -190,9 +190,22 @@ export function sfxWhoosh(vol, pan = 0, dur = 0.32) {
   src.connect(f).connect(g).connect(p).connect(out); src.start(t, Math.random() * 0.5, dur + 0.05);
 }
 
-export function sfxContact(kind, speed = 8) {
+// direct = the ball reached the wall before bouncing: a heavier glass boom or a long rattling clang on the mesh
+export function sfxContact(kind, speed = 8, direct = false) {
   if (!ctx || muted) return;
   const v = Math.min(1, speed / 20);
+  if (direct && kind === 'glass') {
+    knock(90, 40, 0.7 + 0.3 * v, 0.28);                                    // the whole panel booms
+    knock(1500, 820, 0.35 + 0.3 * v, 0.3, 'triangle');                      // sharp crack
+    knock(1520, 1490, 0.12, 0.6);                                           // glass keeps ringing
+    burst({ freq: 5200, q: 1.5, vol: 0.3 + 0.2 * v, dur: 0.18 });
+    return;
+  }
+  if (direct && kind === 'mesh') {
+    knock(620, 380, 0.25 + 0.2 * v, 0.12, 'square');                        // metal clang
+    for (let i = 0; i < 12; i++) burst({ freq: 1800 + (i % 3) * 400, q: 4, vol: (0.35 + 0.2 * v) * (1 - i / 13), dur: 0.06, delay: i * 0.04 });
+    return;
+  }
   if (kind === 'floor') { knock(230, 100, 0.2 + 0.25 * v, 0.06, 'triangle'); burst({ freq: 450, type: 'lowpass', vol: 0.08 + 0.1 * v, dur: 0.03 }); }  // ball on turf: softer, lower "tup"
   else if (kind === 'glass') { knock(1150, 700, 0.25 + 0.3 * v, 0.16); burst({ freq: 3200, q: 2, vol: 0.3 * v + 0.1, dur: 0.12 }); knock(240, 120, 0.3 * v, 0.12); }
   else if (kind === 'mesh') for (let i = 0; i < 6; i++) burst({ freq: 2400 + i * 150, q: 3, vol: (0.25 + 0.2 * v) * (1 - i / 7), dur: 0.05, delay: i * 0.035 });

@@ -42,7 +42,7 @@ camera.position.set(0, 7, 17);
 const resize = () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
 addEventListener('resize', resize); resize();
 
-window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorld, inputs, tut, humans });
+window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorld, inputs, tut, humans, fx });
 const rig = createCameraRig(camera, renderer.domElement);
 const replay = createReplay(15, 60);
 let onEnd = null, pointsWon = [0, 0], lastCfg = null;
@@ -424,7 +424,11 @@ function handleEvents(events, score, winner) {
         venueGroup?.userData.exciteCrowd?.(0.35);
       }
     } else if (e.type === 'contact') {
-      sfxContact(e.kind, world?.ball ? Math.hypot(...world.ball.v) : 8);
+      const speed = world?.ball ? Math.hypot(...world.ball.v) : 8;
+      const wall = e.kind === 'glass' || e.kind === 'mesh', direct = wall && !rallyFlags.bounced && rallyFlags.hits > 0;  // no bounce since the last stroke
+      sfxContact(e.kind, speed, direct);
+      if (wall && e.p) fx?.wallHit(e.p, e.kind, direct, speed / 20);
+      if (direct) shake = Math.max(shake, 0.12);
       if (e.kind === 'floor') rallyFlags.bounced = true;
       else if (e.kind === 'glass' && rallyFlags.bounced) { rallyFlags.glass = true; rallyFlags.afterGlass = true; }
     }
