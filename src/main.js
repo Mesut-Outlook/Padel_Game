@@ -107,6 +107,8 @@ $('start').onclick = async () => {
   aiLevel = tutorial ? 'rookie' : $('ai').value;
   gameSpeed = +$('speed').value;
   control = $('control').value;
+  // keyboard + controller: with several local humans the keyboard is P1's alone so the first pad goes to P2
+  if (control === 'auto' && nHumans > 1) control = 'kb';
   unlockAudio();
   const me = characters[+$('char').value];
   const venue = venues[+$('venue').value];

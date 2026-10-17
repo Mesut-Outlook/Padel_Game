@@ -675,6 +675,23 @@
   #help .hk-arrows { display: grid; grid-template-columns: repeat(3, 26px); grid-template-rows: 26px 26px; gap: 3px; }
   #help .hk-arrows .up { grid-column: 2; grid-row: 1; } #help .hk-arrows .lf { grid-column: 1; grid-row: 2; } #help .hk-arrows .dn { grid-column: 2; grid-row: 2; } #help .hk-arrows .rt { grid-column: 3; grid-row: 2; }
   #help .hk-foot { margin-top: 6px; color: #9fb3c8; font-size: 10.5px; max-width: 390px; } #help .hk-foot a { color: var(--acc); }
+  /* controller view: shown for the device used last (#help[data-dev]) */
+  #help[data-dev="kb"] .pad-only, #help[data-dev="pad"] .kb-only { display: none !important; }
+  #help .hk-dev { margin-left: 6px; } #help .hk-dev i { font-style: normal; cursor: pointer; padding: 0 4px; border-radius: 4px; opacity: .55; }
+  #help .hk-dev i.cur { opacity: 1; background: #ffffff1f; }
+  #help .hk-main.pad-only { align-items: center; } #help .hp-svg { flex: none; } #help .hp-svg .body { fill: #1a2b3c; stroke: #ffffff26; }
+  #help .hp-svg text { font: 800 8px system-ui; fill: #0b1520; text-anchor: middle; pointer-events: none; }
+  #help .hp-svg .off, #help .hp-svg .trig rect { fill: #2b3e52; } #help .hp-svg .trig text { fill: #6d8399; }
+  #help .hp-svg .move circle { fill: #4ea8ff; } #help .hp-svg .move .dot, #help .hp-svg [data-b="11"] .dot { fill: #0b1520; stroke: #ffffff40; }
+  #help .hp-svg .shot rect, #help .hp-svg .shot circle { fill: #ff9f43; } #help .hp-svg .sys, #help .hp-svg .sys circle { fill: #b8c4d0; }
+  #help .xa circle, #help b.xa { fill: #5dc21e; background: #5dc21e; } #help .xb circle, #help b.xb { fill: #ff4d4d; background: #ff4d4d; }
+  #help .xx circle, #help b.xx { fill: #2f8cff; background: #2f8cff; } #help .xy circle, #help b.xy { fill: #ffc21a; background: #ffc21a; }
+  #help .hp-svg .on, #help .hp-svg .on circle, #help .hp-svg .on rect { stroke: #fff; stroke-width: 2.5; filter: brightness(1.35); }
+  #help .hp-legend { display: grid; gap: 2px; font-size: 10.5px; color: #cfd8e3; align-content: center; }
+  #help .pk { display: flex; align-items: center; gap: 6px; white-space: nowrap; border-radius: 4px; padding: 0 3px 0 0; }
+  #help .pk b { min-width: 22px; height: 15px; padding: 0 3px; box-sizing: border-box; border-radius: 4px; color: #0b1520; font: 800 9px/15px system-ui; text-align: center; }
+  #help .pk b.move { background: #4ea8ff; } #help .pk b.shot { background: #ff9f43; } #help .pk b.sys { background: #b8c4d0; }
+  #help .pk.on { background: #ffffff1f; } #help .pk.on b { box-shadow: 0 0 0 2px #fff; }
   #replayTag { position: fixed; top: 70px; right: 16px; background: #c1121f; padding: 4px 12px; border-radius: 6px; font-weight: 800; z-index: 2; }
   kbd { background: #234; padding: 1px 6px; border-radius: 4px; }
   #hud .tour { font-size: 11px; letter-spacing: 2px; opacity: .7; }
