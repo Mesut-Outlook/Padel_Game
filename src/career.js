@@ -59,3 +59,15 @@ export function applyReward(profile, reward, result) {
     history: { played: h.played + 1, won: h.won + (result.won ? 1 : 0), pointsWon: h.pointsWon + (result.pointsWon || 0) },
   };
 }
+
+// Credits to raise a stat from `level` to level + 1
+export const trainCost = (level, eco) => Math.round(eco.training.base * eco.training.growth ** (level - eco.training.start));
+
+export function buyTraining(profile, stat, eco) {
+  if (!STATS.includes(stat)) return { ok: false, reason: 'stat' };
+  const level = profile.stats[stat];
+  if (level >= eco.training.max) return { ok: false, reason: 'max' };
+  const cost = trainCost(level, eco);
+  if (profile.credits < cost) return { ok: false, reason: 'credits' };
+  return { ok: true, profile: { ...profile, credits: profile.credits - cost, stats: { ...profile.stats, [stat]: level + 1 } } };
+}

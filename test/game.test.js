@@ -106,3 +106,47 @@ test('a pending swing plants the feet: aiming sideways barely moves the player',
   };
   assert.ok(run('auto') < run(null) * 0.5, `with swing ${run('auto')} vs walking ${run(null)}`);
 });
+
+// one struck ball with a seeded Math.random; returns |x| where it first lands or hits a wall = how far a centre-aimed shot strays
+function strayAfterHit({ stats, swing, ball = [0.85, 1.0, 6], bounces = 1, rally = 0, seed }) {
+  let s = seed; const rnd = Math.random; Math.random = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  try {
+    const w = newWorld({ stats: { 0: stats } }); w.state = 'play'; w.rally = rally;
+    Object.assign(w.match.rally, { phase: 'rally', lastHitTeam: 1, bouncesSinceHit: bounces });
+    w.players[0].p = [0, 6];
+    Object.assign(w.ball, { p: [...ball], v: [0, 0, 0], w: [0, 0, 0], live: true });
+    let hit = false;
+    for (let i = 0; i < 400; i++) {
+      stepWorld(w, { 0: { swing: i === 0 ? swing : null, aim: 0 } }, 1 / 60);
+      for (const e of w.events) {
+        if (e.type === 'hit') hit = true;
+        else if (hit && e.type === 'contact') return Math.abs(e.p[0]);
+      }
+      w.events.length = 0;
+    }
+    throw new Error(hit ? 'no contact' : 'no hit');
+  } finally { Math.random = rnd; }
+}
+const meanStray = (o) => { let n = 0; for (let i = 1; i <= 200; i++) n += strayAfterHit({ ...o, seed: i * 7919 }); return n / 200; };
+
+test('volley stat: a volley-10 player strays less on volleys than volley-2', () => {
+  const hi = meanStray({ stats: { volley: 10 }, swing: 'volley', bounces: 0 }), lo = meanStray({ stats: { volley: 2 }, swing: 'volley', bounces: 0 });
+  assert.ok(hi < lo, `volley 10 ${hi} vs volley 2 ${lo}`);
+});
+
+test('smash stat: a smash-10 player strays less on smashes than smash-2', () => {
+  const o = { swing: 'smash', ball: [0.85, 2.3, 6] };
+  const hi = meanStray({ ...o, stats: { smash: 10 } }), lo = meanStray({ ...o, stats: { smash: 2 } });
+  assert.ok(hi < lo, `smash 10 ${hi} vs smash 2 ${lo}`);
+});
+
+test('stamina stat: deep in a 14-shot rally stamina-10 strays less than stamina-2', () => {
+  const o = { swing: 'drive', rally: 14 };
+  const hi = meanStray({ ...o, stats: { stamina: 10 } }), lo = meanStray({ ...o, stats: { stamina: 2 } });
+  assert.ok(hi < lo, `stamina 10 ${hi} vs stamina 2 ${lo}`);
+});
+
+test('stats at 6 keep today\'s behaviour (volley/smash/stamina are centred)', () => {
+  const o = { swing: 'volley', bounces: 0, rally: 14 };
+  assert.equal(meanStray({ ...o, stats: {} }), meanStray({ ...o, stats: { volley: 6, smash: 6, stamina: 6 } }));
+});

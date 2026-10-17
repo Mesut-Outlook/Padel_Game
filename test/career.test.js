@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { newProfile, loadProfile, saveProfile, matchReward, applyReward, exportProfile, importProfile } from '../src/career.js';
+import { newProfile, loadProfile, saveProfile, matchReward, applyReward, exportProfile, importProfile, trainCost, buyTraining } from '../src/career.js';
 
 const eco = JSON.parse(fs.readFileSync(new URL('../data/economy.json', import.meta.url)));
 const chars = JSON.parse(fs.readFileSync(new URL('../data/characters.json', import.meta.url)));
@@ -54,4 +54,20 @@ test('export / import round trip; bad import throws', () => {
   assert.deepEqual(importProfile(exportProfile(p)), p);
   assert.throws(() => importProfile('{"version":99}'), /invalid profile/);
   assert.throws(() => importProfile('nope'), /invalid profile/);
+});
+
+test('training cost grows by 1.6 per level from 50', () => {
+  assert.deepEqual([4, 5, 9].map(l => trainCost(l, eco)), [50, 80, 524]);
+});
+
+test('buyTraining: max, credits, unknown stat rejected unchanged; success deducts and raises', () => {
+  const p = { ...newProfile(chars[0], {}), credits: 10 };
+  assert.deepEqual(buyTraining({ ...p, stats: { ...p.stats, power: 10 }, credits: 9999 }, 'power', eco).reason, 'max');
+  assert.deepEqual(buyTraining(p, 'power', eco), { ok: false, reason: 'credits' });
+  assert.deepEqual(buyTraining(p, 'luck', eco), { ok: false, reason: 'stat' });
+  const r = buyTraining({ ...p, credits: 100 }, 'power', eco);
+  assert.equal(r.ok, true);
+  assert.equal(r.profile.credits, 50);
+  assert.equal(r.profile.stats.power, 5);
+  assert.equal(p.stats.power, 4);
 });

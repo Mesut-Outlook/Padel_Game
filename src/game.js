@@ -24,7 +24,7 @@ export function newWorld(opts = {}) {
   const players = [0, 1, 2, 3].map(id => ({
     id, team: id < 2 ? 0 : 1, active: opts.players === 2 ? id % 2 === 0 : true,
     p: [0, 0], f: 0, swing: null, anim: 'idle', want: null, wantT: 0,
-    stats: { speed: 6, power: 6, control: 6, volley: 6, smash: 6, ...(opts.stats?.[id] || {}) },
+    stats: { speed: 6, power: 6, control: 6, volley: 6, smash: 6, stamina: 6, ...(opts.stats?.[id] || {}) },
     racket: { power: 6, control: 6, spin: 6, sweetSpot: 6, ...(opts.rackets?.[id] || {}) },
   }));
   const w = { t: 0, ball: newBall(), match: newMatch({ players: opts.players || 4, ...opts.match }), players,
@@ -87,12 +87,21 @@ function strike(w, pl, kind, aimX = 0) {
   else if (hitD > 1.15) quality = 'late';
   else if (hitD < 0.55) quality = 'early';
 
+  // career stats, centred on 6 (= no change): volley for balls taken before the bounce, smash for overheads,
+  // stamina against the fatigue that sets in after 8 shots of a rally
+  const overhead = ['smash', 'bandeja', 'vibora', 'bajada', 'rulo'].includes(kind);
+  let statK = 1;
+  if (w.match.rally.bouncesSinceHit === 0 && kind !== 'serve') statK *= 1 + (6 - pl.stats.volley) * 0.08;
+  if (overhead) statK *= 1 + (6 - pl.stats.smash) * 0.08;
+  statK *= Math.max(0.5, 1 + Math.max(0, w.rally - 8) * 0.02 * (6 - pl.stats.stamina));
+
   let depth = s.depth, t = s.t;
+  if (overhead) t *= 1 + (6 - pl.stats.smash) * 0.03;
   if (kind === 'smash' || kind === 'bajada') t *= 1.25 - pow * 0.5;
   if (kind === 'drive') t *= 1.15 - pow * 0.3;
   if (quality === 'perfect') t *= 0.92;
 
-  let err = (1 - ctl) * 1.4;
+  let err = (1 - ctl) * 1.4 * statK;
   if (quality === 'perfect') err *= 0.6;
   else if (quality !== 'good') err *= 1.35;
 
@@ -112,9 +121,9 @@ function strike(w, pl, kind, aimX = 0) {
     if (Math.random() < (1 - ctl) * (w.match.rally.fault ? 0.05 : 0.2)) mistake = Math.random() < 0.5 ? 'net' : 'long';
   } else {
     const inSpeed = Math.hypot(...b.v), reach = Math.hypot(b.p[0] - pl.p[0], b.p[2] - pl.p[1]) / REACH;
-    const awkward = b.p[1] < 0.45 || (b.p[1] > 1.6 && !['smash', 'bandeja', 'vibora', 'bajada', 'rulo'].includes(kind)) ? 0.06 : 0;
+    const awkward = b.p[1] < 0.45 || (b.p[1] > 1.6 && !overhead) ? 0.06 : 0;
     const risky = { smash: 0.05, vibora: 0.04, chiquita: 0.03, bajada: 0.05, rulo: 0.04 }[kind] || 0;
-    let pErr = (1 - ctl) * 0.12 + Math.max(0, inSpeed - 14) * 0.006 + reach * reach * 0.05 + awkward + risky;
+    let pErr = ((1 - ctl) * 0.12 + Math.max(0, inSpeed - 14) * 0.006 + reach * reach * 0.05 + awkward + risky) * statK;
     if (quality === 'perfect') pErr *= 0.5;
     else if (quality !== 'good') pErr += 0.06;
     if (Math.random() < pErr) mistake = Math.random() < 0.5 ? 'net' : 'long';
