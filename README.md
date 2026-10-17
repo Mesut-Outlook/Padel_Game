@@ -39,7 +39,7 @@ Pages sürümünde bilgisayara karşı maç, eğitim, menü ve kol desteği çal
 | C | kamera: TV, oyuncu arkası, yan, tepe, top, drone, serbest | View (Back) |
 | R / Esc | son sayının tekrarı / tekrarı geç | R3 / B |
 | M | sesi aç/kapa | |
-| Enter (maç bitince) | ana menüye dön | Start |
+| Enter (maç bitince) | ana menüye (kariyer maçında kariyer ekranına) dön | Start |
 
 Menüdeki **Kontrol** seçimi 1. oyuncu için: *Klavye + Xbox kolu* (ikisi birden), *Sadece klavye* veya *Sadece Xbox kolu*. Diğer insan oyuncular kalan kolları sırayla alır.
 
@@ -68,6 +68,8 @@ Kolun tarayıcıda nasıl göründüğünü test etmek için: http://localhost:5
 - **Arayüz & Dil Desteği** (Tam İngilizce): Menüler (`src/menu.js`), oyun içi HUD (`SET`, `PTS`, `GOLDEN POINT`, `ADVANTAGE`), duraklatma menüsü (`Resume`, `Restart match`, `Main menu` — DOM churn korumalı), klavye / Xbox kol yardımı (`src/helpkeys.js`: son kullanılan cihaza göre klavye ya da kol çizimi, basılan tuş yanar; `H` veya D-pad ↑ aç/kapa), 14 derslik eğitim (`src/tutorial.js`), kontroller sayfası (`public/kontroller.html`), gamepad test aracı (`tools/padtest.html`) ve ağ mesajları tamamen İngilizce olarak sunulur.
 - **AI** (`src/ai.js`): 4 seviye (çaylak → efsane), çiftlerde birlikte fileye çıkma/çekilme, top tahmini, vuruş seçimi, boşluğa nişan.
 - **Karakterler** (`src/player.js`): kadın/erkek ince-atletik tenisçi gövdesi, 6 vücut tipi (ince, atletik, kaslı, iri, uzun, minyon), ten rengi, her karaktere özel görünüm (`data/characters.json`): saç (uzun, küt, topuz, at kuyruğu, kısa, seyrek, kel, samuray topuzu) ve rengi, sakal (tam / hafif / keçi) ve rengi, gözlük, makyaj, yüz genişliği, omuz genişliği, saç bandı / vizör, gerçek forma ve şort (vücutla hareket eden, yuvarlak yakalı, şeritli kumaş modelleri; kumaş vücut hatlarını göstermez), padel ayakkabısı, elde raket (yüzü önde, sap avuçta), solak/sağlak.
+- **Kariyer modu** (`src/career.js`, `src/tournament.js`, `src/careerui.js`; menüde **CAREER**): 26 şablondan karakter yarat, görünümü (saç modeli ve rengi, sakal ve rengi, ten, vücut, yüz, gözlük, makyaj, saç bandı/vizör) istediğin an ücretsiz değiştir. Her özellik 4'ten başlar; kariyer maçlarında **Credits** kazan (oynadın + kazanılan oyun/sayı + galibiyet + her 10 STYLE puanı 1 Credit, AI seviyesi çarpanı), **Training**'de 6 özelliği (hız, güç, kontrol, vole, smaç, dayanıklılık) geliştir, **Shop**'ta raket (çekirdek/yüzey/şekil), ayakkabı (hız, çeviklik), top (Standard/Pro/Pro S: hız ve sekme), forma takımı ve başlık al; **Locker**'da kuşan. **Tournaments**: Club Americano'dan Premier Padel Finals'a 10 basamaklı merdiven (Americano, Mexicano, eleme, lig; ralli puanlaması 16 sayıya), giriş ücreti, dereceye göre Credits + sıralama puanı, yarıda bırakılan turnuva kaldığı turdan devam; **Ranking**: dünya sıralaması. **Play Online**: sunucudaki açık odaları listele, oda kur / katıl; karakterinin görünümü diğer oyunculara gider, online maç ×1.2 öder. İlerleme yalnız bu tarayıcıda saklanır (Profile → Export / Import ile yedekle). Denge değerleri `data/economy.json`, `data/shop.json`, `data/tournaments.json`.
+- **Yerel 2 oyuncu**: çiftlerde 2 insan oyuncu *Opponents* (karşılıklı) ya da *Same team* (aynı takımda, 2 AI'ya karşı) oynayabilir.
 - **İçerik** (`data/`): 10 ülke/mekan, 26 karakter, 12 raket (yuvarlak/gözyaşı/elmas), turnuva formatları (Americano, Mexicano, King of the Court, lig, eleme) ve amatörden Premier Finals'a kariyer basamakları.
 
 Geliştirici ve ana sponsor: **Mesut** (kort reklamları, file bandı, menü, skor tabelası).
@@ -76,9 +78,10 @@ Geliştirici ve ana sponsor: **Mesut** (kort reklamları, file bandı, menü, sk
 
 ```
 src/      game.js (paylaşılan simülasyon), physics.js, rules.js, ai.js, player.js, court.js,
-          camera.js, replay.js, input.js, net.js, main.js, audio.js, helpkeys.js, tutorial.js
+          camera.js, replay.js, input.js, net.js, main.js, audio.js, helpkeys.js, tutorial.js,
+          career.js (profil, ekonomi, market, merdiven), tournament.js (turnuva motoru), careerui.js (kariyer ekranları)
 server/   server.js — otoriter oda sunucusu + dist/ statik servis
-data/     rackets, venues, tournaments, characters (JSON)
+data/     rackets, venues, tournaments, characters, economy, shop (JSON)
 public/assets/  ubc/ karakter modelleri, anims/ animasyonlar
 agents/   Antigravity görev (tasks/) ve raporları (reports/)
 docs/     re-findings.md (rea tersine mühendislik notları)
@@ -93,15 +96,12 @@ docs/     re-findings.md (rea tersine mühendislik notları)
 - [x] Duraklatma menüsü tıklama ve yeniden başlatma stabilizasyonu (`agy-06`)
 - [x] Smaç slow-mo jitter çözümü, efekt yazısı & melodisi, seyirci tepkileri, oyun müziği ve tam İngilizce UI (`agy-07`)
 - [x] Maç içi STYLE puanı, seri çarpanı, madalyalar, seyirci coşkusu (`agy-09`)
-- [ ] Faz 3a — kariyer modu (tasarım: `docs/superpowers/specs/2026-10-17-career-mode-design.md`, plan: `docs/superpowers/plans/2026-10-17-career-mode.md`)
-  - [x] Görev 1: profil kaydı, Export/Import, maç kazancı, `data/economy.json` (`src/career.js`)
-  - [ ] Görev 2: `startMatch(cfg)` tek maç giriş noktası + maç sonu sonucu (`main.js`); STYLE puanının kariyer kazancına katılıp katılmayacağı kararı
-  - [ ] Görev 3: kariyer ana ekranı, karakter yaratıcı (saç/sakal/renk), profil, ödül ekranı (agy)
-  - [ ] Görev 4–6: antrenman, market, ayakkabı/top etkileri, dolap ekranı
-  - [ ] Görev 7–10: ralli puanlaması, turnuva motoru (Americano/Mexicano/eleme/lig), merdiven, sıralama
-  - [ ] Görev 11–13: online açık maç listesi, profilin online taşınması, dokümanlar
+- [x] Faz 3a — kariyer modu (tasarım: `docs/superpowers/specs/2026-10-17-career-mode-design.md`, plan: `docs/superpowers/plans/2026-10-17-career-mode.md`): profil + karakter yaratıcı, Credits/sıralama puanı, antrenman, market ve dolap, ayakkabı/top etkileri, ralli puanlaması, Americano/Mexicano/eleme/lig turnuvaları, merdiven ve dünya sıralaması, online açık oda listesi (`agy-10`, `agy-11`; `agy-12`/`agy-13` agy kotası dolunca Sonnet alt-ajanıyla)
+- [x] Yerel 2 oyuncu: aynı takım / rakip seçimi
+- [ ] Açılış sayfası: yeni ziyaretçi nasıl başlasın (kariyer / hızlı maç / eğitim) — tasarlanacak
+- [ ] Kariyer küçük işleri: partner/sıralamada şablon karakterin AI kopyası, ödül kartı boşluğu, online odada formların gizlenmesi, uzak oyuncunun raket rengi
 - [ ] Faz 3b — giriş/hesap, rezervasyon, online turnuvalar, ücretli kestirmeler
-- [ ] rea ile Red Bull Padel APK davranış analizi → fizik ayarı (`docs/re-findings.md`)
+- [ ] (Beklemede) rea ile Red Bull Padel APK davranış analizi → fizik/his ayarı (`docs/re-findings.md`); APK yok — değeri ve güvenli kaynağı (kendi Android cihazından Google Play) sonra konuşulacak
 - [x] Tüm vücut prosedürel vuruşlar: bacak itişi, kalça-omuz ayrışması, alçak topta lunge, topu izleyen kafa (`agy-08`)
 - [ ] Vuruş pozlarında ince ayar (temasta dizler hafif içe kapanıyor; `tools/posetest.html` ile)
 
