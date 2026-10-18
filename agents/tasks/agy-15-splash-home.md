@@ -26,10 +26,12 @@ Sıra: agy-14'e başladıysan önce onu bitir, sonra bu. `src/careerui.js` deği
 4. **Settings** (`src/settings.js` saf mantık + HOME'dan açılan küçük panel): `padel.settings.v1` = `{ control: 'auto'|'kb'|'pad', speed: 0.7|0.85|1 }`; okuma/yazma try/catch, bozuk/eksikse varsayılan. Sihirbazın Controls / Game speed seçimi buradan okur ve buraya yazar; **kariyer maçları da buradan okur** (careerui'de maç başlatırken — bilinen hatayı kapatır).
 5. **Rotalar** (`src/route.js` saf: `parseRoute(hash, search)` → `{screen: 'home'|'friendly'|'career', room?}`): `#home`, `#friendly`, `#career`; tarayıcı Geri/İleri çalışır. `?room=CODE` → splash sonrası Friendly → Online, kod dolu. Maç bitince `toMenu()` maçın başladığı yere döner (Friendly → `#friendly`, kariyer → `#career` zaten böyle). `closeCareer()` artık HOME'a döner.
 
+6. **PlayStation kolu** (DualShock 4 / DualSense): tuş numaraları Xbox ile aynı ("standard" düzen), yani `padDir`/`spatialFocus` ve 0=onay, 1=geri, 9=Start her iki kolda çalışır. Fark yalnız yazılarda: splash, HOME, Settings ve sihirbazdaki **her kol ipucu** Xbox adlarıyla yazılıp `padText()` (`src/padstyle.js`) içinden geçirilsin → PS kolda "✕ select · ○ back · Options", Xbox'ta "A select · B back · Start". Settings'te kontrol seçeneği "Xbox controller only" değil "Controller only" (Xbox / PlayStation). Kol takıldığında (`gamepadconnected`) ipuçları yeniden çizilsin.
+
 ## Testler (`npm test` yeşil)
 - `test/route.test.js`: `#home`, `#friendly`, `#career`, boş hash → home, `?room=padel1` → `PADEL1` (büyük harf, yalnız A-Z0-9, en çok 6), bilinmeyen → home.
 - `test/settings.test.js`: storage atınca (throw) varsayılan döner; geçersiz `speed` → varsayılan; kayıt/okuma tur testi.
 
 ## Doğrulama (raporda dürüst yaz)
 - `npm test` ve `npx vite build` çıktısı.
-- Elle kontrol listesi (yaptıklarını ✔, yapamadıklarını ✘ ile): splash atlanıyor ve ikinci yüklemede çıkmıyor; HOME'da kol ile 3 kart + alt satır gezilebiliyor; Friendly → START maç açıyor; maç sonu Friendly'ye dönüyor; Career aç/kapa HOME'a dönüyor; tarayıcı Geri; `?room=ABC123`. Görsel doğrulama yapamadıysan "yapamadım" yaz — Opus tarayıcıda bakacak.
+- Elle kontrol listesi (yaptıklarını ✔, yapamadıklarını ✘ ile): PS kol bağlıyken ipuçları ✕ ○ Options gösteriyor; splash atlanıyor ve ikinci yüklemede çıkmıyor; HOME'da kol ile 3 kart + alt satır gezilebiliyor; Friendly → START maç açıyor; maç sonu Friendly'ye dönüyor; Career aç/kapa HOME'a dönüyor; tarayıcı Geri; `?room=ABC123`. Görsel doğrulama yapamadıysan "yapamadım" yaz — Opus tarayıcıda bakacak.
