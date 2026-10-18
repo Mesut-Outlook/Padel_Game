@@ -82,7 +82,8 @@ Geliştirici ve ana sponsor: **Mesut** (kort reklamları, file bandı, menü, sk
 ## Yapı
 
 ```
-src/      game.js (paylaşılan simülasyon), physics.js, rules.js, ai.js, player.js, court.js,
+src/      game.js (paylaşılan simülasyon, enerji), physics.js, rules.js, ai.js, player.js, court.js, skyline.js,
+          fx.js, padnav.js (kol ile menü gezintisi), padstyle.js (Xbox / PlayStation etiketleri), thumbs.js,
           camera.js, replay.js, input.js, net.js, main.js, audio.js, helpkeys.js, tutorial.js,
           career.js (profil, ekonomi, market, merdiven), tournament.js (turnuva motoru), careerui.js (kariyer ekranları)
 server/   server.js — otoriter oda sunucusu + dist/ statik servis
@@ -103,6 +104,14 @@ docs/     re-findings.md (rea tersine mühendislik notları)
 - [x] Maç içi STYLE puanı, seri çarpanı, madalyalar, seyirci coşkusu (`agy-09`)
 - [x] Faz 3a — kariyer modu (tasarım: `docs/superpowers/specs/2026-10-17-career-mode-design.md`, plan: `docs/superpowers/plans/2026-10-17-career-mode.md`): profil + karakter yaratıcı, Credits/sıralama puanı, antrenman, market ve dolap, ayakkabı/top etkileri, ralli puanlaması, Americano/Mexicano/eleme/lig turnuvaları, merdiven ve dünya sıralaması, online açık oda listesi (`agy-10`, `agy-11`; `agy-12`/`agy-13` agy kotası dolunca Sonnet alt-ajanıyla)
 - [x] Yerel 2 oyuncu: aynı takım / rakip seçimi
+- [x] Kol ile menü gezintisi düzeltildi (D-pad + çubuk ölü bölgesi, ekrandaki konuma göre odak; Training / Start Match erişilebilir)
+- [x] Cam/tel çarpma efektleri ve sesleri; sekmeden doğrudan duvara giden topa kırmızı çatlak + sarsıntı
+- [x] Şehre özel mekan silüetleri (10 şehir), kapalı salonlarda cam cephe
+- [x] Oyuncu portreleri kameraya bakıyor ve ortalı
+- [x] Oyuncu enerjisi / yorgunluk ve taraf değişiminde su molası
+- [x] PlayStation kolu (DualShock 4 / DualSense) etiketleri
+- [ ] Karar bekliyor: kariyer marketinde enerji ürünleri (izotonik içecek, enerji jeli, muz) — maça götürülen ürün molada daha çok enerji verir, tükenir
+- [ ] Enerji değerlerinin oynayarak ince ayarı (`ENERGY` tablosu, `src/game.js`)
 - [ ] Açılış sayfası: yeni ziyaretçi nasıl başlasın (kariyer / hızlı maç / eğitim) — tasarlanacak
 - [ ] Kariyer küçük işleri (son incelemeden): partner/sıralamada şablon karakterin AI kopyası; ödül kartı boşluğu; online odada formların gizlenmesi ve başarısız katılımda ekranın takılı kalması; uzak oyuncunun raket rengi; tek başına online (özel oda + AI) ×1.2 ödüyor; ralli puanlamasında skor tablosu `repeat(0, …)` kontrolü; lobi/profil metinlerinin `innerHTML` yerine metin olarak basılması; kariyer maçları menüdeki Kontrol/Oyun hızı ayarını kullanmıyor; markette hata metninde ham neden kodu; 16 çiftlik turnuvada aynı AI iki tarafta; turnuva maçından yarıda çıkınca maç tekrar oynanabiliyor (hükmen yenilgi yok)
 - [ ] Faz 3b — giriş/hesap, rezervasyon, online turnuvalar, ücretli kestirmeler
