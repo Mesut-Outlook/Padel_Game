@@ -110,9 +110,10 @@ docs/     re-findings.md (rea tersine mühendislik notları)
 - [x] Oyuncu portreleri kameraya bakıyor ve ortalı
 - [x] Oyuncu enerjisi / yorgunluk ve taraf değişiminde su molası
 - [x] PlayStation kolu (DualShock 4 / DualSense) etiketleri
-- [ ] Karar bekliyor: kariyer marketinde enerji ürünleri (izotonik içecek, enerji jeli, muz) — maça götürülen ürün molada daha çok enerji verir, tükenir
+- [ ] Kariyer marketinde enerji ürünleri (muz, izotonik, jel) — karar verildi, tasarım: `docs/superpowers/specs/2026-10-18-home-modes-energy-design.md`
 - [ ] Enerji değerlerinin oynayarak ince ayarı (`ENERGY` tablosu, `src/game.js`)
-- [ ] Açılış sayfası: yeni ziyaretçi nasıl başlasın (kariyer / hızlı maç / eğitim) — tasarlanacak
+- [ ] Açılış animasyonu + ana ekran (Friendly Match / Career / Friends Cup) — tasarım aynı belgede
+- [ ] Karar bekliyor: Friends Cup sunucusunun barındırılması — alan adı (domain) ile birlikte kararlaştırılacak
 - [ ] Kariyer küçük işleri (son incelemeden): partner/sıralamada şablon karakterin AI kopyası; ödül kartı boşluğu; online odada formların gizlenmesi ve başarısız katılımda ekranın takılı kalması; uzak oyuncunun raket rengi; tek başına online (özel oda + AI) ×1.2 ödüyor; ralli puanlamasında skor tablosu `repeat(0, …)` kontrolü; lobi/profil metinlerinin `innerHTML` yerine metin olarak basılması; kariyer maçları menüdeki Kontrol/Oyun hızı ayarını kullanmıyor; markette hata metninde ham neden kodu; 16 çiftlik turnuvada aynı AI iki tarafta; turnuva maçından yarıda çıkınca maç tekrar oynanabiliyor (hükmen yenilgi yok)
 - [ ] Faz 3b — giriş/hesap, rezervasyon, online turnuvalar, ücretli kestirmeler
 - [ ] (Beklemede) rea ile Red Bull Padel APK davranış analizi → fizik/his ayarı (`docs/re-findings.md`); APK yok — değeri ve güvenli kaynağı (kendi Android cihazından Google Play) sonra konuşulacak
