@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Padel Legends</title>
 <!-- GoatCounter: cookie-free visit counts (no consent banner needed); localhost is not counted. Events: src/track.js -->
+<script>/* GoatCounter sends location.search: take a ?room= invite code out of the URL before it loads (main.js reads window.__padelRoom) */
+try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) { window.__padelRoom = r; u.searchParams.delete('room'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } } catch { /* keep the URL as is */ }</script>
 <script data-goatcounter="https://padellegends.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

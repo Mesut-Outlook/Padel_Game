@@ -41,7 +41,7 @@ addEventListener('pointerdown', unlockAudio, { once: true });
 addEventListener('keydown', unlockAudio, { once: true });
 
 function applyRoute() {
-  const route = parseRoute(location.hash, location.search);
+  const route = parseRoute(location.hash, window.__padelRoom ? `?room=${window.__padelRoom}` : location.search);  // index.html moved ?room= out of the URL
   const menuEl = $('menu');
   if (route.screen === 'home') {
     hideHome();
