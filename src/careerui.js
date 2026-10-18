@@ -1,5 +1,6 @@
 // Career mode UI screens: Template picker, Character Creator, Career Hub, Career Play, Training, Shop, Locker, Match Reward, Profile.
 // Reuses the menu's single 3D preview canvas (Intel HD 620 friendly) and routes all storage through src/career.js.
+import { serverUrl, NO_SERVER } from './serverurl.js';
 import characters from '../data/characters.json';
 import venues from '../data/venues.json';
 import rackets from '../data/rackets.json';
@@ -2368,13 +2369,7 @@ function renderRankingScreen() {
 // 11. Play Online (room list, create, join by code). The match itself runs through main.js startOnline.
 const onlineState = { rooms: null, busy: false, players: 4, isPublic: true, venueIdx: 0, ballId: 'ball_standard', code: '', status: '', lobby: null, net: null };
 
-function onlineUrl() {
-  const q = new URLSearchParams(location.search).get('server');
-  if (q) return q;
-  if (location.hostname.endsWith('github.io')) return null;  // static build: no game server
-  return location.port === '5173' ? `ws://${location.hostname}:8080` : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
-}
-const NO_SERVER = 'Online mode requires a game server, which is not included in this static web build. You can play against the AI.';
+const onlineUrl = () => serverUrl(location);
 
 function setOnlineStatus(text, lobby) {
   onlineState.status = text;

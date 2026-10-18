@@ -11,6 +11,7 @@ import { createReplay } from './replay.js';
 import { aiInput } from './ai.js';
 import { readLocal, readGamepad, consumePressed, clearPressed } from './input.js';
 import { connect } from './net.js';
+import { serverUrl, NO_SERVER } from './serverurl.js';
 import { predict } from './physics.js';
 import { createFx } from './fx.js';
 import { unlockAudio, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxReward, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
@@ -129,21 +130,16 @@ async function setupScene(venue, ids, roster, rk) {
   if (!looping) { looping = true; requestAnimationFrame(loop); }  // a restart reuses the running loop
 }
 
-// Online entry for the menu button and for Career. url defaults to ?server= / :8080 / same host. look = remote-visible appearance (its stats are ignored).
+// Online entry for the menu button and for Career. url defaults to serverUrl() (?server= / static build: none / :8080 / same host). look = remote-visible appearance (its stats are ignored).
 // status(text, lobby?) mirrors the #lobby line for callers that show their own panel; returns the net handle (or null if it did not connect).
 export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, onEnd: end, status } = {}) {
   unlockAudio();
   control = $('control').value;
   const say = (t, l) => { $('lobby').innerHTML = t; status?.(t, l); };
-  // the static GitHub Pages build has no game server; ?server=wss://... points it at one
-  if (!new URLSearchParams(location.search).get('server') && location.hostname.endsWith('github.io')) {
-    say('Online mode requires a game server, which is not included in this static web build. You can play against the AI.');
-    return null;
-  }
+  url ||= serverUrl(location);  // null on the static web build unless ?server= points at one
+  if (!url) { say(NO_SERVER); return null; }
   code = String(code || '').trim().toUpperCase();
   if (!code) { say('Enter a room code first.'); return null; }
-  url ||= new URLSearchParams(location.search).get('server') ||
-    (location.port === '5173' ? `ws://${location.hostname}:8080` : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
   onEnd = end || null; pointsWon = [0, 0];
   net = connect({
     url, code, char, stats, racket, public: isPublic, name, look, shoes, ball,
