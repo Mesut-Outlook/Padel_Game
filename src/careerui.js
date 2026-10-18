@@ -219,13 +219,17 @@ function buildEquippedPlayer(p = profile) {
   const kit = equippedKit(p);
   const shoeItem = equippedShoes(p);
   const hwItem = equippedHeadwearItem(p);
+  const baseOutfit = p.player?.outfit || {};
   return {
     ...p.player,
     stats: { ...p.stats },
     outfit: {
-      shirt: kit ? kit.shirt : (p.player.outfit?.shirt || '#FFFFFF'),
-      shorts: kit ? kit.shorts : (p.player.outfit?.shorts || '#1D3557'),
-      shoes: shoeItem ? shoeItem.color : (kit?.shoes || p.player.outfit?.shoes || '#1B1B1E'),
+      shirt: kit ? kit.shirt : (baseOutfit.shirt || '#FFFFFF'),
+      shorts: kit ? kit.shorts : (baseOutfit.shorts || '#1D3557'),
+      shoes: shoeItem ? shoeItem.color : (kit?.shoes || baseOutfit.shoes || '#1B1B1E'),
+      style: kit?.style || baseOutfit.style || 'crew',
+      pattern: kit?.pattern || baseOutfit.pattern || 'none',
+      ...(kit?.accent || baseOutfit.accent ? { accent: kit?.accent || baseOutfit.accent } : {}),
     },
     headwear: hwItem ? hwItem.headwear : p.player.headwear,
   };
@@ -1437,12 +1441,17 @@ function renderShopItemSpecHtml(item, tabId) {
     `;
   }
   if (tabId === 'kit') {
+    const styleName = { crew: 'Crew neck', polo: 'Polo', vneck: 'V-neck', tank: 'Tank top' }[item.style || 'crew'] || 'Crew neck';
+    const patternName = { none: 'Solid', chest: 'Chest stripe', sash: 'Diagonal sash', side: 'Side panels' }[item.pattern || 'none'] || 'Solid';
+    const label = `${styleName} · ${patternName.toLowerCase()}`;
     return `
       <div class="cr-kit-swatches">
         <span class="cr-kit-chip"><i style="background:${item.shirt}"></i>Shirt</span>
         <span class="cr-kit-chip"><i style="background:${item.shorts}"></i>Shorts</span>
         <span class="cr-kit-chip"><i style="background:${item.shoes}"></i>Shoes</span>
+        ${item.accent ? `<span class="cr-kit-chip"><i style="background:${item.accent}"></i>Accent</span>` : ''}
       </div>
+      <div class="cr-shop-spec">${escapeHtml(label)}</div>
     `;
   }
   if (tabId === 'headwear') {
@@ -1697,6 +1706,8 @@ function renderLockerScreen() {
       <div class="cr-locker-grid" id="cr-locker-kit">
         ${ownedKits.map(k => {
           const isEq = profile.equipped?.kit === k.id;
+          const kStyle = { crew: 'Crew neck', polo: 'Polo', vneck: 'V-neck', tank: 'Tank top' }[k.style || 'crew'] || 'Crew neck';
+          const kPattern = ({ none: 'Solid', chest: 'Chest stripe', sash: 'Diagonal sash', side: 'Side panels' }[k.pattern || 'none'] || 'Solid').toLowerCase();
           return `
             <button type="button" class="pl-card cr-locker-card ${isEq ? 'is-selected' : ''}" data-slot="kit" data-id="${k.id}">
               <div class="cr-locker-card-head">
@@ -1707,7 +1718,9 @@ function renderLockerScreen() {
                 <span class="cr-kit-chip"><i style="background:${k.shirt}"></i>Shirt</span>
                 <span class="cr-kit-chip"><i style="background:${k.shorts}"></i>Shorts</span>
                 <span class="cr-kit-chip"><i style="background:${k.shoes}"></i>Shoes</span>
+                ${k.accent ? `<span class="cr-kit-chip"><i style="background:${k.accent}"></i>Accent</span>` : ''}
               </div>
+              <div class="cr-shop-spec">${escapeHtml(`${kStyle} · ${kPattern}`)}</div>
               <span class="pl-check">✓</span>
             </button>
           `;

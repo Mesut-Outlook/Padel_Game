@@ -102,16 +102,30 @@ function kitColors(ch) {
 // Jersey: up over the shoulders (measured shoulder tops: f 1.47, m 1.54) with a round crew neck around the neck
 // (neck base: f 1.485, m 1.52), scooped 2 cm lower at the front.
 const NECK = { f: [1.455, 0.058], m: [1.49, 0.066] }, TOP = { f: 1.5, m: 1.575 };
-const SHIRT_GLSL = (f) => { const [ny, nr] = NECK[f ? 'f' : 'm'];
-  return `(y > 0.9 && y < ${TOP[f ? 'f' : 'm']} && ax < ${f ? '0.2' : '0.34'} && !(y > ${ny} - (z > 0.0 ? 0.02 : 0.0) && ax < ${nr}) && (ax < 0.2 || y > 1.3))`; };
+const SHIRT_GLSL = (f, style = 'crew') => {
+  const [ny, nr] = NECK[f ? 'f' : 'm'], top = TOP[f ? 'f' : 'm'];
+  const neckCut = style === 'vneck'
+    ? `(z > 0.0 ? (ax < ${nr} && y > (${ny - 0.06}) + (ax / ${nr}) * 0.06) : (ax < ${nr} && y > ${ny}))`
+    : `(y > ${ny} - (z > 0.0 ? 0.02 : 0.0) && ax < ${nr})`;
+  if (style === 'tank') return `(y > 0.9 && y < ${top} && !${neckCut} && ax < ${f ? 0.155 : 0.185})`;  // sleeveless: stops at the shoulder
+  return `(y > 0.9 && y < ${top} && ax < ${f ? '0.2' : '0.34'} && !${neckCut} && (ax < 0.2 || y > 1.3))`;
+};
 const SHORTS_GLSL = (f) => `(y > ${f ? '0.7' : '0.66'} && y <= 0.98 && ax < 0.26)`;
-const SHIRT = (x, y, z, f) => { const ax = Math.abs(x), [ny, nr] = NECK[f ? 'f' : 'm'];
-  return y > 0.9 && y < TOP[f ? 'f' : 'm'] && ax < (f ? 0.2 : 0.34) && !(y > ny - (z > 0 ? 0.02 : 0) && ax < nr) && (ax < 0.2 || y > 1.3); };
+const SHIRT = (x, y, z, f, style = 'crew') => {
+  const ax = Math.abs(x), [ny, nr] = NECK[f ? 'f' : 'm'], top = TOP[f ? 'f' : 'm'];
+  if (y <= 0.9 || y >= top) return false;
+  const neckCut = style === 'vneck'
+    ? (z > 0 ? (ax < nr && y > (ny - 0.06) + (ax / nr) * 0.06) : (ax < nr && y > ny))
+    : (y > ny - (z > 0.0 ? 0.02 : 0.0) && ax < nr);
+  if (neckCut) return false;
+  if (style === 'tank') return ax < (f ? 0.155 : 0.185);
+  return ax < (f ? 0.2 : 0.34) && (ax < 0.2 || y > 1.3);
+};
 const SHORTS = (x, y, z, f) => y > (f ? 0.7 : 0.66) && y <= 0.98 && Math.abs(x) < 0.26;
 
 // Real clothes: the body surface inside a kit region, copied and pushed out along the normals (looser toward the
 // hems) and skinned to the same skeleton, so the jersey and shorts have volume and move with the player.
-function makeGarment(body, region, regionGlsl, female, offset, color, trim, trimTest, minGap = () => 0.006) {
+function makeGarment(body, region, regionGlsl, female, offset, color, trim, trimTest, minGap = () => 0.006, accent, accentTest, poloButtons = false, ny = 1.49) {
   const src = body.geometry, pos = src.attributes.position, nor = src.attributes.normal, idx = src.index.array;
   const keep = [];
   for (let t = 0; t < idx.length; t += 3) {
@@ -135,12 +149,19 @@ function makeGarment(body, region, regionGlsl, female, offset, color, trim, trim
   const mat = new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide });  // double-sided: hems show the inside
   mat.onBeforeCompile = (sh) => {  // trim bands (collar, sleeve and hem, shorts side stripe) from rest-pose position
     sh.uniforms.uTrim = { value: trim };
+    if (accent) sh.uniforms.uAccent = { value: accent };
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 aRest; varying vec3 vRest;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = aRest;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vRest; uniform vec3 uTrim;')
-      .replace('#include <color_fragment>', `#include <color_fragment>\n{ float y = vRest.y, ax = abs(vRest.x), z = vRest.z; if (!${regionGlsl}) discard; if (${trimTest}) diffuseColor.rgb = uTrim; }`);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>\nvarying vec3 vRest; uniform vec3 uTrim;${accent ? ' uniform vec3 uAccent;' : ''}`)
+      .replace('#include <color_fragment>', `#include <color_fragment>\n{
+  float y = vRest.y, ax = abs(vRest.x), z = vRest.z;
+  if (!${regionGlsl}) discard;
+  ${accentTest ? `if (${accentTest}) diffuseColor.rgb = uAccent;` : ''}
+  ${poloButtons ? `if (z > 0.0 && ax < 0.005 && (abs(y - ${(ny - 0.05).toFixed(3)}) < 0.0035 || abs(y - ${(ny - 0.09).toFixed(3)}) < 0.0035)) diffuseColor.rgb = vec3(0.95);` : ''}
+  if (${trimTest}) diffuseColor.rgb = uTrim;
+}`);
   };
-  mat.customProgramCacheKey = () => 'garment:' + regionGlsl + trimTest;
+  mat.customProgramCacheKey = () => 'garment:' + regionGlsl + trimTest + (accentTest || '') + (poloButtons ? ':polo' : '');
   const m = new THREE.SkinnedMesh(geo, mat);
   m.bind(body.skeleton, body.bindMatrix);
   m.castShadow = true; m.frustumCulled = false;
@@ -183,15 +204,59 @@ function smoothShell(p, pos, nor, tris, minGap, iters) {
   for (const i of tris) { const r = weld[i]; if (r !== i) { p[i * 3] = p[r * 3]; p[i * 3 + 1] = p[r * 3 + 1]; p[i * 3 + 2] = p[r * 3 + 2]; } }
 }
 
+// Accent areas (pattern and polo collar/placket) in rest-pose coordinates, or null. Painted on the cloth and on the
+// body underneath, so where the skin pokes through the shell the stripe still has clean edges.
+function kitAccentGlsl(f, style, pattern) {
+  const [ny, nr] = NECK[f ? 'f' : 'm'];
+  const accentParts = [];
+  if (style === 'polo') {
+    accentParts.push(`(y > ${(ny - 0.045).toFixed(3)} && ax < ${(nr + 0.022).toFixed(3)})`);
+    accentParts.push(`(z > 0.0 && ax < 0.016 && y > ${(ny - 0.13).toFixed(3)} && y <= ${ny.toFixed(3)})`);
+  }
+  if (pattern === 'chest') {
+    accentParts.push(`(y > 1.18 && y < 1.28 && ax < 0.2)`);
+  } else if (pattern === 'sash') {
+    accentParts.push(`(abs((y - 1.17) + 1.3 * vRest.x) < 0.04 && ax < 0.2)`);
+  } else if (pattern === 'side') {
+    accentParts.push(`(ax > 0.08 && ax < 0.2 && abs(z + 0.01) < 0.045 && y > 0.92 && y < 1.33)`);
+  }
+  return accentParts.length ? accentParts.join(' || ') : null;
+}
+
 function makeKit(body, ch) {
   const f = ch.gender === 'f', { shirt, shorts } = kitColors(ch), sleeve = f ? 0.2 : 0.34;
   const near = (a, b) => Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b) < 0.15;
   const trimShirt = near(shirt, shorts) ? new THREE.Color('#f4f4f4') : shorts;
+  const style = ch.outfit?.style || 'crew';
+  const pattern = ch.outfit?.pattern || 'none';
+  const accent = ch.outfit?.accent ? new THREE.Color(ch.outfit.accent) : trimShirt;
+  const [ny, nr] = NECK[f ? 'f' : 'm'];
+
+  // Trim test (waistband hem, collar/cuffs)
+  const trimParts = ['y < 0.925'];
+  if (style === 'tank') {
+    trimParts.push(`(y > ${(ny - 0.045).toFixed(3)} && ax < ${(nr + 0.022).toFixed(3)})`);
+    trimParts.push(`(ax > ${(f ? 0.135 : 0.165).toFixed(3)} && ax < ${(f ? 0.155 : 0.185).toFixed(3)} && y > 1.3)`);
+  } else if (style === 'vneck') {
+    trimParts.push(`((z > 0.0 && ax < ${(nr + 0.02).toFixed(3)} && y > (${(ny - 0.06).toFixed(3)} + (ax / ${nr.toFixed(3)}) * 0.06 - 0.025)) || (z <= 0.0 && y > ${(ny - 0.035).toFixed(3)} && ax < ${(nr + 0.022).toFixed(3)}))`);
+    trimParts.push(`(ax > ${(sleeve - 0.025).toFixed(3)} && y > 1.3)`);
+  } else if (style === 'crew') {
+    trimParts.push(`(y > ${(ny - 0.045).toFixed(3)} && ax < ${(nr + 0.022).toFixed(3)})`);
+    trimParts.push(`(ax > ${(sleeve - 0.025).toFixed(3)} && y > 1.3)`);
+  } else if (style === 'polo') {
+    trimParts.push(`(ax > ${(sleeve - 0.025).toFixed(3)} && y > 1.3)`);
+  }
+  const trimTest = trimParts.join(' || ');
+
+  const accentTest = kitAccentGlsl(f, style, pattern);
+
   return [
     // jersey: 8 mm off the skin, ~1.4 cm at the hem; sleeves open up toward the cuff
-    makeGarment(body, SHIRT, SHIRT_GLSL(f), f, (x, y) => 0.008 + Math.max(0, 1.0 - y) * 0.06 + (Math.abs(x) > 0.2 ? (Math.abs(x) - 0.2) * 0.08 : 0),
-      shirt, trimShirt, `y < 0.925 || (y > ${NECK[f ? 'f' : 'm'][0] - 0.045} && ax < ${NECK[f ? 'f' : 'm'][1] + 0.022}) || (ax > ${(sleeve - 0.025).toFixed(3)} && y > 1.3)`,
-      (y) => (y < 1.0 ? 0.02 : 0.006)),  // over the waistband the jersey must stay outside the shorts
+    makeGarment(body, (x, y, z, f) => SHIRT(x, y, z, f, style), SHIRT_GLSL(f, style), f,
+      (x, y) => 0.008 + Math.max(0, 1.0 - y) * 0.06 + (style !== 'tank' && Math.abs(x) > 0.2 ? (Math.abs(x) - 0.2) * 0.08 : 0),
+      shirt, trimShirt, trimTest,
+      (y) => (y < 1.0 ? 0.02 : 0.006),
+      accent, accentTest, style === 'polo', ny),
     // shorts: 1 cm off the skin, wider at the leg openings, side stripe in the shirt colour
     makeGarment(body, SHORTS, SHORTS_GLSL(f), f, (x, y) => 0.01 + Math.max(0, 0.8 - y) * 0.1,
       shorts, shirt, 'ax > 0.178 && ax < 0.192 && abs(vRest.z + 0.03) < 0.05'),
@@ -200,8 +265,11 @@ function makeKit(body, ch) {
 
 function kitMaterial(base, ch) {
   const m = base.clone(), f = ch.gender === 'f';
-  const { shirt } = kitColors(ch);
+  const { shirt, shorts } = kitColors(ch);
+  const style = ch.outfit?.style || 'crew', accentTest = kitAccentGlsl(f, style, ch.outfit?.pattern || 'none');
+  const near = Math.hypot(shirt.r - shorts.r, shirt.g - shorts.g, shirt.b - shorts.b) < 0.15;  // same fallback as makeKit's trim
   const u = {
+    uAccent: { value: new THREE.Color(ch.outfit?.accent || (near ? '#f4f4f4' : ch.outfit.shorts)) },
     uShirt: { value: shirt }, uShorts: { value: new THREE.Color(ch.outfit.shorts) },
     uShoes: { value: new THREE.Color(ch.outfit.shoes) },
     uSkin: { value: new THREE.Color(ch.skinTone).multiply(new THREE.Color(1 / TEX_SKIN.r, 1 / TEX_SKIN.g, 1 / TEX_SKIN.b)) },
@@ -215,13 +283,13 @@ function kitMaterial(base, ch) {
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vRest;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = position;');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
-varying vec3 vRest; uniform vec3 uShirt, uShorts, uShoes, uSkin, uBeard; uniform float uFemale, uBeardMode, uMakeup;`)
+varying vec3 vRest; uniform vec3 uShirt, uShorts, uShoes, uSkin, uBeard, uAccent; uniform float uFemale, uBeardMode, uMakeup;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
   float y = vRest.y, ax = abs(vRest.x), z = vRest.z;
   float shade = 0.55 + 0.9 * dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
   vec3 col = diffuseColor.rgb * uSkin;
-  if (${SHIRT_GLSL(f)}) col = uShirt * shade;    // same regions as the cloth meshes
+  if (${SHIRT_GLSL(f, style)}) col = ${accentTest ? `(${accentTest}) ? uAccent * shade : ` : ''}uShirt * shade;    // same regions as the cloth meshes
   if (${SHORTS_GLSL(f)}) col = uShorts * shade;
   if (y < 0.24 && y > 0.1) col = vec3(0.93) * shade;           // socks
   if (y < 0.095) discard;                                       // bare foot: hidden inside the shoe mesh
@@ -242,7 +310,7 @@ varying vec3 vRest; uniform vec3 uShirt, uShorts, uShoes, uSkin, uBeard; uniform
   diffuseColor.rgb = col;
 }`);
   };
-  m.customProgramCacheKey = () => 'kit' + (f ? 'f' : 'm');
+  m.customProgramCacheKey = () => 'kit:' + (f ? 'f' : 'm') + ':' + style + ':' + accentTest;
   return m;
 }
 

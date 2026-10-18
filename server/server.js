@@ -18,17 +18,27 @@ const CHARACTERS = JSON.parse(fs.readFileSync(new URL('../data/characters.json',
 const COLOR = /^#[0-9a-f]{6}$/i;
 const ONE_OF = { gender: ['m', 'f'], hand: ['right', 'left'], beard: ['stubble', 'full', 'goatee'],
   hair: ['Hair_SimpleParted', 'Hair_Buzzed', 'Hair_BuzzedFemale', 'Hair_Long', 'Hair_Buns', 'none'] };
+const OUTFIT_STYLES = ['crew', 'polo', 'vneck', 'tank'];
+const OUTFIT_PATTERNS = ['none', 'chest', 'sash', 'side'];
 const BODY_TYPES = ['slim', 'athletic', 'muscular', 'stocky', 'tall', 'petite'];
 const text = (v, n) => String(v).replace(/[^\p{L}\p{N} .'-]/gu, '').slice(0, n);
 function sanitizeLook(l) {
   if (!l || typeof l !== 'object' || JSON.stringify(l).length > LOOK_MAX) return null;
-  const out = {}, col = (v) => (typeof v === 'string' && COLOR.test(v) ? v : undefined), num = (v, lo, hi) => (typeof v === 'number' ? clamp(v, lo, hi) : undefined);
+  const col = (v) => (typeof v === 'string' && COLOR.test(v) ? v : undefined), num = (v, lo, hi) => (typeof v === 'number' ? clamp(v, lo, hi) : undefined);
+  const out = {};
   if (l.name != null) out.name = text(l.name, 16);
   if (l.country != null) out.country = text(l.country, 32);
   if (/^[A-Z]{2}$/.test(l.countryCode)) out.countryCode = l.countryCode;
   for (const k in ONE_OF) if (ONE_OF[k].includes(l[k])) out[k] = l[k];
   for (const k of ['skinTone', 'hairColor', 'beardColor']) if (col(l[k])) out[k] = l[k];
-  if (l.outfit && typeof l.outfit === 'object') { const o = {}; for (const k of ['shirt', 'shorts', 'shoes']) if (col(l.outfit[k])) o[k] = l.outfit[k]; out.outfit = o; }
+  if (l.outfit && typeof l.outfit === 'object') {
+    const o = {};
+    for (const k of ['shirt', 'shorts', 'shoes']) if (col(l.outfit[k])) o[k] = l.outfit[k];
+    if (OUTFIT_STYLES.includes(l.outfit.style)) o.style = l.outfit.style;
+    if (OUTFIT_PATTERNS.includes(l.outfit.pattern)) o.pattern = l.outfit.pattern;
+    if (col(l.outfit.accent)) o.accent = l.outfit.accent;
+    out.outfit = o;
+  }
   if (l.body && typeof l.body === 'object') {
     const b = {};
     if (BODY_TYPES.includes(l.body.type)) b.type = l.body.type;

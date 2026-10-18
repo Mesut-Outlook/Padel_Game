@@ -94,3 +94,54 @@ test('join: look is whitelisted (bad markup/colours/keys dropped), stats and rac
     a.ws.close();
   } finally { await srv.close(); }
 });
+
+test('join: look outfit sanitizes style, pattern, and accent (drops invalid values)', async () => {
+  const srv = await startServer(0);
+  try {
+    const a = client(srv.port);
+    let lob = a.next('lobby');
+    await a.send({
+      type: 'join', code: 'KIT1', cfg: { players: 2 },
+      look: {
+        outfit: {
+          shirt: '#112233',
+          shorts: '#445566',
+          shoes: '#778899',
+          style: 'polo',
+          pattern: 'sash',
+          accent: '#ffffff',
+        },
+      },
+    });
+    let l = await lob;
+    assert.deepEqual(l.looks[0].outfit, {
+      shirt: '#112233',
+      shorts: '#445566',
+      shoes: '#778899',
+      style: 'polo',
+      pattern: 'sash',
+      accent: '#ffffff',
+    });
+    a.ws.close();
+
+    const b = client(srv.port);
+    lob = b.next('lobby');
+    await b.send({
+      type: 'join', code: 'KIT2', cfg: { players: 2 },
+      look: {
+        outfit: {
+          shirt: '#112233',
+          style: 'hoodie',
+          pattern: 'dots',
+          accent: 'red',
+        },
+      },
+    });
+    l = await lob;
+    assert.deepEqual(l.looks[0].outfit, {
+      shirt: '#112233',
+    });
+    b.ws.close();
+  } finally { await srv.close(); }
+});
+

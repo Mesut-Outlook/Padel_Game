@@ -40,3 +40,24 @@ test('every shop item and racket has a known tier and a non-negative price; star
   }
   for (const id of ['r01', 'shoe_starter', 'kit_starter', 'ball_standard']) assert.equal(item(id).price, 0, id);
 });
+
+test('every kit and roster character has allowed style and pattern', () => {
+  const validStyles = ['crew', 'polo', 'vneck', 'tank'];
+  const validPatterns = ['none', 'chest', 'sash', 'side'];
+  const COLOR = /^#[0-9a-f]{6}$/i;
+
+  const kits = shop.items.filter(i => i.type === 'kit');
+  assert.ok(kits.length >= 13, `expected >= 13 kits, got ${kits.length}`);
+  for (const k of kits) {
+    if (k.style != null) assert.ok(validStyles.includes(k.style), `kit ${k.id} style ${k.style}`);
+    if (k.pattern != null) assert.ok(validPatterns.includes(k.pattern), `kit ${k.id} pattern ${k.pattern}`);
+    if (k.accent != null) assert.ok(COLOR.test(k.accent), `kit ${k.id} accent ${k.accent}`);
+  }
+
+  for (const c of chars) {
+    if (c.outfit?.style != null) assert.ok(validStyles.includes(c.outfit.style), `char ${c.id} style ${c.outfit.style}`);
+    if (c.outfit?.pattern != null) assert.ok(validPatterns.includes(c.outfit.pattern), `char ${c.id} pattern ${c.outfit.pattern}`);
+    if (c.outfit?.accent != null) assert.ok(COLOR.test(c.outfit.accent), `char ${c.id} accent ${c.outfit.accent}`);
+  }
+});
+

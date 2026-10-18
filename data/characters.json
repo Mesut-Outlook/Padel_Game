@@ -9,7 +9,10 @@
     "outfit": {
       "shirt": "#0047AB",
       "shorts": "#FFFFFF",
-      "shoes": "#1B1B1E"
+      "shoes": "#1B1B1E",
+      "style": "polo",
+      "pattern": "none",
+      "accent": "#FFFFFF"
     },
     "hand": "right",
     "position": "drive",
@@ -78,7 +81,10 @@
     "outfit": {
       "shirt": "#FFFFFF",
       "shorts": "#C8102E",
-      "shoes": "#1D3557"
+      "shoes": "#1D3557",
+      "style": "crew",
+      "pattern": "chest",
+      "accent": "#C8102E"
     },
     "hand": "right",
     "position": "reves",
@@ -136,7 +142,10 @@
     "outfit": {
       "shirt": "#E63946",
       "shorts": "#1D3557",
-      "shoes": "#F1FAEE"
+      "shoes": "#F1FAEE",
+      "style": "tank",
+      "pattern": "side",
+      "accent": "#FFFFFF"
     },
     "hand": "right",
     "position": "drive",
@@ -168,7 +177,10 @@
     "outfit": {
       "shirt": "#2EC4B6",
       "shorts": "#011627",
-      "shoes": "#FF9F1C"
+      "shoes": "#FF9F1C",
+      "style": "vneck",
+      "pattern": "none",
+      "accent": "#FFFFFF"
     },
     "hand": "right",
     "position": "drive",
@@ -204,7 +216,10 @@
     "outfit": {
       "shirt": "#4D96FF",
       "shorts": "#FFFFFF",
-      "shoes": "#1B1B1E"
+      "shoes": "#1B1B1E",
+      "style": "polo",
+      "pattern": "sash",
+      "accent": "#FFFFFF"
     },
     "hand": "left",
     "position": "drive",
@@ -242,7 +257,10 @@
     "outfit": {
       "shirt": "#005293",
       "shorts": "#FECB00",
-      "shoes": "#2B2B2B"
+      "shoes": "#2B2B2B",
+      "style": "vneck",
+      "pattern": "chest",
+      "accent": "#FECB00"
     },
     "hand": "right",
     "position": "drive",
@@ -365,7 +383,10 @@
     "outfit": {
       "shirt": "#111827",
       "shorts": "#D8F53A",
-      "shoes": "#FFFFFF"
+      "shoes": "#FFFFFF",
+      "style": "tank",
+      "pattern": "none",
+      "accent": "#D8F53A"
     },
     "hand": "right",
     "position": "drive",
@@ -396,7 +417,10 @@
     "outfit": {
       "shirt": "#C0392B",
       "shorts": "#F2F3F4",
-      "shoes": "#C0392B"
+      "shoes": "#C0392B",
+      "style": "polo",
+      "pattern": "side",
+      "accent": "#C0392B"
     },
     "hand": "right",
     "position": "revés",
@@ -558,7 +582,10 @@
     "outfit": {
       "shirt": "#FF4F8B",
       "shorts": "#22223B",
-      "shoes": "#FFFFFF"
+      "shoes": "#FFFFFF",
+      "style": "tank",
+      "pattern": "chest",
+      "accent": "#FFFFFF"
     },
     "hand": "right",
     "position": "revés",
@@ -755,7 +782,10 @@
     "outfit": {
       "shirt": "#00B4D8",
       "shorts": "#03045E",
-      "shoes": "#FFFFFF"
+      "shoes": "#FFFFFF",
+      "style": "crew",
+      "pattern": "sash",
+      "accent": "#FFFFFF"
     },
     "hand": "right",
     "position": "revés",
