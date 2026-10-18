@@ -381,18 +381,18 @@
   },
   {
     "id": "p12",
-    "name": "Görkem",
+    "name": "İlker",
     "gender": "m",
     "country": "Türkiye",
     "countryCode": "TR",
     "skinTone": "#C68642",
     "outfit": {
-      "shirt": "#111827",
-      "shorts": "#D8F53A",
+      "shirt": "#FFD100",
+      "shorts": "#C8102E",
       "shoes": "#FFFFFF",
       "style": "tank",
-      "pattern": "none",
-      "accent": "#D8F53A"
+      "pattern": "chest",
+      "accent": "#C8102E"
     },
     "hand": "right",
     "position": "drive",
@@ -411,7 +411,9 @@
       "width": 0.92
     },
     "hair": "Hair_Buzzed",
-    "hairColor": "#2b1d14"
+    "hairColor": "#2b1d14",
+    "beard": "goatee",
+    "beardColor": "#1a120c"
   },
   {
     "id": "p18",
