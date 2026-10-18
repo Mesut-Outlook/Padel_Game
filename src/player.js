@@ -571,7 +571,7 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
 // Hair look: colour, an optional cut height (rest-pose metres, e.g. a chin-length bob), thinning (opacity < 1) and gel (wet shine).
 function hairMaterial(base, color, cut, opacity = 1, gel = false) {
   const m = base.clone();
-  m.color = color;
+  m.color = color.getHSL({}).l > 0.85 ? color.clone().multiplyScalar(1.7) : color;  // the dark hair texture greys white hair: lift it
   if (gel) { m.roughness = 0.3; m.metalness = 0; }
   if (opacity < 1) { m.transparent = true; m.opacity = opacity; m.depthWrite = false; }
   if (cut) {

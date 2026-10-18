@@ -112,6 +112,10 @@
     "country": "Türkiye",
     "countryCode": "TR",
     "skinTone": "#D2A679",
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#FFFFFF",
+    "beard": "goatee",
+    "beardColor": "#FFFFFF",
     "outfit": {
       "shirt": "#75AADB",
       "shorts": "#FFFFFF",
@@ -129,9 +133,9 @@
     },
     "aiLevel": "club",
     "body": {
-      "type": "slim",
-      "height": 1.03,
-      "width": 0.9
+      "type": "tall",
+      "height": 1.1,
+      "width": 0.95
     }
   },
   {
