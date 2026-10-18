@@ -28,6 +28,7 @@ import { initHome, showHome, hideHome } from './home.js';
 import { initSettingsModal, openSettingsModal } from './settingsmodal.js';
 import { bindFullscreenKey, toggleFullscreen, isFullscreen } from './fullscreen.js';
 import { padDir } from './padnav.js';
+import { tipCycle } from './tips.js';
 
 const $ = (id) => document.getElementById(id);
 const matchOpts = () => ({ sets: parseInt($('sets').value), superTiebreak: $('sets').value === '3s', goldenPoint: $('golden').value === '1', starPoint: $('golden').value === 'star' });
@@ -340,6 +341,9 @@ let lastD = Infinity, nearD = Infinity;
 // approach and shows it from behind your player; every overhead / glass rebound / lob chance gets key hints.
 const SHOT_KEYS = { kb: { smash: 'L', vibora: 'I', bandeja: 'Space', bajada: 'Space', lob: 'K' }, pad: { smash: 'Y', vibora: 'RB', bandeja: 'A', bajada: 'A', lob: 'B' } };
 const SHOT_NAME = { smash: 'SMASH', vibora: 'VÍBORA', bandeja: 'BANDEJA', bajada: 'BAJADA', lob: 'LOB' };
+const nextTip = tipCycle();
+const CAM_NAME = { tv: 'TV view', behind: 'Behind player', side: 'Side view', top: 'Top-down', ball: 'Follow ball', drone: 'Drone', free: 'Free camera' };
+let camShown = '';
 let device = 'kb', approach = 0, armed = true, hintKey = '';  // armed: the next overhead chance may start a slow approach
 addEventListener('keydown', () => { device = 'kb'; });
 function showHint(list, title = '') {
@@ -530,7 +534,10 @@ function handleEvents(events, score, winner) {
     }
     else if (e.type === 'fault') { flash('SERVE FAULT', 1); sfxCrowdReact('murmur'); }
     else if (e.type === 'let') flash('LET', 1);
-    else if (e.type === 'drink') setTimeout(() => showHype('💧 CHANGEOVER — water & banana, energy back up', 0, 2.4), 1300);  // after the point call
+    else if (e.type === 'drink') {  // after the point call; then one tip, so they come every other game at most
+      setTimeout(() => showHype('💧 CHANGEOVER — water & banana, energy back up', 0, 2.4), 1300);
+      if (humans.length && loadSettings().tips) setTimeout(() => showHype('💡 ' + (device === 'pad' ? padText(nextTip('pad')) : nextTip('kb')), 0, 5), 4000);
+    }
     else if (e.type === 'point') {
       pointsWon[e.team]++;
       approach = 0; slow = 0; setSmashBanner('');
@@ -842,7 +849,7 @@ function loop(now) {
   }
   // skip first, so the press that starts a replay (R / R3) can't also end it
   if (padButtonDown() || skipReplay) { if (replay.playing) endReplay(); skipReplay = false; }
-  if (consumePressed('KeyC')) $('cam').textContent = '🎥 ' + rig.next();
+  if (consumePressed('KeyC')) rig.next();
   if (consumePressed('KeyR')) startReplay(false);
   if (consumePressed('KeyM')) flash(toggleMute() ? '🔇 SOUND OFF' : '🔊 SOUND ON', 1);
   if (!tut && consumePressed('Enter') && (world?.match.winner != null || net?.winner != null)) { toMenu(); return; }
@@ -897,7 +904,10 @@ function loop(now) {
   }
   venueGroup?.userData.updateCrowd?.(dt);
   rig.update(dt, { ball: view.b, players: view.pl.map(s => ({ p: [s[0], s[1]], f: s[2] })), focus, team: focus < 2 ? 0 : 1 });
-  if ($('cam').textContent === '') $('cam').textContent = '🎥 ' + rig.name;
+  if (camShown !== rig.name + device) {  // also follows the replay's camera and the input device
+    camShown = rig.name + device;
+    $('cam').innerHTML = `🎥 ${CAM_NAME[rig.name] || rig.name} <kbd>${device === 'pad' ? padText('View') : 'C'}</kbd>`;
+  }
   if (msgTimer > 0 && (msgTimer -= dt) <= 0) $('msg').textContent = '';
   if (hypeTimer > 0 && (hypeTimer -= dt) <= 0 && $('hypeToast')) $('hypeToast').hidden = true;
   shakeOff.set(0, 0, 0);

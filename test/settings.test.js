@@ -20,32 +20,40 @@ function createThrowingStorage() {
 
 test('loadSettings returns default settings when storage is empty or throws', () => {
   const emptyStore = createMockStorage();
-  assert.deepEqual(loadSettings(emptyStore), { control: 'auto', speed: 0.85 });
+  assert.deepEqual(loadSettings(emptyStore), { control: 'auto', speed: 0.85, tips: true });
 
   const throwingStore = createThrowingStorage();
-  assert.deepEqual(loadSettings(throwingStore), { control: 'auto', speed: 0.85 });
+  assert.deepEqual(loadSettings(throwingStore), { control: 'auto', speed: 0.85, tips: true });
 });
 
 test('loadSettings recovers from invalid speed and control in storage', () => {
   const store = createMockStorage({
     'padel.settings.v1': JSON.stringify({ control: 'steering_wheel', speed: 999 }),
   });
-  assert.deepEqual(loadSettings(store), { control: 'auto', speed: 0.85 });
+  assert.deepEqual(loadSettings(store), { control: 'auto', speed: 0.85, tips: true });
 });
 
 test('saveSettings and loadSettings round trip successfully', () => {
   const store = createMockStorage();
   const saved = saveSettings({ control: 'pad', speed: 1 }, store);
-  assert.deepEqual(saved, { control: 'pad', speed: 1 });
-  assert.deepEqual(loadSettings(store), { control: 'pad', speed: 1 });
+  assert.deepEqual(saved, { control: 'pad', speed: 1, tips: true });
+  assert.deepEqual(loadSettings(store), { control: 'pad', speed: 1, tips: true });
 
   // Update speed only
   saveSettings({ speed: 0.7 }, store);
-  assert.deepEqual(loadSettings(store), { control: 'pad', speed: 0.7 });
+  assert.deepEqual(loadSettings(store), { control: 'pad', speed: 0.7, tips: true });
 });
 
 test('saveSettings does not throw when storage throws', () => {
   const throwingStore = createThrowingStorage();
   const res = saveSettings({ control: 'kb', speed: 0.7 }, throwingStore);
-  assert.deepEqual(res, { control: 'kb', speed: 0.7 });
+  assert.deepEqual(res, { control: 'kb', speed: 0.7, tips: true });
+});
+
+test('tips can be switched off and stay off; a non-boolean is ignored', () => {
+  const store = createMockStorage();
+  assert.equal(saveSettings({ tips: false }, store).tips, false);
+  assert.equal(loadSettings(store).tips, false);
+  assert.equal(saveSettings({ tips: 'no' }, store).tips, false);
+  assert.equal(saveSettings({ tips: true }, store).tips, true);
 });

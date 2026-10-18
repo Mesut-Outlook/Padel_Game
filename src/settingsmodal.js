@@ -1,6 +1,7 @@
 // Settings Modal UI for Padel Legends
 // Controls: Keyboard + Controller / Keyboard only / Controller only (Xbox / PlayStation)
 // Speed: Slow (0.7) / Normal (0.85) / Fast (1.0)
+// Tips: On / Off (changeover tips in matches)
 
 import { loadSettings, saveSettings, VALID_CONTROLS, VALID_SPEEDS } from './settings.js';
 import { padText } from './padstyle.js';
@@ -40,6 +41,7 @@ export function openSettingsModal() {
   const current = loadSettings();
   let selControl = current.control;
   let selSpeed = current.speed;
+  let selTips = current.tips;
 
   modalEl.innerHTML = `
     <div class="sm-card" role="dialog" aria-modal="true" aria-labelledby="sm-title">
@@ -83,6 +85,12 @@ export function openSettingsModal() {
             Fast (100% Real)
           </button>
         </div>
+
+        <div class="sm-section-label">TIPS AT CHANGEOVERS</div>
+        <div class="sm-speed-row sm-two" id="sm-tips-options">
+          <button type="button" class="sm-speed-btn ${selTips ? 'is-selected' : ''}" data-tips="1" tabindex="0">On</button>
+          <button type="button" class="sm-speed-btn ${selTips ? '' : 'is-selected'}" data-tips="0" tabindex="0">Off</button>
+        </div>
       </div>
 
       <div class="sm-foot">
@@ -110,6 +118,13 @@ export function openSettingsModal() {
     };
   });
 
+  modalEl.querySelectorAll('#sm-tips-options .sm-speed-btn').forEach(btn => {
+    btn.onclick = () => {
+      selTips = btn.dataset.tips === '1';
+      modalEl.querySelectorAll('#sm-tips-options .sm-speed-btn').forEach(b => b.classList.toggle('is-selected', b === btn));
+    };
+  });
+
   function close() {
     modalEl.hidden = true;
     if (pollTimer) {
@@ -119,7 +134,7 @@ export function openSettingsModal() {
   }
 
   function save() {
-    const updated = saveSettings({ control: selControl, speed: selSpeed });
+    const updated = saveSettings({ control: selControl, speed: selSpeed, tips: selTips });
     // Also sync legacy form inputs if in DOM
     const oldCtrl = document.getElementById('control');
     if (oldCtrl) oldCtrl.value = updated.control;
