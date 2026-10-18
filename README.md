@@ -15,12 +15,17 @@ npm test           # kurallar, fizik, AI, replay testleri
 
 ## Tarayıcıda oyna (GitHub Pages)
 
-`main` dalına her yüklemede `.github/workflows/pages.yml` testleri çalıştırır, oyunu derler ve GitHub Pages'te yayınlar:
-**https://mesut-outlook.github.io/Padel_Game/** — kurulum gerekmez, linki paylaşmak yeterli.
+**https://padellegends.eu** — kurulum gerekmez, linki paylaşmak yeterli (`www.` ve eski `mesut-outlook.github.io/Padel_Game/` adresi buraya yönlenir).
 
-İlk kez açmak için depoda **Settings → Pages → Build and deployment → Source: GitHub Actions** seçilmeli.
+`main` dalına her yüklemede `.github/workflows/pages.yml` testleri çalıştırır, oyunu derler ve GitHub Pages'te yayınlar
+(Mesut-Outlook/Padel_Game → Settings → Pages: Source **GitHub Actions**, Custom domain **padellegends.eu**).
+Alan adı Namecheap'te (yalnız alan adı, hosting yok; BasicDNS: 4× A `@` → 185.199.108–111.153, CNAME `www` → `mesut-outlook.github.io`).
+Actions ile yayınlandığı için depoda CNAME dosyası gerekmez; vite `base: './'` alan adı kökünde de çalışır.
+
 Pages sürümünde bilgisayara karşı maç, eğitim, menü ve kol desteği çalışır; **online mod** bir oyun sunucusu
 (`npm run server`) ister — adrese `?server=wss://sunucu-adresi` eklenerek kendi sunucuna bağlanabilir.
+Kalıcı online sunucu henüz yok: plan ayrı bir sunucu (VPS / Fly.io vb.) + `server.padellegends.eu` alt alan adı
+(Namecheap paylaşımlı hosting WebSocket sunucusu için uygun değil).
 
 ## Kontroller
 
