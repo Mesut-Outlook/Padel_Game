@@ -43,7 +43,7 @@ test('every shop item and racket has a known tier and a non-negative price; star
 
 test('every kit and roster character has allowed style and pattern', () => {
   const validStyles = ['crew', 'polo', 'vneck', 'tank'];
-  const validPatterns = ['none', 'chest', 'sash', 'side', 'stripes'];
+  const validPatterns = ['none', 'chest', 'sash', 'side', 'stripes', 'split'];
   const COLOR = /^#[0-9a-f]{6}$/i;
 
   const kits = shop.items.filter(i => i.type === 'kit');

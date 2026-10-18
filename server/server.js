@@ -19,7 +19,7 @@ const COLOR = /^#[0-9a-f]{6}$/i;
 const ONE_OF = { gender: ['m', 'f'], hand: ['right', 'left'], beard: ['stubble', 'full', 'goatee'],
   hair: ['Hair_SimpleParted', 'Hair_Buzzed', 'Hair_BuzzedFemale', 'Hair_Long', 'Hair_Buns', 'none'] };
 const OUTFIT_STYLES = ['crew', 'polo', 'vneck', 'tank'];
-const OUTFIT_PATTERNS = ['none', 'chest', 'sash', 'side', 'stripes'];
+const OUTFIT_PATTERNS = ['none', 'chest', 'sash', 'side', 'stripes', 'split'];
 const BODY_TYPES = ['slim', 'athletic', 'muscular', 'stocky', 'tall', 'petite'];
 const text = (v, n) => String(v).replace(/[^\p{L}\p{N} .'-]/gu, '').slice(0, n);
 function sanitizeLook(l) {
@@ -37,6 +37,7 @@ function sanitizeLook(l) {
     if (OUTFIT_STYLES.includes(l.outfit.style)) o.style = l.outfit.style;
     if (OUTFIT_PATTERNS.includes(l.outfit.pattern)) o.pattern = l.outfit.pattern;
     if (col(l.outfit.accent)) o.accent = l.outfit.accent;
+    if (/^[A-Z0-9]{1,3}$/.test(l.outfit.text)) o.text = l.outfit.text;
     out.outfit = o;
   }
   if (l.body && typeof l.body === 'object') {

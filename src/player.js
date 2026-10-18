@@ -125,7 +125,7 @@ const SHORTS = (x, y, z, f) => y > (f ? 0.7 : 0.66) && y <= 0.98 && Math.abs(x) 
 
 // Real clothes: the body surface inside a kit region, copied and pushed out along the normals (looser toward the
 // hems) and skinned to the same skeleton, so the jersey and shorts have volume and move with the player.
-function makeGarment(body, region, regionGlsl, female, offset, color, trim, trimTest, minGap = () => 0.006, accent, accentTest, poloButtons = false, ny = 1.49) {
+function makeGarment(body, region, regionGlsl, female, offset, color, trim, trimTest, minGap = () => 0.006, accent, accentTest, poloButtons = false, ny = 1.49, logo = null) {
   const src = body.geometry, pos = src.attributes.position, nor = src.attributes.normal, idx = src.index.array;
   const keep = [];
   for (let t = 0; t < idx.length; t += 3) {
@@ -150,9 +150,10 @@ function makeGarment(body, region, regionGlsl, female, offset, color, trim, trim
   mat.onBeforeCompile = (sh) => {  // trim bands (collar, sleeve and hem, shorts side stripe) from rest-pose position
     sh.uniforms.uTrim = { value: trim };
     if (accent) sh.uniforms.uAccent = { value: accent };
+    if (logo) sh.uniforms.uLogo = { value: logo };
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 aRest; varying vec3 vRest;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = aRest;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>\nvarying vec3 vRest; uniform vec3 uTrim;${accent ? ' uniform vec3 uAccent;' : ''}`)
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>\nvarying vec3 vRest; uniform vec3 uTrim;${accent ? ' uniform vec3 uAccent;' : ''}${logo ? ' uniform sampler2D uLogo;' : ''}`)
       .replace('#include <color_fragment>', `#include <color_fragment>\n{
   float y = vRest.y, ax = abs(vRest.x), z = vRest.z;
   if (!${regionGlsl}) discard;
@@ -204,9 +205,21 @@ function smoothShell(p, pos, nor, tris, minGap, iters) {
   for (const i of tris) { const r = weld[i]; if (r !== i) { p[i * 3] = p[r * 3]; p[i * 3 + 1] = p[r * 3 + 1]; p[i * 3 + 2] = p[r * 3 + 2]; } }
 }
 
-// Accent areas (pattern and polo collar/placket) in rest-pose coordinates, or null. Painted on the cloth and on the
-// body underneath, so where the skin pokes through the shell the stripe still has clean edges.
-function kitAccentGlsl(f, style, pattern) {
+// Chest letters (outfit.text, up to 3) as a white-on-black canvas mask, one per text.
+const logoTex = {};
+function logoMask(text) {
+  if (logoTex[text]) return logoTex[text];
+  const c = document.createElement('canvas'); c.width = 96; c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, 96, 64);
+  g.fillStyle = '#fff'; g.font = 'bold 54px Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, 48, 35, 92);
+  return (logoTex[text] = new THREE.CanvasTexture(c));
+}
+
+// Accent areas (pattern, polo collar/placket and chest letters) in rest-pose coordinates, or null. Painted on the cloth
+// and on the body underneath, so where the skin pokes through the shell the stripe still has clean edges.
+function kitAccentGlsl(f, style, pattern, text) {
   const [ny, nr] = NECK[f ? 'f' : 'm'];
   const accentParts = [];
   if (style === 'polo') {
@@ -221,6 +234,13 @@ function kitAccentGlsl(f, style, pattern) {
     accentParts.push(`(ax > 0.08 && ax < 0.2 && abs(z + 0.01) < 0.045 && y > 0.92 && y < 1.33)`);
   } else if (pattern === 'stripes') {  // 7 cm vertical stripes, shirt colour down the middle
     accentParts.push(`(mod(vRest.x - 0.035, 0.14) < 0.07 && ax < 0.2)`);
+  } else if (pattern === 'split') {  // halves: shirt colour on the wearer's left, accent on the right, sleeves included
+    accentParts.push(`(vRest.x < 0.0)`);
+  }
+  if (text) {  // 12 x 8 cm on the wearer's left chest, read from the front (+x is the viewer's right)
+    const y0 = (ny - 0.21).toFixed(3);
+    const inBox = `z > 0.0 && vRest.x > 0.03 && vRest.x < 0.15 && y > ${y0} && y < ${(ny - 0.13).toFixed(3)}`;
+    accentParts.push(`(${inBox} && texture2D(uLogo, vec2((vRest.x - 0.03) / 0.12, (y - ${y0}) / 0.08)).r > 0.5)`);
   }
   return accentParts.length ? accentParts.join(' || ') : null;
 }
@@ -250,7 +270,7 @@ function makeKit(body, ch) {
   }
   const trimTest = trimParts.join(' || ');
 
-  const accentTest = kitAccentGlsl(f, style, pattern);
+  const text = ch.outfit?.text, accentTest = kitAccentGlsl(f, style, pattern, text);
 
   return [
     // jersey: 8 mm off the skin, ~1.4 cm at the hem; sleeves open up toward the cuff
@@ -258,7 +278,7 @@ function makeKit(body, ch) {
       (x, y) => 0.008 + Math.max(0, 1.0 - y) * 0.06 + (style !== 'tank' && Math.abs(x) > 0.2 ? (Math.abs(x) - 0.2) * 0.08 : 0),
       shirt, trimShirt, trimTest,
       (y) => (y < 1.0 ? 0.02 : 0.006),
-      accent, accentTest, style === 'polo', ny),
+      accent, accentTest, style === 'polo', ny, text ? logoMask(text) : null),
     // shorts: 1 cm off the skin, wider at the leg openings, side stripe in the shirt colour
     makeGarment(body, SHORTS, SHORTS_GLSL(f), f, (x, y) => 0.01 + Math.max(0, 0.8 - y) * 0.1,
       shorts, shirt, 'ax > 0.178 && ax < 0.192 && abs(vRest.z + 0.03) < 0.05'),
@@ -268,7 +288,7 @@ function makeKit(body, ch) {
 function kitMaterial(base, ch) {
   const m = base.clone(), f = ch.gender === 'f';
   const { shirt, shorts } = kitColors(ch);
-  const style = ch.outfit?.style || 'crew', accentTest = kitAccentGlsl(f, style, ch.outfit?.pattern || 'none');
+  const style = ch.outfit?.style || 'crew', text = ch.outfit?.text, accentTest = kitAccentGlsl(f, style, ch.outfit?.pattern || 'none', text);
   const near = Math.hypot(shirt.r - shorts.r, shirt.g - shorts.g, shirt.b - shorts.b) < 0.15;  // same fallback as makeKit's trim
   const u = {
     uAccent: { value: new THREE.Color(ch.outfit?.accent || (near ? '#f4f4f4' : ch.outfit.shorts)) },
@@ -278,6 +298,7 @@ function kitMaterial(base, ch) {
     uFemale: { value: ch.gender === 'f' ? 1 : 0 },
     uBeard: { value: new THREE.Color(ch.beardColor || ch.hairColor || '#2b1d14') },
     uBeardMode: { value: { stubble: 1, goatee: 2 }[ch.beard] || 0 },
+    ...(text && { uLogo: { value: logoMask(text) } }),
     uMakeup: { value: ch.makeup ? 1 : 0 },
   };
   m.onBeforeCompile = (sh) => {
@@ -285,7 +306,7 @@ function kitMaterial(base, ch) {
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vRest;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = position;');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
-varying vec3 vRest; uniform vec3 uShirt, uShorts, uShoes, uSkin, uBeard, uAccent; uniform float uFemale, uBeardMode, uMakeup;`)
+varying vec3 vRest; uniform vec3 uShirt, uShorts, uShoes, uSkin, uBeard, uAccent; uniform float uFemale, uBeardMode, uMakeup;${text ? ' uniform sampler2D uLogo;' : ''}`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
   float y = vRest.y, ax = abs(vRest.x), z = vRest.z;

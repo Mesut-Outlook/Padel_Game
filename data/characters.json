@@ -261,12 +261,13 @@
     "countryCode": "TR",
     "skinTone": "#F9DCC4",
     "outfit": {
-      "shirt": "#005293",
-      "shorts": "#FECB00",
+      "shirt": "#FFD100",
+      "shorts": "#A90432",
       "shoes": "#2B2B2B",
-      "style": "vneck",
-      "pattern": "chest",
-      "accent": "#FECB00"
+      "style": "polo",
+      "pattern": "none",
+      "accent": "#A90432",
+      "text": "GS"
     },
     "hand": "right",
     "position": "drive",
@@ -387,12 +388,13 @@
     "countryCode": "TR",
     "skinTone": "#C68642",
     "outfit": {
-      "shirt": "#FDB912",
+      "shirt": "#FFD100",
       "shorts": "#A90432",
       "shoes": "#FFFFFF",
       "style": "crew",
-      "pattern": "stripes",
-      "accent": "#A90432"
+      "pattern": "split",
+      "accent": "#A90432",
+      "text": "GS"
     },
     "hand": "right",
     "position": "drive",

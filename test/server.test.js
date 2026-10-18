@@ -95,7 +95,7 @@ test('join: look is whitelisted (bad markup/colours/keys dropped), stats and rac
   } finally { await srv.close(); }
 });
 
-test('join: look outfit sanitizes style, pattern, and accent (drops invalid values)', async () => {
+test('join: look outfit sanitizes style, pattern, accent and chest text (drops invalid values)', async () => {
   const srv = await startServer(0);
   try {
     const a = client(srv.port);
@@ -110,6 +110,7 @@ test('join: look outfit sanitizes style, pattern, and accent (drops invalid valu
           style: 'polo',
           pattern: 'sash',
           accent: '#ffffff',
+          text: 'GS',
         },
         hairGel: true,
       },
@@ -123,6 +124,7 @@ test('join: look outfit sanitizes style, pattern, and accent (drops invalid valu
       style: 'polo',
       pattern: 'sash',
       accent: '#ffffff',
+      text: 'GS',
     });
     a.ws.close();
 
@@ -136,6 +138,7 @@ test('join: look outfit sanitizes style, pattern, and accent (drops invalid valu
           style: 'hoodie',
           pattern: 'dots',
           accent: 'red',
+          text: '<b>GS</b>',
         },
         hairGel: 'yes',
       },
