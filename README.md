@@ -112,6 +112,7 @@ docs/     re-findings.md (rea tersine mühendislik notları)
 - [x] PlayStation kolu (DualShock 4 / DualSense) etiketleri
 - [ ] Kariyer marketinde enerji ürünleri (muz, izotonik, jel) — karar verildi, tasarım: `docs/superpowers/specs/2026-10-18-home-modes-energy-design.md`
 - [ ] Enerji değerlerinin oynayarak ince ayarı (`ENERGY` tablosu, `src/game.js`)
+- [ ] Forma çeşitleri: polo, V yaka, kolsuz, desenli (bazı karakterlerde ve markette) — `agy-14`
 - [ ] Açılış animasyonu + ana ekran (Friendly Match / Career / Friends Cup) — tasarım aynı belgede
 - [ ] Karar bekliyor: Friends Cup sunucusunun barındırılması — alan adı (domain) ile birlikte kararlaştırılacak
 - [ ] Kariyer küçük işleri (son incelemeden): partner/sıralamada şablon karakterin AI kopyası; ödül kartı boşluğu; online odada formların gizlenmesi ve başarısız katılımda ekranın takılı kalması; uzak oyuncunun raket rengi; tek başına online (özel oda + AI) ×1.2 ödüyor; ralli puanlamasında skor tablosu `repeat(0, …)` kontrolü; lobi/profil metinlerinin `innerHTML` yerine metin olarak basılması; kariyer maçları menüdeki Kontrol/Oyun hızı ayarını kullanmıyor; markette hata metninde ham neden kodu; 16 çiftlik turnuvada aynı AI iki tarafta; turnuva maçından yarıda çıkınca maç tekrar oynanabiliyor (hükmen yenilgi yok)
