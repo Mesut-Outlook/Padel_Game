@@ -179,7 +179,7 @@
     "gender": "f",
     "country": "Türkiye",
     "countryCode": "TR",
-    "skinTone": "#D9A679",
+    "skinTone": "#F6D7C3",
     "outfit": {
       "shirt": "#2EC4B6",
       "shorts": "#011627",
@@ -200,17 +200,16 @@
     },
     "aiLevel": "rookie",
     "body": {
-      "type": "stocky",
-      "height": 0.95,
-      "width": 1.2
+      "type": "slim",
+      "height": 1.03,
+      "width": 0.95,
+      "waist": 0.76,
+      "hips": 1.12
     },
-    "hair": "Hair_BuzzedFemale",
-    "hairColor": "#4a2f1d",
-    "headwear": {
-      "type": "headband",
-      "color": "#e63946"
-    },
-    "ponytail": true
+    "hair": "Hair_Long",
+    "hairColor": "#E8C66A",
+    "hairLength": 2.4,
+    "makeup": true
   },
   {
     "id": "p06",

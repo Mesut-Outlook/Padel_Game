@@ -346,7 +346,10 @@ function shapeBody(bones, ch) {
   const k = b.type === 'muscular' ? 1.07 : b.type === 'stocky' ? 1.04 : 1;  // build on top of width
   const set = (n, x, y, z) => bones[n]?.scale.set(x, y, z);
   const torso = w * k * (f ? 0.86 : 0.85), shoulders = b.shoulders || 1;  // shoulders > 1: broader upper body
-  set('spine_02', torso * shoulders, 1, torso);
+  const waist = b.waist || 1, hips = b.hips || 1;  // waist < 1: narrower waist, hips > 1: wider hips (thighs follow)
+  set('pelvis', (f ? 0.98 : 0.95) * hips, 1, 1);
+  set('spine_01', waist / hips, 1, waist);  // scales inherit: undo the hips, then the waist above it
+  set('spine_02', torso * shoulders / waist, 1, torso / waist);
   set('neck_01', 1 / (torso * shoulders), 1, 1 / torso);
   if (ch.face?.width) set('Head', ch.face.width, 1, 1);  // chubby cheeks > 1, narrow face < 1
   const arm = k * (f ? 0.8 : 0.78), fore = 0.9;
@@ -357,7 +360,6 @@ function shapeBody(bones, ch) {
     set('thigh_' + s, thighX, 1, thighZ);
     set('calf_' + s, calf, 1, calf);
   }
-  set('pelvis', f ? 0.98 : 0.95, 1, 1);
 }
 
 function hash(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); }
@@ -388,11 +390,16 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
   const hairColor = new THREE.Color(ch.hairColor || HAIR_COLORS[hash(ch.id + 'h') % HAIR_COLORS.length]);
   const beardColor = new THREE.Color(ch.beardColor || ch.hairColor || '#2b1d14');
   const parts = [{ gltf: brows, color: hairColor }, ...hairs.map((h, i) => hairList[i] === 'Hair_Beard'
-    ? { gltf: h, color: beardColor } : { gltf: h, color: hairColor, cut: ch.hairCut, opacity: ch.hairOpacity, gel: ch.hairGel })];
+    ? { gltf: h, color: beardColor } : { gltf: h, color: hairColor, cut: ch.hairCut, opacity: ch.hairOpacity, gel: ch.hairGel, len: ch.hairLength })];
   for (const part of parts) {
     const meshes = [];
     SkeletonUtils.clone(part.gltf.scene).traverse(o => { if (o.isSkinnedMesh) meshes.push(o); });
     for (const o of meshes) {
+      if (part.len) {  // hairLength > 1: stretch everything below the ears downward (Hair_Long 2.4 = upper back)
+        o.geometry = o.geometry.clone();
+        const pos = o.geometry.attributes.position;
+        for (let i = 0; i < pos.count; i++) { const y = pos.getY(i); if (y < 1.62) pos.setY(i, 1.62 - (1.62 - y) * part.len); }
+      }
       o.material = hairMaterial(o.material, part.color, part.cut, part.opacity, part.gel); o.castShadow = true; o.frustumCulled = false;
       o.bind(new THREE.Skeleton(o.skeleton.bones.map(b => bones[b.name] || b), o.skeleton.boneInverses), o.bindMatrix);
       root.add(o);
