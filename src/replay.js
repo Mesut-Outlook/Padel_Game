@@ -8,6 +8,7 @@ export function createReplay(seconds = 15, hz = 60) {
   const buf = new Array(cap).fill(null);
   let start = 0, n = 0;
   let marks = [];
+  let hitMarks = [];
   let pt = 0, from = 0, to = 0, speed = 0.5;
   const at = i => buf[(start + i) % cap];
 
@@ -35,9 +36,20 @@ export function createReplay(seconds = 15, hz = 60) {
     record(snap) {
       if (n < cap) buf[(start + n++) % cap] = snap;
       else { buf[start] = snap; start = (start + 1) % cap; }
+      if (hitMarks.length && hitMarks[0] < r.oldest) hitMarks = hitMarks.filter(t => t >= r.oldest);
     },
     mark(label) { if (n) marks.push({ label, t: r.newest }); },
+    markHit(t = r.newest) { if (n) hitMarks.push(t); },
     highlights() { marks = marks.filter(m => m.t >= r.oldest); return marks; },
+    // Plays the last `count` shots (default 3) leading up to the end of the rally
+    playLastShots(count = 3, { speed: s = 0.5, to: end } = {}) {
+      if (!n) return;
+      const e = end ?? r.newest;
+      const valid = hitMarks.filter(t => t <= e + 0.05);
+      const targetIdx = Math.max(0, valid.length - count);
+      const f = valid.length ? valid[targetIdx] - 0.4 : e - 5;
+      r.play({ from: f, to: e, speed: s });
+    },
     // from/to are snapshot times; with only `label`, plays +-3s around the latest matching mark.
     play({ from: f, to: e, speed: s = 0.5, label } = {}) {
       if (!n) return;

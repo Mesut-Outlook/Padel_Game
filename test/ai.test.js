@@ -49,3 +49,16 @@ test('doubles AI partner shifts to cover center when teammate is drawn wide', ()
   assert.ok(input1.move[0] > -0.2, `partner shifts to cover center, move[0]=${input1.move[0]}`);
 });
 
+test('deep lob forces AI to defend rather than smash', () => {
+  const w = newWorld();
+  w.state = 'play';
+  // Ball is a deep high lob traveling toward team 1's backcourt (landing around z=-8.5)
+  Object.assign(w.match.rally, { phase: 'rally', lastHitTeam: 0, bouncesSinceHit: 0 });
+  w.players[2].p = [1.5, -4.5]; // Player 2 is near net/midcourt
+  Object.assign(w.ball, { p: [1.5, 2.4, -4.5], v: [0, -3, -5], live: true });
+  const inp = aiInput(w, 2, 'legend');
+  // On a deep lob overhead, AI must not choose 'smash'
+  assert.notEqual(inp.swing, 'smash', `AI should hit bandeja/lob or let bounce, not smash: ${inp.swing}`);
+});
+
+

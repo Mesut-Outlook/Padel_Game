@@ -27,6 +27,7 @@ import { initSplash } from './splash.js';
 import { initHome, showHome, hideHome } from './home.js';
 import { initSettingsModal, openSettingsModal } from './settingsmodal.js';
 import { bindFullscreenKey, toggleFullscreen, isFullscreen } from './fullscreen.js';
+import { padDir } from './padnav.js';
 
 const $ = (id) => document.getElementById(id);
 const matchOpts = () => ({ sets: parseInt($('sets').value), superTiebreak: $('sets').value === '3s', goldenPoint: $('golden').value === '1', starPoint: $('golden').value === 'star' });
@@ -427,13 +428,28 @@ function assisted(pl, inp) {
   return { ...inp, move: [m[0] * k, m[1] * k] };
 }
 
+const vCamRight = new THREE.Vector3();
+const vCamFwd = new THREE.Vector3();
+function getCamPlane() {
+  if (!camera) return null;
+  vCamRight.set(1, 0, 0).applyQuaternion(camera.quaternion);
+  vCamFwd.set(0, 0, -1).applyQuaternion(camera.quaternion);
+  const rLen = Math.hypot(vCamRight.x, vCamRight.z) || 1;
+  const fLen = Math.hypot(vCamFwd.x, vCamFwd.z) || 1;
+  return {
+    right: [vCamRight.x / rLen, vCamRight.z / rLen],
+    forward: [vCamFwd.x / fLen, vCamFwd.z / fLen],
+  };
+}
+
 function inputs() {
   const inp = {};
+  const cp = getCamPlane();
   for (const pl of world.players) {
     if (!pl.active) continue;
     const h = humans.indexOf(pl.id);
-    if (h === 0) inp[pl.id] = assisted(pl, readLocal(pl.team, control));
-    else if (h > 0) { const pad = readGamepad(control === 'kb' ? h - 1 : h, pl.team); inp[pl.id] = pad ? assisted(pl, pad) : aiInput(world, pl.id, aiLevel); }
+    if (h === 0) inp[pl.id] = assisted(pl, readLocal(pl.team, control, cp));
+    else if (h > 0) { const pad = readGamepad(control === 'kb' ? h - 1 : h, pl.team, cp); inp[pl.id] = pad ? assisted(pl, pad) : aiInput(world, pl.id, aiLevel); }
     else inp[pl.id] = aiInput(world, pl.id, aiLevel);
   }
   return inp;
@@ -443,6 +459,7 @@ function handleEvents(events, score, winner) {
   const myTeam = humans.length ? teamOf(humans[0]) : 0;
   for (const e of events) {
     if (e.type === 'hit') {
+      replay.markHit();
       const wasAfterGlass = rallyFlags.afterGlass;
       rallyFlags.bounced = false;
       rallyFlags.afterGlass = false;
@@ -566,10 +583,15 @@ function handleEvents(events, score, winner) {
       }
 
       // last hitter reacts: celebrates a winner, groans at an error
+      const hitter = lastHitter;
       if (lastHitter != null && Math.random() < 0.75) speak(lastHitter, teamOf(lastHitter) === e.team);
       lastHitter = null;
-      const team = e.team === 0 ? $('t0').textContent : $('t1').textContent;
       const WHY = { 'double bounce': 'double bounce', 'bounced own side': 'bounced on own side', 'hit own mesh': 'hit own mesh', 'hit opponent wall directly': 'direct wall out', 'double fault': 'double fault', out: 'out', 'volleyed serve': 'volleyed serve', 'double hit': 'double hit' };
+      const ERRORS = new Set(['bounced own side', 'hit own mesh', 'hit opponent wall directly', 'double fault', 'volleyed serve', 'double hit']);
+      const isError = ERRORS.has(e.why) || (e.why === 'out' && (hitter == null || teamOf(hitter) !== e.team));
+      // Attribute errors to the offending team (the point loser); winners to the scoring team
+      const subjectTeam = isError ? 1 - e.team : e.team;
+      const team = subjectTeam === 0 ? $('t0').textContent : $('t1').textContent;
       if (!tut) flash(`${team}\n${WHY[e.why] || e.why}`, 2.1, kicker);
       // auto highlight: long rally, smash, or a ball played off the glass
       if (!tut && (rallyLen >= 8 || rallyFlags.smash || rallyFlags.glass)) setTimeout(() => startReplay(true), 900);
@@ -649,22 +671,26 @@ function renderHud(s) {
 
 // Pause menu: P, Esc (when no replay is running) or pad Start. Freezes the match; online games keep running.
 let paused = false, pauseSel = 0;
-const padPrev = {};
+let lastPadNavY = 0, padRepeatTimer = 0;
+let lastPadNavA = false, lastPadNavB = false, lastPadNavStart = false;
+
 function pauseItems() {
   const items = [['Resume', () => setPaused(false)]];
   if (tut) items.push(['Skip lesson', () => { setPaused(false); tut.skip(); }]);
   else if (!net) items.push(['Restart match', () => { setPaused(false); if (replay.playing) endReplay(); lastCfg?.onEnd ? startMatch(lastCfg) : $('start').click(); }]);  // career matches restart as career matches
-  items.push([isFullscreen() ? 'Exit Fullscreen' : 'Fullscreen', () => { toggleFullscreen(); drawPause(); }]);
+  items.push([isFullscreen() ? 'Exit Fullscreen' : 'Fullscreen', async () => { await toggleFullscreen(); drawPause(); }]);
   items.push(['Main menu', toMenu]);
   return items;
 }
 document.addEventListener('fullscreenchange', () => { if (paused) drawPause(); });
+
 function updatePauseSel() {
   const box = $('pzItems');
   box.querySelectorAll('.pz-item').forEach((b, i) => {
     b.classList.toggle('sel', i === pauseSel);
   });
 }
+
 function drawPause() {
   const box = $('pzItems');
   const items = pauseItems();
@@ -677,34 +703,93 @@ function drawPause() {
       const act = pauseItems()[idx]?.[1];
       if (act) act();
     };
-    b.onmouseenter = () => {
+    b.onmousemove = () => {
       pauseSel = +b.dataset.i;
       updatePauseSel();
     };
   });
   $('pzNote').textContent = net ? 'Online match continues in the background.' : '';
+  const hintEl = document.querySelector('#pause .pz-hint');
+  if (hintEl) {
+    hintEl.textContent = padText('↑ ↓ / Left Stick select · A confirm · B / Start resume');
+  }
 }
+
 $('pause').onclick = (e) => {
   if (e.target === $('pause')) setPaused(false);
 };
+
 function setPaused(on) {
   paused = on;
   pauseSel = 0;
   $('pause').hidden = !on;
-  if (on) drawPause();
+  if (on) {
+    drawPause();
+    // Arm edge guards so the button pressed to trigger pause doesn't immediately fire an action
+    const pads = (navigator.getGamepads ? Array.from(navigator.getGamepads()) : []).filter(Boolean);
+    lastPadNavA = pads.some(p => p.buttons[0]?.pressed);
+    lastPadNavB = pads.some(p => p.buttons[1]?.pressed);
+    lastPadNavStart = true;
+    lastPadNavY = 0;
+    padRepeatTimer = 0;
+  }
   clearPressed();
   if (!on) last = performance.now();
 }
-function padEdge(i) {  // fresh press of one pad button (menu navigation while paused)
-  const gp = [...(navigator.getGamepads?.() || [])].find(Boolean), on = !!gp?.buttons[i]?.pressed;
-  const edge = on && !padPrev[i]; padPrev[i] = on; return edge;
-}
+
 function pauseInput() {
   const items = pauseItems(), n = items.length;
-  const up = consumePressed('ArrowUp') | consumePressed('KeyW') | padEdge(12);
-  const down = consumePressed('ArrowDown') | consumePressed('KeyS') | padEdge(13);
-  const pick = consumePressed('Enter') | consumePressed('Space') | padEdge(0);
-  const back = consumePressed('KeyP') | consumePressed('Escape') | consumePressed('Pause') | padEdge(1);
+  const pads = (navigator.getGamepads ? Array.from(navigator.getGamepads()) : []).filter(Boolean);
+
+  let padUp = false, padDown = false, padPick = false, padBack = false;
+  let currentY = 0;
+  let currentA = false;
+  let currentB = false;
+  let currentStart = false;
+
+  const now = performance.now();
+
+  for (const pad of pads) {
+    const [, dy] = padDir(pad);
+    if (dy === -1) currentY = -1;
+    else if (dy === 1) currentY = 1;
+
+    if (pad.buttons[0]?.pressed) currentA = true;
+    if (pad.buttons[1]?.pressed) currentB = true;
+    if (pad.buttons[9]?.pressed) currentStart = true;
+  }
+
+  // Vertical navigation with auto-repeat for left stick / d-pad
+  if (currentY !== 0) {
+    if (currentY !== lastPadNavY) {
+      if (currentY === -1) padUp = true;
+      if (currentY === 1) padDown = true;
+      padRepeatTimer = now + 280;
+    } else if (now > padRepeatTimer) {
+      if (currentY === -1) padUp = true;
+      if (currentY === 1) padDown = true;
+      padRepeatTimer = now + 150;
+    }
+  } else {
+    padRepeatTimer = 0;
+  }
+  lastPadNavY = currentY;
+
+  // Controller buttons
+  if (currentA && !lastPadNavA) padPick = true;
+  if (currentB && !lastPadNavB) padBack = true;
+  if (currentStart && !lastPadNavStart) {
+    padBack = true;
+  }
+  lastPadNavA = currentA;
+  lastPadNavB = currentB;
+  lastPadNavStart = currentStart;
+
+  const up = consumePressed('ArrowUp') | consumePressed('KeyW') | padUp;
+  const down = consumePressed('ArrowDown') | consumePressed('KeyS') | padDown;
+  const pick = consumePressed('Enter') | consumePressed('Space') | padPick;
+  const back = consumePressed('KeyP') | consumePressed('Escape') | consumePressed('Pause') | padBack;
+
   if (up || down) {
     pauseSel = (pauseSel + (down ? 1 : n - 1)) % n;
     updatePauseSel();
@@ -722,7 +807,7 @@ function startReplay(auto) {
   if (replay.playing) return;
   replayCamBefore = rig.name;
   rig.set(auto ? (Math.random() < 0.5 ? 'side' : 'ball') : rig.name);
-  replay.play({ speed: auto ? 0.5 : 0.6 });
+  replay.playLastShots(3, { speed: auto ? 0.5 : 0.6 });
   $('replayTag').hidden = false;
 }
 function endReplay() { replay.stop(); $('replayTag').hidden = true; if (replayCamBefore) rig.set(replayCamBefore); replayCamBefore = null; clearPressed(); }
@@ -767,7 +852,7 @@ function loop(now) {
     if (!view) { endReplay(); view = snapshot(world); }
   } else if (net) {
     const pl = net.seat < 2 ? 0 : 1;
-    const inp = readLocal(pl, control);
+    const inp = readLocal(pl, control, getCamPlane());
     net.send(inp);
     view = net.view();
     if (!view) { requestAnimationFrame(loop); return; }

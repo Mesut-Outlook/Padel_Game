@@ -43,3 +43,22 @@ test('facing wraps across +-PI', () => {
   const f = r.update(0.5).pl[0][2];
   assert.ok(Math.abs(Math.abs(f) - Math.PI) < 1e-9, `f=${f}`);
 });
+
+test('playLastShots plays starting 0.4s before the 3rd last hit', () => {
+  const r = createReplay(15, 60);
+  for (let i = 0; i < 600; i++) {
+    const t = i / 60;
+    r.record(snap(t));
+    // Simulate hits at t=2.0, t=4.0, t=6.0, t=7.5, t=9.0
+    if (Math.abs(t - 2.0) < 0.005 || Math.abs(t - 4.0) < 0.005 || Math.abs(t - 6.0) < 0.005 || Math.abs(t - 7.5) < 0.005 || Math.abs(t - 9.0) < 0.005) {
+      r.markHit(t);
+    }
+  }
+  // Rally ended around t=9.5. The last 3 hits were at t=6.0, t=7.5, t=9.0.
+  // 3rd last hit is at t=6.0. Start should be 6.0 - 0.4 = 5.6.
+  r.playLastShots(3, { speed: 1 });
+  assert.ok(r.playing);
+  const firstFrame = r.scrub(0); // scrubs to the 'from' time
+  assert.ok(Math.abs(firstFrame.t - 5.6) < 0.05, `expected start around 5.6s, got ${firstFrame.t}`);
+});
+

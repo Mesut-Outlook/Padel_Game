@@ -85,9 +85,11 @@ function analyze(w, s, T) {
 // first reachable "good" intercept (low-ish descending after the bounce / any volley height), else last reachable
 function select(an, pl) {
   const spd = SPEED * (0.75 + pl.stats.speed / 24) * 0.85, atNet = Math.abs(pl.p[1]) < 4.8;
+  const isDeepLob = an.lob && (an.firstFloorZ == null || an.firstFloorZ >= 7.0);
   let fb = null, last = null;
   for (const c of an.cands) {
-    if (c.b === 0 && !((atNet || c.y > 1.9) && Math.abs(c.z) < 6.5)) continue; // back players let it bounce / use the glass
+    // If incoming ball is a deep lob, don't try to volley it in the air beyond 4.2m; retreat and let it bounce!
+    if (c.b === 0 && (isDeepLob ? Math.abs(c.z) > 4.2 : !((atNet || c.y > 1.9) && Math.abs(c.z) < 6.5))) continue;
     last = c;
     const need = Math.max(0, Math.hypot(c.x - pl.p[0], c.z - pl.p[1]) - 1.0) / spd;
     if (c.t - need < 0.03) continue;
@@ -112,7 +114,7 @@ function formation(w, s, pl) {
   return [side * X_SPLIT + clamp(bx * 0.25, -1.2, 1.2) + shiftX, zs * targetZ];
 }
 
-function chooseShot(w, pl, L) {
+function chooseShot(w, pl, L, an) {
   const y = w.ball.p[1], r = w.match.rally, pre = r?.bouncesSinceHit === 0, my = Math.abs(pl.p[1]);
   const opps = w.players.filter(p => p.team !== pl.team && p.active);
   const atNet = opps.filter(p => Math.abs(p.p[1]) < 5).length, good = rnd() < L.q;
@@ -123,7 +125,10 @@ function chooseShot(w, pl, L) {
   }
 
   if (y > 1.9 && (pre || y > 2.2)) {                                   // overhead zone
-    if (my < 5.5) {
+    // Smashes require being well forward at the net (my < 4.2). If pushed back or dealing with a deep lob,
+    // hit a defensive bandeja or lob instead of an aggressive kill smash.
+    const isDeepLob = an?.lob && (an?.firstFloorZ >= 6.8 || my > 4.2);
+    if (my < 4.2 && !isDeepLob) {
       if (good && rnd() < 0.25) return 'rulo';                          // spiral hook toward side wall mesh
       return rnd() < L.smash ? 'smash' : (good && rnd() < 0.5 ? 'vibora' : 'bandeja');
     }
@@ -209,7 +214,7 @@ export function aiInput(w, pid, level = 'club') {
     const d = Math.hypot(b.p[0] - pl.p[0], b.p[2] - pl.p[1]);
     if (d < 1.3 && d < REACH && b.p[1] > 0.25 && b.p[1] < MAX_H && zs * b.p[2] > -0.3 && !pl.swing && waitT < 0.3 && !st.miss
         && !(r.phase === 'serveFlight' && r.bouncesSinceHit === 0)) {
-      out.swing = chooseShot(w, pl, L);
+      out.swing = chooseShot(w, pl, L, an);
       out.aim = aimFor(w, pl, L);
       // ball got past them, deep and low: save it with a contrapared off their own back or nearest side glass
       if (zs * b.p[2] > 8.6 && b.p[1] < 1.1 && r.bouncesSinceHit === 1 && rnd() < 0.12) {  // rare, like real padel

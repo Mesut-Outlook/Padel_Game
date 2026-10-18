@@ -17,7 +17,7 @@ export const SHOTS = {
   serveSlice: { depth: 5.2, t: 0.95, spin: -60, side: 30, anim: 'serve' },  // low, skidding, curls away
   drive:    { depth: 7.4, t: 0.75, spin: 45,  anim: 'forehand' },
   volley:   { depth: 6.2, t: 0.6,  spin: -30, anim: 'volley' },
-  lob:      { depth: 9.0, t: 1.75, spin: 20,  anim: 'forehand' },
+  lob:      { depth: 8.8, t: 1.85, spin: 20,  anim: 'forehand' },
   chiquita: { depth: 3.2, t: 0.95, spin: -20, anim: 'forehand' },
   bandeja:  { depth: 7.8, t: 0.95, spin: -45, anim: 'overhead' },
   vibora:   { depth: 7.0, t: 0.75, spin: -60, side: 35, anim: 'overhead' },
@@ -206,6 +206,7 @@ export function stepWorld(w, inputs, dt) {
     const b = w.ball;
     if (w.state !== 'serve' && !tossing) pl.f = Math.atan2(b.p[0] - pl.p[0], b.p[2] - pl.p[1]);
     if (inp.swing) { pl.want = inp.swing; pl.wantT = 0.3; pl.aim = inp.aim || 0; }
+    else if (pl.want && inp.aim) { pl.aim = inp.aim; }
     if (pl.want) pl.wantT -= dt;
     if (pl.wantT <= 0) pl.want = null;
   }
@@ -215,7 +216,7 @@ export function stepWorld(w, inputs, dt) {
     w.ball.p = serveBall(s);
     s.anim = 'serveReady';
     if (s.want) {  // let go of the ball: a padel serve is struck after it bounces, below the waist
-      w.state = 'toss'; w.toss = { want: s.want, aim: s.aim, bounced: false, t: 0 };
+      w.state = 'toss'; w.toss = { want: s.want, aim: s.aim || inputs[s.id]?.aim || 0, bounced: false, t: 0 };
       Object.assign(w.ball, { v: [0, 0, 0], w: [0, 0, 0], live: true });
       s.want = null; s.anim = 'serveToss';
     }
@@ -251,7 +252,7 @@ export function stepWorld(w, inputs, dt) {
     const r = w.match.rally;
     const notMine = r.bouncesSinceHit === 0 && (r.lastHitTeam === pl.team || r.phase === 'serveFlight'); // never volley the serve
     const now = d < 0.8 || !closing || pl.wantT < 0.05 || (b.v[1] < 0 && b.p[1] < 0.45);
-    if (onSide && !notMine && reachable(pl, b) && now) strike(w, pl, SHOTS[pl.want] ? pl.want : autoShot(w, pl), pl.aim);
+    if (onSide && !notMine && reachable(pl, b) && now) strike(w, pl, SHOTS[pl.want] ? pl.want : autoShot(w, pl), pl.aim || inputs[pl.id]?.aim || 0);
   }
   stepBallEvents(w, dt);
   return w;

@@ -1,9 +1,17 @@
 // Local input: keyboard = first human, each gamepad = next human. Output matches game.stepWorld input shape.
 const keys = new Set();
 const pressed = new Set();
-addEventListener('keydown', e => { if (!keys.has(e.code)) pressed.add(e.code); keys.add(e.code); });
-addEventListener('keyup', e => keys.delete(e.code));
-addEventListener('blur', () => keys.clear());
+const GAME_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'];
+if (typeof addEventListener !== 'undefined') {  // node tests import toWorld
+  addEventListener('keydown', e => {
+    // in a match (#hud shown) arrows and Space must not scroll the page; menus keep them for selects and buttons
+    if (GAME_KEYS.includes(e.code) && document.getElementById('hud')?.hidden === false) e.preventDefault();
+    if (!keys.has(e.code)) pressed.add(e.code);
+    keys.add(e.code);
+  });
+  addEventListener('keyup', e => keys.delete(e.code));
+  addEventListener('blur', () => keys.clear());
+}
 
 // 'slice' = slice serve; in a rally it falls back to the automatic shot
 // 'contra' = contrapared off your own glass: hold left/right for a side glass, nothing for the back glass
@@ -31,19 +39,33 @@ export function clearPressed() { pressed.clear(); }
 
 export function consumePressed(code) { pollPadKeys(); const had = pressed.has(code); pressed.delete(code); return had; }
 
-// team 0 looks toward -z, team 1 toward +z: screen "up" means toward the net.
-function toWorld(sx, sy, team) { const s = team === 0 ? 1 : -1; return [sx * s, -sy * s]; }
+// Translates screen input (sx, sy: -1..1) to world movement [x, z].
+// When camPlane is supplied (from active camera rig), movement is screen-oriented:
+// screen UP moves up on-screen, screen LEFT moves left on-screen, in any camera angle.
+export function toWorld(sx, sy, team, camPlane) {
+  if (camPlane?.right && camPlane?.forward) {
+    const [rx, rz] = camPlane.right;
+    const [fx, fz] = camPlane.forward;
+    const x = sx * rx + sy * fx;
+    const z = sx * rz + sy * fz;
+    return [x === 0 ? 0 : x, z === 0 ? 0 : z];
+  }
+  const s = team === 0 ? 1 : -1;
+  const x = sx * s;
+  const z = -sy * s;
+  return [x === 0 ? 0 : x, z === 0 ? 0 : z];
+}
 
-export function readKeyboard(team) {
+export function readKeyboard(team, camPlane) {
   const sx = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
   const sy = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
   let swing = null;
   for (const k in SWING_KEYS) if (consumePressed(k)) swing = SWING_KEYS[k];
-  const move = toWorld(sx, sy, team);
+  const move = toWorld(sx, sy, team, camPlane);
   return { move, swing, aim: move[0] }; // aim: hold left/right while swinging to place the ball
 }
 
-export function readGamepad(index, team) {
+export function readGamepad(index, team, camPlane) {
   const gp = navigator.getGamepads?.()[index];
   if (!gp) return null;
   const dz = v => (Math.abs(v) < 0.18 ? 0 : v);
@@ -52,16 +74,16 @@ export function readGamepad(index, team) {
   const prev = padPrev[index] || [];
   for (const b in PAD_BTN) if (gp.buttons[b]?.pressed && !prev[b]) swing = PAD_BTN[b];
   padPrev[index] = gp.buttons.map(b => b.pressed);
-  const move = toWorld(sx, sy, team);
+  const move = toWorld(sx, sy, team, camPlane);
   return { move, swing, aim: move[0] };
 }
 
 export const gamepadCount = () => [...(navigator.getGamepads?.() || [])].filter(Boolean).length;
 
 // first local player: 'kb' keyboard only, 'pad' first gamepad only, 'auto' both
-export function readLocal(team, mode = 'auto') {
-  if (mode === 'pad') return readGamepad(0, team) || { move: [0, 0], swing: null, aim: 0 };
-  const kb = readKeyboard(team), pad = mode === 'auto' && readGamepad(0, team);
+export function readLocal(team, mode = 'auto', camPlane) {
+  if (mode === 'pad') return readGamepad(0, team, camPlane) || { move: [0, 0], swing: null, aim: 0 };
+  const kb = readKeyboard(team, camPlane), pad = mode === 'auto' && readGamepad(0, team, camPlane);
   if (!pad) return kb;
   const move = kb.move[0] || kb.move[1] ? kb.move : pad.move;
   return { move, swing: kb.swing || pad.swing, aim: move[0] };

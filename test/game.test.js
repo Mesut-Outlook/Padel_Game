@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newWorld, stepWorld } from '../src/game.js';
+import { toWorld } from '../src/input.js';
 
 // naive bots: chase ball x, swing always -> match must progress and score points without throwing
 test('bot match progresses and scores', () => {
@@ -214,3 +215,32 @@ test('energy: a changeover is a drink break that restores energy and is announce
   assert.ok(w.events.some(e => e.type === 'drink'), w.match.log.join(' | '));
   assert.ok(w.players.every(p => p.energy > 0.5), w.players.map(p => p.energy).join());
 });
+
+test('toWorld translates screen movement relative to camera orientation', () => {
+  // Default TV camera (looking toward -z): screen up moves toward -z
+  assert.deepEqual(toWorld(0, 1, 0), [0, -1]);
+  assert.deepEqual(toWorld(1, 0, 0), [1, 0]);
+
+  // Side camera (positioned at +x looking at -x):
+  // screen UP moves away from camera toward -x; screen DOWN moves toward +x
+  // screen LEFT moves toward -z; screen RIGHT moves toward +z
+  const sideCam = { right: [0, 1], forward: [-1, 0] };
+  assert.deepEqual(toWorld(0, 1, 0, sideCam), [-1, 0]);  // up on screen
+  assert.deepEqual(toWorld(0, -1, 0, sideCam), [1, 0]);  // down on screen
+  assert.deepEqual(toWorld(-1, 0, 0, sideCam), [0, -1]); // left on screen
+  assert.deepEqual(toWorld(1, 0, 0, sideCam), [0, 1]);   // right on screen
+});
+
+test('aiming updates pl.aim while swing is armed and during hit', () => {
+  const w = newWorld(); w.state = 'play';
+  const p = w.players[0]; p.p = [0, 8];
+  Object.assign(w.ball, { p: [0, 1, 3.0], v: [0, 0, 5], live: true });
+  // Frame 1: player arms swing with neutral aim
+  stepWorld(w, { 0: { move: [0, 0], swing: 'auto', aim: 0 } }, 1 / 60);
+  assert.equal(p.aim, 0);
+  assert.ok(p.want);
+  // Frame 2: player holds aim left while swing is armed
+  stepWorld(w, { 0: { move: [-1, 0], aim: -1 } }, 1 / 60);
+  assert.equal(p.aim, -1, 'pl.aim updated to -1 while swing was armed');
+});
+
