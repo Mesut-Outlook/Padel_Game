@@ -92,11 +92,11 @@ HOME ─┬─ FRIENDLY MATCH ─▶ Where? ─▶ Match ─▶ Player ─▶ (L
 Alt satır: **Training** (mevcut eğitim), **Settings** (kontrol, oyun hızı, ses — bütün modlar okur), **Controls** (mevcut kol yardımı), **Profile** (kariyer profili varsa).
 
 ### 5.4 FRIENDLY MATCH sayfaları
-1. **Where?** — `On this computer` (tek başına AI'ya karşı ya da aynı bilgisayarda 2–4 kişi) · `Online with a friend` (Create room → kod + paylaşım linki `?room=CODE` ve Kopyala; Join → kod gir; açık odalar listesi).
-2. **Match** — Singles/Doubles, insan sayısı ve taraf (2 kişide aynı takım/rakip), AI seviyesi, mekan, set; "More options" kapalı: deuce kuralı (Golden/Advantage/Star Point).
-3. **Player** — karakter + raket; kariyer profili varsa "Use my career player" (görünüm ve ekipman gelir, Credits **kazandırmaz**).
-4. START (online'da lobi: kim geldi, boş koltuklar AI, ev sahibi Start).
-- Son seçimler hatırlanır (`localStorage`, try/catch); ikinci girişte tek tıkla START.
+Düzeltme (2026-10-18, kod incelemesi): görünen menü zaten 5 adımlı bir sihirbaz (`src/menu.js`, agy-04: Mode · Player · Venue · Racket · Match, canlı önizleme); 11 açılır liste yalnız gizli eski form ve sihirbazın veri kaynağı. Friendly bu sihirbazı **yeniden kullanır**, sıfırdan yazılmaz:
+1. **Mode** adımının başına **Where?**: `On this computer` (tek başına AI'ya karşı ya da aynı bilgisayarda 2–4 kişi) · `Online with a friend` (bugünkü online çekmece buraya taşınır: Create room → kod + paylaşım linki `?room=CODE` ve Kopyala; Join → kod; açık odalar listesi).
+2. Player · Venue · Racket · Match adımları aynen kalır; kariyer profili varsa Player adımında "Use my career player" (görünüm + ekipman, Credits **kazandırmaz**).
+3. Sihirbazdaki CAREER ve TRAINING düğmeleri HOME'a taşınır; Mode adımında B/Esc HOME'a döner.
+- Son seçimler hatırlanır (`localStorage`, try/catch).
 
 ### 5.5 Gezinme *(Opus kararı)*
 - Hash rotaları: `#home`, `#friendly`, `#career`, `#cup`, `#cup/CODE`. Tarayıcı Geri, Esc ve kolda B/○ hep bir üst ekrana döner.
@@ -137,14 +137,14 @@ Alt satır: **Training** (mevcut eğitim), **Settings** (kontrol, oyun hızı, s
 4. **Adalet ve Credits çiftliği.** Kariyerinde 10'a çıkmış biri yeni başlayanı ezer; arkadaşlar birbirine maç verip Credits kasabilir. *Çözüm:* ev sahibi seçer: **Equal players** (herkes özellik 6, standart raket/top — varsayılan) veya **Career players**. Friends Cup ve Friendly **Credits ve ürün vermez/harcamaz**; yalnız kupa geçmişi ve kupa rozeti.
 5. **`tournament.js` tek insan varsayıyor.** Aynı turda birden çok insan maçı, aynı anda iki kort (Americano 8 kişi = 2 kort) gerekir. *Çözüm:* `humans` kümesi; o turda insanlı maçlar sunucuda gerçek oda, diğerleri simüle; tur ancak tüm maçlar bitince ilerler. Testler mevcut tek-insan davranışını korur.
 6. **Splash ve yükleme HD 620'de çakışır.** 3D yükleme 2.5 sn'den uzun sürebilir. *Çözüm:* splash DOM/CSS, yüklemeyi örter; HOME yükleme bitmese de açılır, START düğmeleri ilerleme çubuğu gösterip hazır olunca etkinleşir.
-7. **Yeni oyuncuya 11 açılır liste.** *Çözüm:* 3 adımlı Friendly, makul varsayılanlar, "More options" kapalı, son seçimlerin hatırlanması.
+7. **Modlar tek menüye sıkışmış.** Kariyer ve eğitim hızlı maç sihirbazının köşesinde düğme. *Çözüm:* HOME modları ayırır; Friendly mevcut 5 adımlı sihirbazı Where? adımıyla kullanır; son seçimler hatırlanır. (İlk taslaktaki "11 açılır liste" gizli eski formdu — düzeltildi.)
 8. **Ayarlar dağınık; kariyer maçları Kontrol/Oyun hızını yok sayıyor** (bilinen hata). *Çözüm:* tek global Settings (`padel.settings.v1`) — Friendly, Career, Friends Cup aynı yerden okur; hata kendiliğinden kapanır.
 9. **Geri tuşu ve derin linkler tutarsız.** *Çözüm:* §5.5 hash rotaları; her ekranın tek "üst" ekranı; Esc / B / tarayıcı Geri aynı şeyi yapar.
 
 ## 8. Kullanıcı kararları (2026-10-18)
 1. **Sunucu barındırma: beklemede.** Kullanıcı bunu alan adı (domain) ile birlikte düşünüp karar verecek. O zamana kadar C'nin sunucuya bağlı kısmı (kalıcı kupa, zamanlı oda) yapılmaz; FRIENDS CUP kartı "Needs an online server" der.
 2. **"Aynı oda" = aynı online oda** (kullanıcı onayladı). Aynı bilgisayarda (kanepede) kupa istenmiyor.
-- Belge onaylandı; geliştirme 2026-10-19 Pazartesi 02:00'de başlar (A → B; C sunucu kararından sonra).
+- Belge onaylandı. Kullanıcı B'yi hemen agy'ye verdi (`agy-15`, 2026-10-18); Opus 2026-10-19 02:00'de agy-14/agy-15'i review eder ve A'yı yapar. C sunucu kararından sonra.
 
 ## 9. Sıra *(Opus önerisi)*
 1. **A — Enerji ürünleri** (küçük, sunucu gerektirmez)
