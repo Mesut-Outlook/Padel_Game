@@ -977,6 +977,7 @@ function renderCreatorScreen() {
       showScreen('profile');
     } else {
       const created = newProfile(creatorTemplate || characters[0], look);
+      track('career-create');
       created.player = cleanCharacterLook(created.player);
       persistProfile(created);
       flashMsg = null;
@@ -1393,6 +1394,7 @@ function renderTrainingScreen() {
       const st = TRAINING_STATS.find(x => x.key === statKey);
       const res = buyTraining(profile, statKey, eco);
       if (res.ok) {
+        track(`career-training/${statKey}`);
         persistProfile(res.profile);
         flashMsg = { type: 'ok', text: `${st ? st.label : statKey} upgraded to ${res.profile.stats[statKey]}/${maxLevel}!` };
         renderTrainingScreen();
@@ -1589,6 +1591,7 @@ function renderShopScreen() {
     buyBtn.onclick = () => {
       const res = buyItem(profile, item, shop);
       if (res.ok) {
+        track(`career-shop-buy/${item.type || 'racket'}`);
         delete shopErrors[item.id];
         persistProfile(res.profile);
         flashMsg = { type: 'ok', text: `Purchased ${item.name}!` };
@@ -2129,6 +2132,7 @@ function startTournament() {
     }
   }
   const T = createTournament({ format: entry.format, entrants });
+  track(`career-tournament/${entry.id}`);
   persistProfile({ ...profile, credits: profile.credits - entry.entryFee, tournament: { entryId: entry.id, T, partner: partnerId } });
   showScreen('tournament');
 }
@@ -2407,6 +2411,7 @@ function joinOnlineRoom(code, create) {
   code = String(code || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
   if (!code) { setOnlineStatus('Enter a room code first.'); return; }
   if (!profile || onlineState.net) return;
+  track(create ? 'online-create' : 'online-join');
   const { stats: _s, ...look } = buildEquippedPlayer(profile);
   const shoeItem = equippedShoes(profile);
   const myRacket = rackets.find(r => r.id === profile.equipped?.racket) || rackets[0];

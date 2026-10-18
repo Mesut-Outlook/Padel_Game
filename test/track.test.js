@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { track } from '../src/track.js';
+import { track, trackOnce } from '../src/track.js';
 
 test('track sends a fixed event name, and is silent without GoatCounter or when it throws', () => {
   delete globalThis.goatcounter;
@@ -11,5 +11,13 @@ test('track sends a fixed event name, and is silent without GoatCounter or when 
   assert.deepEqual(sent, [{ path: 'online-click', title: 'online-click', event: true }]);
   globalThis.goatcounter = { count: () => { throw new Error('offline'); } };
   assert.doesNotThrow(() => track('match-end'));
+  delete globalThis.goatcounter;
+});
+
+test('trackOnce counts an event only the first time in a session', () => {
+  const sent = [];
+  globalThis.goatcounter = { count: (o) => sent.push(o.path) };
+  trackOnce('input/keyboard'); trackOnce('input/keyboard'); trackOnce('input/xbox');
+  assert.deepEqual(sent, ['input/keyboard', 'input/xbox']);
   delete globalThis.goatcounter;
 });

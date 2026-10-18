@@ -1,6 +1,7 @@
 // Broadcast-quality visual menu for Padel Legends.
 // Integrates with existing HTML form inputs (#mode, #char, #venue, #racket, etc.) as the single source of truth.
 // Styles are authored in index.html under the .pl-* class hierarchy.
+import { track } from './track.js';
 import * as THREE from 'three';
 import characters from '../data/characters.json';
 import venues from '../data/venues.json';
@@ -716,8 +717,10 @@ export function initMenu() {
     if ($('room')) $('room').value = currentRoomCode;
   }
 
+  let roomJoined = false;  // typed / invited code (join) vs the generated one (create), for analytics
   function setWhere(where, code) {
     selectedWhere = where;
+    if (code) roomJoined = true;  // arrived with a ?room= invite
     shell.querySelectorAll('.pl-where-card').forEach(c => c.classList.toggle('is-selected', c.dataset.where === where));
     const onlineSec = shell.querySelector('#pl-online-section');
     if (onlineSec) onlineSec.hidden = (where !== 'online');
@@ -764,6 +767,7 @@ export function initMenu() {
     const applyJoin = () => {
       const val = joinInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
       if (val) {
+        roomJoined = true;
         updateRoomDisplay(val);
         const lobbyStatus = shell.querySelector('#pl-online-lobby-status');
         if (lobbyStatus) lobbyStatus.innerHTML = `Room code set to <b>${val}</b>. Click START MATCH to connect!`;
@@ -834,6 +838,7 @@ export function initMenu() {
   if (startBtn) {
     startBtn.onclick = () => {
       if (selectedWhere === 'online') {
+        track(roomJoined ? 'online-join' : 'online-create');
         if (!currentRoomCode) updateRoomDisplay(generateRoomCode());
         if ($('room')) $('room').value = currentRoomCode;
         if ($('online')) $('online').click();

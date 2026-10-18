@@ -12,14 +12,14 @@ import { aiInput } from './ai.js';
 import { readLocal, readGamepad, consumePressed, clearPressed } from './input.js';
 import { connect } from './net.js';
 import { serverUrl, NO_SERVER } from './serverurl.js';
-import { track } from './track.js';
+import { track, trackOnce } from './track.js';
 import { predict } from './physics.js';
 import { createFx } from './fx.js';
 import { unlockAudio, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxReward, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
 import { initMenu, setWizardWhere, disposeMenu } from './menu.js';
 import { initCareer, openCareer } from './careerui.js';
 import { createTutorial } from './tutorial.js';
-import { padText } from './padstyle.js';
+import { padText, isPlayStation } from './padstyle.js';
 import { mountKeyHelp } from './helpkeys.js';
 import { parseRoute } from './route.js';
 import { loadSettings } from './settings.js';
@@ -39,6 +39,10 @@ initCareer({ startMatch, startOnline });
 mountKeyHelp($('help'));
 addEventListener('pointerdown', unlockAudio, { once: true });
 addEventListener('keydown', unlockAudio, { once: true });
+// which input devices visitors use (once per session each)
+addEventListener('keydown', () => trackOnce('input/keyboard'), { once: true });
+addEventListener('touchstart', () => trackOnce('input/touch'), { once: true, passive: true });
+addEventListener('gamepadconnected', (e) => trackOnce(`input/${isPlayStation(e.gamepad.id) ? 'playstation' : /xbox|xinput|045e/i.test(e.gamepad.id) ? 'xbox' : 'other'}`));
 
 function applyRoute() {
   const route = parseRoute(location.hash, window.__padelRoom ? `?room=${window.__padelRoom}` : location.search);  // index.html moved ?room= out of the URL
@@ -264,7 +268,7 @@ $('start').onclick = async () => {
     match: matchOpts(), roster, rackets: rk, venue: venues[+$('venue').value],
   });
   if (tutorial) {
-    tut = createTutorial({ world, scene, hand: roster[0].hand, camName: () => rig.name, replaying: () => replay.playing, consumePressed, onExit: () => location.reload() });
+    tut = createTutorial({ world, scene, hand: roster[0].hand, camName: () => rig.name, replaying: () => replay.playing, consumePressed, onExit: () => { track('tutorial-end'); location.reload(); } });
   }
 };
 
@@ -272,7 +276,7 @@ $('start').onclick = async () => {
 // onEnd gets team 0's MatchResult (+ score text) once; the menu key then returns to #career instead of the plain menu.
 export async function startMatch(cfg) {
   lastCfg = cfg;
-  track($('start').dataset.tutorial === '1' ? 'tutorial-start' : 'match-start');
+  track($('start').dataset.tutorial === '1' ? 'tutorial-start' : `match-start/${cfg.players === 2 ? 'singles' : 'doubles'}/${cfg.ai}/${cfg.venue?.id || 'unknown'}`);
   unlockAudio();
   const settings = loadSettings();
   gameSpeed = settings.speed;
@@ -295,6 +299,7 @@ export async function startMatch(cfg) {
 
 // back to the menu after a match; career matches return to the career hub
 function toMenu() {
+  if (!tut && world?.match.winner == null && net?.winner == null && (world || net)) track('match-quit');  // left before the end (pause → Main menu)
   if (onEnd) history.replaceState(history.state, '', '#career');  // replace, not push: history.state carries the career backup when storage is blocked
   else history.replaceState(history.state, '', '#friendly');
   location.reload();
@@ -570,7 +575,7 @@ function handleEvents(events, score, winner) {
       if (!tut && (rallyLen >= 8 || rallyFlags.smash || rallyFlags.glass)) setTimeout(() => startReplay(true), 900);
       rallyFlags = {};
       if (!tut && winner != null) {
-        track('match-end');
+        track(`match-end/${!humans.length ? 'watch' : winner === myTeam ? 'win' : 'loss'}`);
         if (onEnd && net) {  // online: no local world, the server's score decides
           const done = onEnd; onEnd = null;
           const sets = net.score?.board?.sets || [];

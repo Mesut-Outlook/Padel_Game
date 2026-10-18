@@ -1,6 +1,8 @@
 // Fullscreen toggle utilities and keyboard binding
 // Supports standard Fullscreen API with webkit/moz/ms fallbacks and input field guards.
 
+import { track } from './track.js';
+
 export function isFullscreen(doc = (typeof document !== 'undefined' ? document : null)) {
   if (!doc) return false;
   return !!(
@@ -19,6 +21,7 @@ export async function toggleFullscreen(target = (typeof document !== 'undefined'
       else if (target.webkitRequestFullscreen) await target.webkitRequestFullscreen();
       else if (target.mozRequestFullScreen) await target.mozRequestFullScreen();
       else if (target.msRequestFullscreen) await target.msRequestFullscreen();
+      track('fullscreen-on');
       return true;
     } else {
       if (doc.exitFullscreen) await doc.exitFullscreen();

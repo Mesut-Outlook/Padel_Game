@@ -28,6 +28,23 @@ Pages sürümünde bilgisayara karşı maç, eğitim, menü ve kol desteği çal
 Kalıcı online sunucu henüz yok: plan ayrı bir sunucu (VPS / Fly.io vb.) + `server.padellegends.eu` alt alan adı
 (Namecheap paylaşımlı hosting WebSocket sunucusu için uygun değil).
 
+## Ziyaret sayacı (GoatCounter)
+
+https://padellegends.goatcounter.com — çerezsiz, kişisel veri yok (AB'de onay penceresi gerekmez); localhost sayılmaz.
+Sayfa ziyaretlerine ek olarak oyun olayları (`src/track.js`, panelde `event` satırları). Yalnız sabit adlar ve enum değerler; isim, oda kodu, görünüm, serbest metin **gönderilmez** (`?room=` davet kodu sayaç yüklenmeden adresten çıkarılır):
+
+| Olay | Ne zaman |
+|---|---|
+| `match-start/<singles\|doubles>/<rookie\|club\|pro\|legend>/<mekan id>` | offline maç başladı (kariyer dahil) |
+| `match-end/<win\|loss\|watch>` · `match-quit` | maç bitti · bitmeden ana menüye dönüldü |
+| `tutorial-start` · `tutorial-end` | eğitim başladı · eğitimden çıkıldı |
+| `career-open` · `career-create` | kariyer açıldı · karakter yaratıldı |
+| `career-tournament/<turnuva id>` · `career-shop-buy/<racket\|shoes\|ball\|kit\|headwear>` · `career-training/<özellik>` | turnuvaya girildi · marketten alındı · antrenman |
+| `online-click` · `online-create` · `online-join` | Online'a basıldı (menü veya kariyer) · oda kuruldu · koda katılındı |
+| `input/<keyboard\|xbox\|playstation\|touch\|other>` | oturumda ilk kullanılan giriş aygıtı (her biri bir kez) |
+| `settings-change/<control\|speed>` | hangi ayar değişti (değeri değil) |
+| `fullscreen-on` | tam ekrana geçildi |
+
 ## Kontroller
 
 | Tuş | Eylem | Gamepad (Xbox) |

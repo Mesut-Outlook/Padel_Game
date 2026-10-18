@@ -2,6 +2,8 @@
 // Storage key: padel.settings.v1
 // Schema: { control: 'auto' | 'kb' | 'pad', speed: 0.7 | 0.85 | 1 }
 
+import { track } from './track.js';
+
 export const DEFAULT_SETTINGS = Object.freeze({
   control: 'auto',
   speed: 0.85,
@@ -47,6 +49,7 @@ export function saveSettings(settings, storage) {
     ? numSpeed
     : current.speed;
   const result = { control: nextControl, speed: nextSpeed };
+  for (const k of ['control', 'speed']) if (result[k] !== current[k]) track(`settings-change/${k}`);  // which setting, never its value
   try {
     store?.setItem(SETTINGS_KEY, JSON.stringify(result));
   } catch {
