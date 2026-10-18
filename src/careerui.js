@@ -1,6 +1,7 @@
 // Career mode UI screens: Template picker, Character Creator, Career Hub, Career Play, Training, Shop, Locker, Match Reward, Profile.
 // Reuses the menu's single 3D preview canvas (Intel HD 620 friendly) and routes all storage through src/career.js.
 import { serverUrl, NO_SERVER } from './serverurl.js';
+import { track } from './track.js';
 import characters from '../data/characters.json';
 import venues from '../data/venues.json';
 import rackets from '../data/rackets.json';
@@ -1112,7 +1113,7 @@ function renderHubScreen() {
   careerPanel.querySelector('#cr-hub-play').onclick = () => { flashMsg = null; showScreen('play'); };
   careerPanel.querySelector('#cr-hub-tournaments').onclick = () => { flashMsg = null; showScreen(profile.tournament ? 'tournament' : 'tournaments'); };
   careerPanel.querySelector('#cr-hub-ranking').onclick = () => { flashMsg = null; showScreen('ranking'); };
-  careerPanel.querySelector('#cr-hub-online').onclick = () => { flashMsg = null; onlineState.status = ''; onlineState.lobby = null; showScreen('online'); };
+  careerPanel.querySelector('#cr-hub-online').onclick = () => { track('online-click'); flashMsg = null; onlineState.status = ''; onlineState.lobby = null; showScreen('online'); };
   careerPanel.querySelector('#cr-hub-training').onclick = () => { flashMsg = null; showScreen('training'); };
   careerPanel.querySelector('#cr-hub-shop').onclick = () => { flashMsg = null; shopErrors = {}; showScreen('shop'); };
   careerPanel.querySelector('#cr-hub-locker').onclick = () => { flashMsg = null; showScreen('locker'); };
@@ -2606,6 +2607,7 @@ function handleCareerGamepad(pad) {
 const startScreen = () => profile.lastReward ? 'reward' : profile.tournamentResult ? 'tresult' : profile.tournament ? 'tournament' : 'hub';
 
 export function openCareer() {
+  track('career-open');
   const menuEl = document.getElementById('menu');
   const shell = menuEl?.querySelector('.pl-shell');
   if (!shell || !careerPanel) return;

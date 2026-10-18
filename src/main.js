@@ -12,6 +12,7 @@ import { aiInput } from './ai.js';
 import { readLocal, readGamepad, consumePressed, clearPressed } from './input.js';
 import { connect } from './net.js';
 import { serverUrl, NO_SERVER } from './serverurl.js';
+import { track } from './track.js';
 import { predict } from './physics.js';
 import { createFx } from './fx.js';
 import { unlockAudio, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxReward, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
@@ -234,6 +235,7 @@ export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', ma
 const escapeText = (t) => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 
 $('online').onclick = () => {
+  track('online-click');
   const me = +$('char').value;
   startOnline({
     code: $('room').value, char: me, stats: characters[me].stats, racket: rackets[+$('racket').value].stats,
@@ -270,6 +272,7 @@ $('start').onclick = async () => {
 // onEnd gets team 0's MatchResult (+ score text) once; the menu key then returns to #career instead of the plain menu.
 export async function startMatch(cfg) {
   lastCfg = cfg;
+  track($('start').dataset.tutorial === '1' ? 'tutorial-start' : 'match-start');
   unlockAudio();
   const settings = loadSettings();
   gameSpeed = settings.speed;
@@ -567,6 +570,7 @@ function handleEvents(events, score, winner) {
       if (!tut && (rallyLen >= 8 || rallyFlags.smash || rallyFlags.glass)) setTimeout(() => startReplay(true), 900);
       rallyFlags = {};
       if (!tut && winner != null) {
+        track('match-end');
         if (onEnd && net) {  // online: no local world, the server's score decides
           const done = onEnd; onEnd = null;
           const sets = net.score?.board?.sets || [];
