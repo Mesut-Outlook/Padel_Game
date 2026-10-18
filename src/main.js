@@ -135,7 +135,9 @@ async function setupScene(venue, ids, roster, rk) {
 export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, onEnd: end, status } = {}) {
   unlockAudio();
   control = $('control').value;
-  const say = (t, l) => { $('lobby').innerHTML = t; status?.(t, l); };
+  const say = (t, l) => {  // the legacy #lobby line is hidden behind the menu: mirror it into the menu's visible status lines
+    $('lobby').innerHTML = t; document.querySelectorAll('.pl-lobby-status').forEach(e => { e.innerHTML = t; }); status?.(t, l);
+  };
   url ||= serverUrl(location);  // null on the static web build unless ?server= points at one
   if (!url) { say(NO_SERVER); return null; }
   code = String(code || '').trim().toUpperCase();
