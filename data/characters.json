@@ -387,12 +387,12 @@
     "countryCode": "TR",
     "skinTone": "#C68642",
     "outfit": {
-      "shirt": "#FFD100",
-      "shorts": "#C8102E",
+      "shirt": "#FDB912",
+      "shorts": "#A90432",
       "shoes": "#FFFFFF",
-      "style": "tank",
-      "pattern": "chest",
-      "accent": "#C8102E"
+      "style": "crew",
+      "pattern": "stripes",
+      "accent": "#A90432"
     },
     "hand": "right",
     "position": "drive",

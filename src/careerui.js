@@ -1446,7 +1446,7 @@ function renderShopItemSpecHtml(item, tabId) {
   }
   if (tabId === 'kit') {
     const styleName = { crew: 'Crew neck', polo: 'Polo', vneck: 'V-neck', tank: 'Tank top' }[item.style || 'crew'] || 'Crew neck';
-    const patternName = { none: 'Solid', chest: 'Chest stripe', sash: 'Diagonal sash', side: 'Side panels' }[item.pattern || 'none'] || 'Solid';
+    const patternName = { none: 'Solid', chest: 'Chest stripe', sash: 'Diagonal sash', side: 'Side panels', stripes: 'Vertical stripes' }[item.pattern || 'none'] || 'Solid';
     const label = `${styleName} · ${patternName.toLowerCase()}`;
     return `
       <div class="cr-kit-swatches">
@@ -1712,7 +1712,7 @@ function renderLockerScreen() {
         ${ownedKits.map(k => {
           const isEq = profile.equipped?.kit === k.id;
           const kStyle = { crew: 'Crew neck', polo: 'Polo', vneck: 'V-neck', tank: 'Tank top' }[k.style || 'crew'] || 'Crew neck';
-          const kPattern = ({ none: 'Solid', chest: 'Chest stripe', sash: 'Diagonal sash', side: 'Side panels' }[k.pattern || 'none'] || 'Solid').toLowerCase();
+          const kPattern = ({ none: 'Solid', chest: 'Chest stripe', sash: 'Diagonal sash', side: 'Side panels', stripes: 'Vertical stripes' }[k.pattern || 'none'] || 'Solid').toLowerCase();
           return `
             <button type="button" class="pl-card cr-locker-card ${isEq ? 'is-selected' : ''}" data-slot="kit" data-id="${k.id}">
               <div class="cr-locker-card-head">

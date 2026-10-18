@@ -219,6 +219,8 @@ function kitAccentGlsl(f, style, pattern) {
     accentParts.push(`(abs((y - 1.17) + 1.3 * vRest.x) < 0.04 && ax < 0.2)`);
   } else if (pattern === 'side') {
     accentParts.push(`(ax > 0.08 && ax < 0.2 && abs(z + 0.01) < 0.045 && y > 0.92 && y < 1.33)`);
+  } else if (pattern === 'stripes') {  // 7 cm vertical stripes, shirt colour down the middle
+    accentParts.push(`(mod(vRest.x - 0.035, 0.14) < 0.07 && ax < 0.2)`);
   }
   return accentParts.length ? accentParts.join(' || ') : null;
 }
