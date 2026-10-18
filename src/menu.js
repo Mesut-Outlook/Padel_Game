@@ -9,6 +9,9 @@ import { createAvatar } from './player.js';
 import { getPortraitThumb, getVenueThumb, getRacketThumb, disposeThumbs } from './thumbs.js';
 import { openCareer } from './careerui.js';
 import { padDir, spatialFocus } from './padnav.js';
+import { padText } from './padstyle.js';
+import { loadSettings, saveSettings } from './settings.js';
+import { toggleFullscreen } from './fullscreen.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -19,6 +22,7 @@ export function countryFlag(cc) {
 }
 
 let previewApi = null;
+let setWizardWhereFn = null;
 export function setCareerPreview(ch, rk, infoHtml, badgeText) {
   return previewApi?.setCustomPreview(ch, rk, infoHtml, badgeText);
 }
@@ -28,6 +32,12 @@ export function restoreQuickMatchPreview() {
 export function setCareerGamepadHandler(fn) {
   return previewApi?.setPadHandler(fn);
 }
+export function setWizardWhere(where, room) {
+  return setWizardWhereFn?.(where, room);
+}
+
+let disposeFn = null;
+export const disposeMenu = () => disposeFn?.();
 
 export function initMenu() {
   const menuEl = $('menu');
@@ -60,7 +70,8 @@ export function initMenu() {
         <div class="pl-tour-tag">MESUT PADEL TOUR</div>
       </div>
       <div class="pl-top-right">
-        <button type="button" class="pl-career-top-btn" id="pl-career-btn">CAREER</button>
+        <button type="button" class="pl-home-top-btn" id="pl-home-btn">← HOME</button>
+        <button type="button" class="pl-home-top-btn fs-btn-sync" id="pl-fs-btn" data-icon-only="1" title="Fullscreen">⛶</button>
         <span class="pl-pad-hint" id="pl-pad-status">🎮 Checking controller…</span>
         <a class="pl-dev" href="kontroller.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;margin-right:14px">⌨ <b>Controls</b></a>
         <span class="pl-dev">Developer: <b>Mesut</b></span>
@@ -94,6 +105,36 @@ export function initMenu() {
         <div class="pl-step-body">
           <!-- Step 0: Mode -->
           <div class="pl-step" data-step="0">
+            <div class="pl-section-label">WHERE TO PLAY?</div>
+            <div class="pl-where-grid" id="pl-where-grid">
+              <button type="button" class="pl-card pl-where-card is-selected" data-where="local">
+                <div class="pl-card-title">🖥️ On this computer</div>
+                <div class="pl-card-sub">Local couch match · Keyboard or gamepads</div>
+                <span class="pl-check">✓</span>
+              </button>
+              <button type="button" class="pl-card pl-where-card" data-where="online">
+                <div class="pl-card-title">🌐 Online with a friend</div>
+                <div class="pl-card-sub">Play over network with a room code</div>
+                <span class="pl-check">✓</span>
+              </button>
+            </div>
+
+            <div class="pl-online-section" id="pl-online-section" hidden>
+              <div class="pl-section-label">ONLINE ROOM</div>
+              <div class="pl-room-link-box">
+                <div style="font-weight:700;font-size:13px;white-space:nowrap;">ROOM CODE: <b id="pl-room-code-val" style="color:var(--acc);letter-spacing:1px;">------</b></div>
+                <input type="text" readonly id="pl-room-link-input" class="pl-room-link-input" value="">
+                <button type="button" id="pl-copy-link-btn" class="pl-copy-btn">📋 Copy Link</button>
+                <span id="pl-copy-status" class="pl-copy-status"></span>
+              </div>
+              <div class="pl-online-divider"><span>OR JOIN / ENTER CODE</span></div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="text" class="pl-room-input" id="pl-join-room-input" placeholder="ROOM CODE" maxlength="6">
+                <button type="button" class="pl-online-btn" id="pl-set-room-btn">USE CODE</button>
+              </div>
+              <div class="pl-lobby-status" id="pl-online-lobby-status"></div>
+            </div>
+
             <div class="pl-section-label">GAME MODE</div>
             <div class="pl-mode-grid">
               <button type="button" class="pl-card pl-mode-card is-selected" data-mode="4">
@@ -228,21 +269,8 @@ export function initMenu() {
           </div>
         </div>
 
-        <!-- Step Footer: Online Collapsible + Next Button -->
-        <div class="pl-step-footer">
-          <div class="pl-online-wrap">
-            <button type="button" class="pl-online-toggle" id="pl-online-toggle">
-              <span>🌐 Play Online with Friends</span>
-              <span id="pl-online-arrow">▼</span>
-            </button>
-            <div class="pl-online-drawer" id="pl-online-drawer" hidden>
-              <div class="pl-online-controls">
-                <input type="text" class="pl-room-input" id="pl-room-input" placeholder="ROOM CODE" maxlength="6">
-                <button type="button" class="pl-online-btn" id="pl-online-btn">JOIN / CREATE ROOM</button>
-              </div>
-              <div class="pl-lobby-status" id="pl-lobby-status"></div>
-            </div>
-          </div>
+        <!-- Step Footer: Next Button -->
+        <div class="pl-step-footer" style="justify-content:flex-end;">
           <button type="button" class="pl-next-btn" id="pl-next-btn">NEXT →</button>
         </div>
       </section>
@@ -254,7 +282,6 @@ export function initMenu() {
         Doubles · Lucia Varela · Madrid Indoor Arena · Starter Nova · 3 sets
       </div>
       <div class="pl-start-slot">
-        <button type="button" class="pl-tutorial-btn" id="pl-tutorial-btn">🎓 TRAINING</button>
         <button type="button" class="pl-start-btn" id="pl-start-btn">START MATCH</button>
       </div>
     </footer>
@@ -320,9 +347,12 @@ export function initMenu() {
     };
     previewCanvas.onpointerup = () => { isDragging = false; };
 
+    let fitW = w, fitH = h;
     function loop() {
-      if (menuEl.hidden) return;
+      if (menuEl.hidden) { animFrameId = null; return; }  // paused behind HOME; resumed below when the menu shows again
       animFrameId = requestAnimationFrame(loop);
+      const w = stage.clientWidth, h = stage.clientHeight;  // built while hidden or before layout settled: follow the stage
+      if (w && h && (w !== fitW || h !== fitH)) { fitW = w; fitH = h; previewRenderer.setSize(w, h); previewCamera.aspect = w / h; previewCamera.updateProjectionMatrix(); }
       if (!isDragging) turntable += 0.006;
       if (previewAvatar?.holder) {
         previewAvatar.holder.rotation.y = turntable;
@@ -331,6 +361,9 @@ export function initMenu() {
       previewRenderer.render(previewScene, previewCamera);
     }
     animFrameId = requestAnimationFrame(loop);
+    new MutationObserver(() => {
+      if (!menuEl.hidden && previewRenderer && !animFrameId) animFrameId = requestAnimationFrame(loop);
+    }).observe(menuEl, { attributes: true, attributeFilter: ['hidden'] });
   }
 
   let previewReqId = 0;
@@ -655,8 +688,111 @@ export function initMenu() {
       if ($('control')) { $('control').value = val; $('control').dispatchEvent(new Event('change')); }
       shell.querySelectorAll('.pl-ctrl-card').forEach(c => c.classList.remove('is-selected'));
       card.classList.add('is-selected');
+      saveSettings({ control: val });
     };
   });
+
+  // Where to play & Online Room
+  let selectedWhere = 'local';
+  let currentRoomCode = '';
+
+  function generateRoomCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let c = '';
+    for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
+    return c;
+  }
+
+  function updateRoomDisplay(code) {
+    currentRoomCode = (code || '').toUpperCase().slice(0, 6);
+    const codeEl = shell.querySelector('#pl-room-code-val');
+    const linkInput = shell.querySelector('#pl-room-link-input');
+    const joinInput = shell.querySelector('#pl-join-room-input');
+    if (codeEl) codeEl.textContent = currentRoomCode || '------';
+    if (linkInput) {
+      linkInput.value = currentRoomCode ? `${location.origin}${location.pathname}?room=${currentRoomCode}` : '';
+    }
+    if (joinInput && code) joinInput.value = currentRoomCode;
+    if ($('room')) $('room').value = currentRoomCode;
+  }
+
+  function setWhere(where, code) {
+    selectedWhere = where;
+    shell.querySelectorAll('.pl-where-card').forEach(c => c.classList.toggle('is-selected', c.dataset.where === where));
+    const onlineSec = shell.querySelector('#pl-online-section');
+    if (onlineSec) onlineSec.hidden = (where !== 'online');
+    if (where === 'online') {
+      if (code) {
+        updateRoomDisplay(code);
+      } else if (!currentRoomCode) {
+        updateRoomDisplay(generateRoomCode());
+      }
+    }
+  }
+
+  shell.querySelectorAll('.pl-where-card').forEach(card => {
+    card.onclick = () => setWhere(card.dataset.where);
+  });
+
+  const copyBtn = shell.querySelector('#pl-copy-link-btn');
+  const copyStatus = shell.querySelector('#pl-copy-status');
+  if (copyBtn) {
+    copyBtn.onclick = async () => {
+      const linkInput = shell.querySelector('#pl-room-link-input');
+      const textToCopy = linkInput ? linkInput.value : '';
+      if (!textToCopy) return;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(textToCopy);
+        } else {
+          linkInput.select();
+          document.execCommand('copy');
+        }
+        if (copyStatus) {
+          copyStatus.textContent = '✓ Copied!';
+          setTimeout(() => { if (copyStatus) copyStatus.textContent = ''; }, 2200);
+        }
+      } catch {
+        if (copyStatus) copyStatus.textContent = 'Failed to copy';
+      }
+    };
+  }
+
+  const joinInput = shell.querySelector('#pl-join-room-input');
+  const setRoomBtn = shell.querySelector('#pl-set-room-btn');
+  if (setRoomBtn && joinInput) {
+    const applyJoin = () => {
+      const val = joinInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+      if (val) {
+        updateRoomDisplay(val);
+        const lobbyStatus = shell.querySelector('#pl-online-lobby-status');
+        if (lobbyStatus) lobbyStatus.innerHTML = `Room code set to <b>${val}</b>. Click START MATCH to connect!`;
+      }
+    };
+    setRoomBtn.onclick = applyJoin;
+    joinInput.onkeydown = (e) => { if (e.key === 'Enter') applyJoin(); };
+  }
+
+  setWizardWhereFn = (where, room) => setWhere(where, room);
+
+  // Home & Fullscreen buttons
+  const homeBtn = shell.querySelector('#pl-home-btn');
+  if (homeBtn) homeBtn.onclick = () => { location.hash = '#home'; };
+  const fsBtn = shell.querySelector('#pl-fs-btn');
+  if (fsBtn) fsBtn.onclick = () => toggleFullscreen();
+
+  // Settings Synchronization
+  function syncSettingsFromStore() {
+    const s = loadSettings();
+    if ($('control')) { $('control').value = s.control; $('control').dispatchEvent(new Event('change')); }
+    if ($('speed')) { $('speed').value = String(s.speed); $('speed').dispatchEvent(new Event('change')); }
+    shell.querySelectorAll('.pl-ctrl-card').forEach(c => c.classList.toggle('is-selected', c.dataset.ctrl === s.control));
+    shell.querySelectorAll('#pl-speed-seg .pl-seg-btn').forEach(b => b.classList.toggle('is-selected', b.dataset.val === String(s.speed)));
+  }
+  syncSettingsFromStore();
+
+  const onSettingsChange = () => syncSettingsFromStore();
+  window.addEventListener('padel-settings-changed', onSettingsChange);
 
   // Step 1 & 2 Filters
   shell.querySelectorAll('#pl-char-filter-row .pl-chip').forEach(chip => {
@@ -683,6 +819,7 @@ export function initMenu() {
         if ($(inputId)) { $(inputId).value = val; $(inputId).dispatchEvent(new Event('change')); }
         shell.querySelectorAll(`#${containerId} .pl-seg-btn`).forEach(b => b.classList.remove('is-selected'));
         btn.classList.add('is-selected');
+        if (inputId === 'speed') saveSettings({ speed: parseFloat(val) });
         updateSummary();
       };
     });
@@ -692,42 +829,30 @@ export function initMenu() {
   bindSegment('pl-ai-seg', 'ai');
   bindSegment('pl-speed-seg', 'speed');
 
-  // Online Drawer
-  const onlineToggle = shell.querySelector('#pl-online-toggle');
-  const onlineDrawer = shell.querySelector('#pl-online-drawer');
-  const onlineArrow = shell.querySelector('#pl-online-arrow');
-  if (onlineToggle && onlineDrawer) {
-    onlineToggle.onclick = () => {
-      onlineDrawer.hidden = !onlineDrawer.hidden;
-      if (onlineArrow) onlineArrow.textContent = onlineDrawer.hidden ? '▼' : '▲';
-    };
-  }
-
-  const roomInput = shell.querySelector('#pl-room-input');
-  const onlineBtn = shell.querySelector('#pl-online-btn');
-  if (onlineBtn && $('online')) {
-    onlineBtn.onclick = () => {
-      if ($('room')) $('room').value = roomInput?.value || '';
-      $('online').click();
-    };
-  }
-
-  // Career mode entry
-  const careerBtn = shell.querySelector('#pl-career-btn');
-  if (careerBtn) careerBtn.onclick = () => openCareer();
-
-  // Training mode: same start path, flagged for main.js
-  const tutBtn = shell.querySelector('#pl-tutorial-btn');
-  if (tutBtn && $('start')) tutBtn.onclick = () => { cleanUp(); $('start').dataset.tutorial = '1'; $('start').click(); };
-
   // Forward match start
   const startBtn = shell.querySelector('#pl-start-btn');
-  if (startBtn && $('start')) {
+  if (startBtn) {
     startBtn.onclick = () => {
-      cleanUp();
-      $('start').click();
+      if (selectedWhere === 'online') {
+        if (!currentRoomCode) updateRoomDisplay(generateRoomCode());
+        if ($('room')) $('room').value = currentRoomCode;
+        if ($('online')) $('online').click();
+      } else {
+        cleanUp();
+        if ($('start')) $('start').click();
+      }
     };
   }
+
+  // Keyboard navigation & Escape back to HOME
+  const onKeyDown = (e) => {
+    if (menuEl.hidden || location.hash === '#career') return;  // the career panel handles its own Esc
+    if (e.key === 'Escape') {
+      if (curStep > 0) switchStep(curStep - 1);
+      else location.hash = '#home';
+    }
+  };
+  window.addEventListener('keydown', onKeyDown);
 
   // Initial population
   populateCharGrid('all');
@@ -736,7 +861,7 @@ export function initMenu() {
   updateAvatarPreview(selectedCharIdx, selectedRacketIdx);
   updateSummary();
 
-  // Xbox Gamepad Polling & Keyboard Grid Navigation
+  // Xbox / PlayStation Gamepad Polling & Navigation
   let gpTimer = null;
   let careerPadHandler = null;
   let lastPadA = false, lastPadB = false, lastPadLB = false, lastPadRB = false, lastPadStart = false;
@@ -756,16 +881,20 @@ export function initMenu() {
   };
 
   function pollGamepads() {
-    if (menuEl.hidden) return;
+    if (menuEl.hidden) {  // HOME / career-free screens: keep polling, and swallow a button still held from HOME
+      lastPadA = lastPadB = lastPadLB = lastPadRB = lastPadStart = true;
+      gpTimer = requestAnimationFrame(pollGamepads);
+      return;
+    }
     const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
     const statusText = gps.length > 0
-      ? `🎮 ${gps.length} controller(s): ${gps[0].id.slice(0, 24)}…`
+      ? `🎮 ${gps.length} controller(s): ${gps[0].id.slice(0, 20)}… · ${padText('A Select · LB/RB Tabs · Start Play · B / Esc: HOME')}`
       : '🎮 No controller detected';
 
     const padHint = shell.querySelector('#pl-pad-status');
     const liveHint = shell.querySelector('#pl-gp-live');
     if (padHint) padHint.textContent = statusText;
-    if (liveHint) liveHint.textContent = statusText;
+    if (liveHint) liveHint.textContent = gps.length > 0 ? padText(`🎮 ${gps.length} controller(s) connected · A to choose`) : '🎮 Checking controller…';
 
     if (careerPadHandler) {
       if (gps.length > 0) careerPadHandler(gps[0]);
@@ -781,12 +910,15 @@ export function initMenu() {
       const rb = pad.buttons[5]?.pressed;
       const start = pad.buttons[9]?.pressed;
 
-      if (start && !lastPadStart) { cleanUp(); $('start')?.click(); }
+      if (start && !lastPadStart) { cleanUp(); startBtn?.click(); }
       const prevStep = curStep;
       if (lb && !lastPadLB) switchStep(curStep - 1);
       if (rb && !lastPadRB) switchStep(curStep + 1);
-      if (b && !lastPadB && curStep > 0) switchStep(curStep - 1);
-      if (curStep !== prevStep) spatialFocus(shell.querySelector(`.pl-step[data-step="${curStep}"]`), 0, 0);  // land on the new page, not the top bar
+      if (b && !lastPadB) {
+        if (curStep > 0) switchStep(curStep - 1);
+        else location.hash = '#home';
+      }
+      if (curStep !== prevStep) spatialFocus(shell.querySelector(`.pl-step[data-step="${curStep}"]`), 0, 0);
 
       const [sx, sy] = padDir(pad);
 
@@ -810,15 +942,24 @@ export function initMenu() {
   }
   gpTimer = requestAnimationFrame(pollGamepads);
 
-  // whole visible menu (tabs, current step, footer with Training / Start): nearest control in that direction
+  const onGamepadEvent = () => {};
+  window.addEventListener('gamepadconnected', onGamepadEvent);
+  window.addEventListener('gamepaddisconnected', onGamepadEvent);
+
+  // whole visible menu (tabs, current step, footer with Start): nearest control in that direction
   function navigateFocus(dx, dy) { spatialFocus(shell, dx, dy); }
 
-  // free the preview's WebGL context and thumbnails as soon as the menu hides (offline start or online lobby start)
-  new MutationObserver(() => { if (menuEl.hidden) cleanUp(); }).observe(menuEl, { attributes: true, attributeFilter: ['hidden'] });
+  // free the preview's WebGL context and thumbnails when a match starts (main.js setupScene); hiding the menu for
+  // HOME must not, or the wizard comes back without its preview, Esc and controller polling
+  disposeFn = cleanUp;
 
   function cleanUp() {
     if (animFrameId) cancelAnimationFrame(animFrameId);
     if (gpTimer) cancelAnimationFrame(gpTimer);
+    window.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('padel-settings-changed', onSettingsChange);
+    window.removeEventListener('gamepadconnected', onGamepadEvent);
+    window.removeEventListener('gamepaddisconnected', onGamepadEvent);
     if (previewRenderer) {
       previewRenderer.dispose();
       previewRenderer.forceContextLoss();

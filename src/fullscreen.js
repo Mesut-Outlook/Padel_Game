@@ -1,0 +1,83 @@
+// Fullscreen toggle utilities and keyboard binding
+// Supports standard Fullscreen API with webkit/moz/ms fallbacks and input field guards.
+
+export function isFullscreen(doc = (typeof document !== 'undefined' ? document : null)) {
+  if (!doc) return false;
+  return !!(
+    doc.fullscreenElement ||
+    doc.webkitFullscreenElement ||
+    doc.mozFullScreenElement ||
+    doc.msFullscreenElement
+  );
+}
+
+export async function toggleFullscreen(target = (typeof document !== 'undefined' ? document.documentElement : null), doc = (typeof document !== 'undefined' ? document : null)) {
+  if (!doc || !target) return false;
+  try {
+    if (!isFullscreen(doc)) {
+      if (target.requestFullscreen) await target.requestFullscreen();
+      else if (target.webkitRequestFullscreen) await target.webkitRequestFullscreen();
+      else if (target.mozRequestFullScreen) await target.mozRequestFullScreen();
+      else if (target.msRequestFullscreen) await target.msRequestFullscreen();
+      return true;
+    } else {
+      if (doc.exitFullscreen) await doc.exitFullscreen();
+      else if (doc.webkitExitFullscreen) await doc.webkitExitFullscreen();
+      else if (doc.mozCancelFullScreen) await doc.mozCancelFullScreen();
+      else if (doc.msExitFullscreen) await doc.msExitFullscreen();
+      return false;
+    }
+  } catch {
+    // Fullscreen may be rejected if denied or untrusted gesture
+    return isFullscreen(doc);
+  }
+}
+
+export function updateFullscreenButtons(doc = (typeof document !== 'undefined' ? document : null)) {
+  if (!doc || !doc.querySelectorAll) return;
+  const full = isFullscreen(doc);
+  const icon = full ? '🗗' : '⛶';
+  const label = full ? 'Exit Fullscreen' : 'Fullscreen';
+  const btns = doc.querySelectorAll('.fs-btn-sync');
+  btns.forEach(btn => {
+    if (btn.dataset.iconOnly === '1') {
+      btn.textContent = icon;
+      btn.title = full ? 'Exit fullscreen' : 'Fullscreen';
+    } else {
+      btn.textContent = `${icon} ${label}`;
+      btn.title = full ? 'Exit fullscreen' : 'Fullscreen';
+    }
+  });
+}
+
+// enabled(): false while a match runs — in a match F is the slice shot (src/input.js), so there only the ⛶ button,
+// the pause menu and the browser's own F11 toggle fullscreen.
+export function bindFullscreenKey(target = (typeof window !== 'undefined' ? window : null), doc = (typeof document !== 'undefined' ? document : null), enabled = () => true) {
+  if (!target) return () => {};
+  const onKey = (e) => {
+    if (e.code === 'KeyF' && !e.repeat && enabled()) {
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) {
+        return;
+      }
+      toggleFullscreen(doc?.documentElement, doc);
+    }
+  };
+  const onFsChange = () => {
+    updateFullscreenButtons(doc);
+  };
+
+  target.addEventListener('keydown', onKey);
+  if (doc?.addEventListener) {
+    doc.addEventListener('fullscreenchange', onFsChange);
+    doc.addEventListener('webkitfullscreenchange', onFsChange);
+  }
+
+  return () => {
+    target.removeEventListener('keydown', onKey);
+    if (doc?.removeEventListener) {
+      doc.removeEventListener('fullscreenchange', onFsChange);
+      doc.removeEventListener('webkitfullscreenchange', onFsChange);
+    }
+  };
+}

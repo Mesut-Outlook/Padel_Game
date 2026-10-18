@@ -15,11 +15,17 @@ import { serverUrl, NO_SERVER } from './serverurl.js';
 import { predict } from './physics.js';
 import { createFx } from './fx.js';
 import { unlockAudio, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxReward, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
-import { initMenu } from './menu.js';
-import { initCareer } from './careerui.js';
+import { initMenu, setWizardWhere, disposeMenu } from './menu.js';
+import { initCareer, openCareer } from './careerui.js';
 import { createTutorial } from './tutorial.js';
 import { padText } from './padstyle.js';
 import { mountKeyHelp } from './helpkeys.js';
+import { parseRoute } from './route.js';
+import { loadSettings } from './settings.js';
+import { initSplash } from './splash.js';
+import { initHome, showHome, hideHome } from './home.js';
+import { initSettingsModal, openSettingsModal } from './settingsmodal.js';
+import { bindFullscreenKey, toggleFullscreen, isFullscreen } from './fullscreen.js';
 
 const $ = (id) => document.getElementById(id);
 const matchOpts = () => ({ sets: parseInt($('sets').value), superTiebreak: $('sets').value === '3s', goldenPoint: $('golden').value === '1', starPoint: $('golden').value === 'star' });
@@ -32,6 +38,64 @@ initCareer({ startMatch, startOnline });
 mountKeyHelp($('help'));
 addEventListener('pointerdown', unlockAudio, { once: true });
 addEventListener('keydown', unlockAudio, { once: true });
+
+function applyRoute() {
+  const route = parseRoute(location.hash, location.search);
+  const menuEl = $('menu');
+  if (route.screen === 'home') {
+    hideHome();
+    if (menuEl) menuEl.hidden = true;
+    showHome();
+  } else if (route.screen === 'career') {
+    hideHome();
+    if (menuEl) menuEl.hidden = false;
+    openCareer();
+  } else {
+    hideHome();
+    if (menuEl) menuEl.hidden = false;
+    if (route.room) {
+      setWizardWhere('online', route.room);
+    }
+  }
+}
+
+initSettingsModal();
+initHome({
+  onFriendly: () => {
+    location.hash = '#friendly';
+  },
+  onCareer: () => {
+    location.hash = '#career';
+  },
+  onTraining: () => {
+    hideHome();
+    $('menu').hidden = false;
+    $('start').dataset.tutorial = '1';
+    $('start').click();
+  },
+  onOpenSettings: () => {
+    openSettingsModal();
+  },
+  onOpenControls: () => {
+    window.open('kontroller.html', '_blank', 'noopener');
+  },
+  onOpenProfile: () => {
+    location.hash = '#career';
+  },
+});
+
+window.addEventListener('hashchange', () => {
+  applyRoute();
+});
+
+initSplash({
+  onComplete: () => {
+    applyRoute();
+  },
+});
+
+bindFullscreenKey(window, document, () => $('hud').hidden);  // menus only: in a match F is the slice shot
+if ($('fsBtn')) $('fsBtn').onclick = () => toggleFullscreen();
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25));
@@ -48,7 +112,7 @@ window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorl
 const rig = createCameraRig(camera, renderer.domElement);
 const replay = createReplay(15, 60);
 let onEnd = null, pointsWon = [0, 0], lastCfg = null;
-let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, msgTimer = 0, hypeTimer = 0, net = null, marker, loadingScene = false;
+let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, msgTimer = 0, hypeTimer = 0, net = null, marker, loadingScene = false, control = 'auto', gameSpeed = 0.85;
 let styleStats = { pts: 0, streak: 0, maxRally: 0, smashes: 0, medals: [] };
 const MEDALS = {
   wall:   ['🧱', 'WALL WIZARD'],
@@ -107,6 +171,7 @@ function awardStyle(basePts, label = '', medalKey = null, tier = 1) {
 async function setupScene(venue, ids, roster, rk) {
   loadingScene = true;
   $('menu').hidden = true;
+  disposeMenu();
   $('msg').textContent = 'Loading…';
   scene.clear();
   venueGroup = buildVenue(scene, venue);
@@ -118,7 +183,7 @@ async function setupScene(venue, ids, roster, rk) {
   for (const id of ids) avatars[id] = await createAvatar(scene, roster[id], rk[id].color, rk[id].shape);
   const name = (t) => ids.filter(id => (id < 2 ? 0 : 1) === t).map(id => roster[id].name.split(' ').pop()).join(' / ');
   $('t0').textContent = name(0); $('t1').textContent = name(1);
-  for (const id of ['hud', 'cam', 'help']) $(id).hidden = false;
+  for (const id of ['hud', 'cam', 'help', 'fsBtn']) $(id).hidden = false;
   $('msg').textContent = '';
   acc = 0; freeze = 0; slow = 0; shake = 0; approach = 0; bannerMode = ''; rallyFlags = {};
   energyUi = null; tiredWarned = false;
@@ -134,7 +199,9 @@ async function setupScene(venue, ids, roster, rk) {
 // status(text, lobby?) mirrors the #lobby line for callers that show their own panel; returns the net handle (or null if it did not connect).
 export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, onEnd: end, status } = {}) {
   unlockAudio();
-  control = $('control').value;
+  const settings = loadSettings();
+  gameSpeed = settings.speed;
+  control = settings.control;
   const say = (t, l) => {  // the legacy #lobby line is hidden behind the menu: mirror it into the menu's visible status lines
     $('lobby').innerHTML = t; document.querySelectorAll('.pl-lobby-status').forEach(e => { e.innerHTML = t; }); status?.(t, l);
   };
@@ -204,6 +271,9 @@ $('start').onclick = async () => {
 export async function startMatch(cfg) {
   lastCfg = cfg;
   unlockAudio();
+  const settings = loadSettings();
+  gameSpeed = settings.speed;
+  control = settings.control;
   aiLevel = cfg.ai;
   onEnd = cfg.onEnd || null; pointsWon = [0, 0];
   const ids = cfg.players === 2 ? [0, 2] : [0, 2, 1, 3];
@@ -223,6 +293,7 @@ export async function startMatch(cfg) {
 // back to the menu after a match; career matches return to the career hub
 function toMenu() {
   if (onEnd) history.replaceState(history.state, '', '#career');  // replace, not push: history.state carries the career backup when storage is blocked
+  else history.replaceState(history.state, '', '#friendly');
   location.reload();
 }
 
@@ -248,7 +319,7 @@ const pace = () => {
   return Math.min(1.05, gameSpeed * (LEVEL_PACE[aiLevel] || 1) * (1 + Math.min(0.12, games * 0.015)));
 };
 let fx = null, tut = null, looping = false;
-let control = 'auto', gameSpeed = 0.85, freeze = 0, shake = 0, lastHitter = null;
+let freeze = 0, shake = 0, lastHitter = null;
 const shakeOff = new THREE.Vector3(), ballHold = new THREE.Vector3(), tmpV = new THREE.Vector3();
 // smash: brief slow motion + smash cam (for your own smashes, or every smash when only AIs play)
 let slow = 0, punchPid = null, bannerMode = '';
@@ -574,9 +645,11 @@ function pauseItems() {
   const items = [['Resume', () => setPaused(false)]];
   if (tut) items.push(['Skip lesson', () => { setPaused(false); tut.skip(); }]);
   else if (!net) items.push(['Restart match', () => { setPaused(false); if (replay.playing) endReplay(); lastCfg?.onEnd ? startMatch(lastCfg) : $('start').click(); }]);  // career matches restart as career matches
+  items.push([isFullscreen() ? 'Exit Fullscreen' : 'Fullscreen', () => { toggleFullscreen(); drawPause(); }]);
   items.push(['Main menu', toMenu]);
   return items;
 }
+document.addEventListener('fullscreenchange', () => { if (paused) drawPause(); });
 function updatePauseSel() {
   const box = $('pzItems');
   box.querySelectorAll('.pz-item').forEach((b, i) => {

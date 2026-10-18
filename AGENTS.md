@@ -25,5 +25,7 @@ Read `CLAUDE.md` — it is the shared guide for every agent (Claude, Antigravity
 | `agy-12` | Career: Tournaments, tournament run, Ranking (done by a Sonnet subagent — agy quota) | `agents/reports/agy-12-career-tournaments.md` | Completed, Opus reviewed (partner fix) |
 | `agy-13` | Career: Play Online (room list, create/join, looks) (Sonnet subagent — agy quota) | `agents/reports/agy-13-career-online.md` | Completed, Opus reviewed |
 | `agy-14` | Jersey styles (polo, vneck, tank, patterns) & kit shop items | `agents/reports/agy-14-jerseys.md` | Completed, Opus reviewed (accents painted on the body, no tank armhole, side-seam panels, shallower sash, Kerim accent) |
+| `agy-15` | Opening splash animation, HOME screen, settings modal & PS controller hints | `agents/reports/agy-15-splash-home.md` | Completed, Opus reviewed (wizard no longer disposed by HOME, Back from career, escaped name) |
+| `agy-16` | Fullscreen toggle button (⛶), F in menus | `agents/reports/agy-16-fullscreen.md` | Completed, Opus reviewed (F is the slice shot in a match: menus only) |
 
 

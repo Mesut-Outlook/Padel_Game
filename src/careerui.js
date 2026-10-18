@@ -2634,7 +2634,7 @@ export function openCareer() {
   }
 }
 
-export function closeCareer() {
+export function closeCareer({ navigate = true } = {}) {  // navigate: false when the route already moved away (browser Back)
   const menuEl = document.getElementById('menu');
   const shell = menuEl?.querySelector('.pl-shell');
   if (!shell || !careerPanel) return;
@@ -2651,10 +2651,8 @@ export function closeCareer() {
   if (topBtn) topBtn.classList.remove('is-active');
 
   setCareerGamepadHandler(null);
-  if (location.hash === '#career') {
-    history.replaceState(history.state, '', location.pathname + location.search);
-  }
   restoreQuickMatchPreview();
+  if (navigate) location.hash = '#home';
 }
 
 export function initCareer({ startMatch, startOnline }) {
@@ -2718,6 +2716,7 @@ export function initCareer({ startMatch, startOnline }) {
 
   window.addEventListener('hashchange', () => {
     if (location.hash === '#career' && !isOpen) openCareer();
+    else if (location.hash !== '#career' && isOpen) closeCareer({ navigate: false });
   });
 
   if (location.hash === '#career') {
