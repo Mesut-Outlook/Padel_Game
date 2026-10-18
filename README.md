@@ -134,6 +134,7 @@ docs/     re-findings.md (rea tersine mühendislik notları)
 - [x] Oyuncu enerjisi / yorgunluk ve taraf değişiminde su molası
 - [x] PlayStation kolu (DualShock 4 / DualSense) etiketleri
 - [ ] Kariyer marketinde enerji ürünleri (muz, izotonik, jel) — karar verildi, tasarım: `docs/superpowers/specs/2026-10-18-home-modes-energy-design.md`
+- [ ] Telefon desteği: maçta dokunmatik kontroller (sol sanal çubuk, sağda vuruş düğmeleri), dikte "telefonu çevir" uyarısı, menülerin dokunmaya ve küçük ekrana uygun hale gelmesi — planlandı (2026-10-19 gece, enerji ürünlerinden sonra)
 - [ ] Enerji değerlerinin oynayarak ince ayarı (`ENERGY` tablosu, `src/game.js`)
 - [x] Forma çeşitleri: polo, V yaka, kolsuz, desenli (bazı karakterlerde ve markette) — `agy-14`
 - [x] Açılış animasyonu + ana ekran (Friendly Match / Career / Friends Cup), Friendly'de Where? (bu bilgisayar / online, oda linki `?room=`), ortak Settings (kariyer maçları da okur), `#home` / `#friendly` / `#career` rotaları — `agy-15`
