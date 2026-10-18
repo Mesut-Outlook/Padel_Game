@@ -49,7 +49,7 @@ function sanitizeLook(l) {
   if (l.face && num(l.face.width, 0.9, 1.12) != null) out.face = { width: num(l.face.width, 0.9, 1.12) };
   if (num(l.hairCut, 0.5, 2) != null) out.hairCut = num(l.hairCut, 0.5, 2);
   if (num(l.hairOpacity, 0, 1) != null) out.hairOpacity = num(l.hairOpacity, 0, 1);
-  for (const k of ['ponytail', 'topknot', 'makeup']) if (l[k] === true) out[k] = true;
+  for (const k of ['ponytail', 'topknot', 'makeup', 'hairGel']) if (l[k] === true) out[k] = true;
   if (l.glasses === true || col(l.glasses)) out.glasses = l.glasses;
   if (l.headwear && ['headband', 'visor'].includes(l.headwear.type) && col(l.headwear.color)) out.headwear = { type: l.headwear.type, color: l.headwear.color };
   return out;

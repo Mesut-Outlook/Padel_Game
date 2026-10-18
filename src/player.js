@@ -365,12 +365,12 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
   const hairColor = new THREE.Color(ch.hairColor || HAIR_COLORS[hash(ch.id + 'h') % HAIR_COLORS.length]);
   const beardColor = new THREE.Color(ch.beardColor || ch.hairColor || '#2b1d14');
   const parts = [{ gltf: brows, color: hairColor }, ...hairs.map((h, i) => hairList[i] === 'Hair_Beard'
-    ? { gltf: h, color: beardColor } : { gltf: h, color: hairColor, cut: ch.hairCut, opacity: ch.hairOpacity })];
+    ? { gltf: h, color: beardColor } : { gltf: h, color: hairColor, cut: ch.hairCut, opacity: ch.hairOpacity, gel: ch.hairGel })];
   for (const part of parts) {
     const meshes = [];
     SkeletonUtils.clone(part.gltf.scene).traverse(o => { if (o.isSkinnedMesh) meshes.push(o); });
     for (const o of meshes) {
-      o.material = hairMaterial(o.material, part.color, part.cut, part.opacity); o.castShadow = true; o.frustumCulled = false;
+      o.material = hairMaterial(o.material, part.color, part.cut, part.opacity, part.gel); o.castShadow = true; o.frustumCulled = false;
       o.bind(new THREE.Skeleton(o.skeleton.bones.map(b => bones[b.name] || b), o.skeleton.boneInverses), o.bindMatrix);
       root.add(o);
     }
@@ -568,10 +568,11 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
   };
 }
 
-// Hair look: colour, an optional cut height (rest-pose metres, e.g. a chin-length bob) and thinning (opacity < 1).
-function hairMaterial(base, color, cut, opacity = 1) {
+// Hair look: colour, an optional cut height (rest-pose metres, e.g. a chin-length bob), thinning (opacity < 1) and gel (wet shine).
+function hairMaterial(base, color, cut, opacity = 1, gel = false) {
   const m = base.clone();
   m.color = color;
+  if (gel) { m.roughness = 0.3; m.metalness = 0; }
   if (opacity < 1) { m.transparent = true; m.opacity = opacity; m.depthWrite = false; }
   if (cut) {
     m.onBeforeCompile = (sh) => {

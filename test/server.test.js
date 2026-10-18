@@ -111,9 +111,11 @@ test('join: look outfit sanitizes style, pattern, and accent (drops invalid valu
           pattern: 'sash',
           accent: '#ffffff',
         },
+        hairGel: true,
       },
     });
     let l = await lob;
+    assert.equal(l.looks[0].hairGel, true);
     assert.deepEqual(l.looks[0].outfit, {
       shirt: '#112233',
       shorts: '#445566',
@@ -135,9 +137,11 @@ test('join: look outfit sanitizes style, pattern, and accent (drops invalid valu
           pattern: 'dots',
           accent: 'red',
         },
+        hairGel: 'yes',
       },
     });
     l = await lob;
+    assert.equal(l.looks[0].hairGel, undefined);
     assert.deepEqual(l.looks[0].outfit, {
       shirt: '#112233',
     });

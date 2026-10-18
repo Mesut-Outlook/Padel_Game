@@ -78,13 +78,15 @@
     "country": "Türkiye",
     "countryCode": "TR",
     "skinTone": "#E8B896",
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#1c140e",
+    "hairGel": true,
     "outfit": {
-      "shirt": "#FFFFFF",
-      "shorts": "#C8102E",
+      "shirt": "#1D3557",
+      "shorts": "#1D3557",
       "shoes": "#1D3557",
       "style": "crew",
-      "pattern": "chest",
-      "accent": "#C8102E"
+      "pattern": "none"
     },
     "hand": "right",
     "position": "reves",
