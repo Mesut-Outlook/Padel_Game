@@ -135,6 +135,7 @@ export function renderHome() {
         <button type="button" class="hm-btn fs-btn-sync" id="hm-btn-fullscreen" tabindex="0" title="Fullscreen">⛶ Fullscreen</button>
         ${profile ? '<button type="button" class="hm-btn" id="hm-btn-profile" tabindex="0">👤 Profile</button>' : ''}
         <a class="hm-privacy" href="privacy.html" target="_blank" rel="noopener">Privacy</a>
+        <a class="hm-privacy" href="mailto:contact@padellegends.eu">✉ contact@padellegends.eu</a>
       </div>
       <div class="hm-footer-hint" data-pad-hint="←/→ Move · A Select · Start Settings">
         ${padText('←/→ Move · A Select · Start Settings')}
