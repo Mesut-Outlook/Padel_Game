@@ -7,14 +7,13 @@ import { loadProfile } from './career.js';
 import { toggleFullscreen } from './fullscreen.js';
 
 // ways to play, pictured on HOME (public/assets/howto/), each linking to its part of kontroller.html; ready = shown.
-// The phone/tablet + controller pictures wait for a real-device check of agy-21, then flip to true.
 const HOWTO = [
   { img: 'pc-keyboard', to: 'keyboard', label: 'Computer + keyboard', ready: true },
   { img: 'pc-controller', to: 'controller', label: 'Computer + Xbox / PlayStation controller', ready: true },
   { img: 'tablet-touch', to: 'touch', label: 'Tablet touch screen', ready: true },
   { img: 'phone-touch', to: 'touch', label: 'Phone touch screen', ready: true },
-  { img: 'tablet-controller', to: 'touch', label: 'Tablet + controller', ready: false },
-  { img: 'phone-controller', to: 'touch', label: 'Phone + controller', ready: false },
+  { img: 'tablet-controller', to: 'touch', label: 'Tablet + controller', ready: true },
+  { img: 'phone-controller', to: 'touch', label: 'Phone + controller', ready: true },
 ];
 
 let homeEl = null;
