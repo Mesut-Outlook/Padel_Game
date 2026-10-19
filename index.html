@@ -712,6 +712,12 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   #touchUi .tc-smash { grid-column: 1; grid-row: 2; }
   #touchUi .tc-top { position: absolute; top: max(12px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); display: flex; gap: 8px; pointer-events: auto; }
   #touchUi .tc-small { width: 44px; height: 44px; font-size: 18px; }
+  #touchUi .tc-tips { position: absolute; inset: 0; pointer-events: none; }  /* play goes on under the tips */
+  #touchUi .tc-tip { position: absolute; padding: 8px 12px; border-radius: 10px; background: rgba(10,18,28,.85); border: 1px dashed var(--acc); color: #fff; font: 700 14px/1.35 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: .5px; text-align: center; }
+  #touchUi .tt-move { left: 22.5%; top: 62%; transform: translate(-50%, -50%); }
+  #touchUi .tt-btns { right: max(190px, calc(env(safe-area-inset-right) + 190px)); bottom: max(28px, env(safe-area-inset-bottom)); }
+  #touchUi .tt-top { left: max(176px, calc(env(safe-area-inset-left) + 176px)); top: max(18px, env(safe-area-inset-top)); }
+  #touchUi .tt-ok { left: 50%; top: 40%; transform: translateX(-50%); pointer-events: auto; border-style: solid; background: var(--acc); color: #0b1520; font-size: 16px; padding: 10px 22px; }
   body.touch { overscroll-behavior: none; touch-action: manipulation; }
   body.touch #fsBtn { display: none !important; }  /* fullscreen stays in the pause menu */
   body.touch:not(.pad) #help, body.touch:not(.pad) #cam kbd, body.touch:not(.pad) #shotHint kbd { display: none !important; }
@@ -756,7 +762,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   #help .hk-dev i.cur { opacity: 1; background: #ffffff1f; }
   #help .hk-main.pad-only { align-items: center; } #help .hp-svg { flex: none; } #help .hp-svg .body { fill: #1a2b3c; stroke: #ffffff26; }
   #help .hp-svg text { font: 800 8px system-ui; fill: #0b1520; text-anchor: middle; pointer-events: none; }
-  #help .hp-svg .off, #help .hp-svg .trig rect { fill: #2b3e52; } #help .hp-svg .trig text { fill: #6d8399; }
+  #help .hp-svg .off { fill: #2b3e52; }
   #help .hp-svg .move circle { fill: #4ea8ff; } #help .hp-svg .move .dot, #help .hp-svg [data-b="11"] .dot { fill: #0b1520; stroke: #ffffff40; }
   #help .hp-svg .shot rect, #help .hp-svg .shot circle { fill: #ff9f43; } #help .hp-svg .sys, #help .hp-svg .sys circle { fill: #b8c4d0; }
   #help .xa circle, #help b.xa { fill: #5dc21e; background: #5dc21e; } #help .xb circle, #help b.xb { fill: #ff4d4d; background: #ff4d4d; }
@@ -1886,9 +1892,9 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
     letter-spacing: 0.8px;
   }
   .hm-howto { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-  .hm-howto-item { margin: 0; width: clamp(150px, 16vw, 220px); text-align: center; }
+  .hm-howto-item { margin: 0; width: clamp(150px, 16vw, 220px); text-align: center; text-decoration: none; }
   .hm-howto-item img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); }
-  .hm-howto-item figcaption { margin-top: 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; color: var(--muted); }
+  .hm-howto-item span { display: block; margin-top: 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; color: var(--muted); }
   @media (max-width: 860px) {
     .hm-cards { grid-template-columns: 1fr; max-width: 420px; }
     .hm-card-sub { margin-bottom: 12px; }

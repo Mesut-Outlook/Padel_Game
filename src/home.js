@@ -6,15 +6,15 @@ import { padDir, spatialFocus } from './padnav.js';
 import { loadProfile } from './career.js';
 import { toggleFullscreen } from './fullscreen.js';
 
-// ways to play, pictured on HOME (public/assets/howto/); ready = works today. The rest wait for agy-21
-// (controller on a phone or tablet) and the touch-screen check, then flip to true.
+// ways to play, pictured on HOME (public/assets/howto/), each linking to its part of kontroller.html; ready = shown.
+// The phone/tablet + controller pictures wait for a real-device check of agy-21, then flip to true.
 const HOWTO = [
-  { img: 'pc-keyboard', label: 'Computer + keyboard', ready: true },
-  { img: 'pc-controller', label: 'Computer + Xbox / PlayStation controller', ready: true },
-  { img: 'tablet-touch', label: 'Tablet touch screen', ready: false },
-  { img: 'phone-touch', label: 'Phone touch screen', ready: false },
-  { img: 'tablet-controller', label: 'Tablet + controller', ready: false },
-  { img: 'phone-controller', label: 'Phone + controller', ready: false },
+  { img: 'pc-keyboard', to: 'keyboard', label: 'Computer + keyboard', ready: true },
+  { img: 'pc-controller', to: 'controller', label: 'Computer + Xbox / PlayStation controller', ready: true },
+  { img: 'tablet-touch', to: 'touch', label: 'Tablet touch screen', ready: true },
+  { img: 'phone-touch', to: 'touch', label: 'Phone touch screen', ready: true },
+  { img: 'tablet-controller', to: 'touch', label: 'Tablet + controller', ready: false },
+  { img: 'phone-controller', to: 'touch', label: 'Phone + controller', ready: false },
 ];
 
 let homeEl = null;
@@ -120,7 +120,7 @@ export function renderHome() {
       </div>
 
       <div class="hm-howto" aria-label="Ways to play">
-        ${HOWTO.filter(h => h.ready).map(h => `<figure class="hm-howto-item"><img src="assets/howto/${h.img}.webp" alt="${h.label}" width="640" height="482" loading="lazy"><figcaption>${h.label}</figcaption></figure>`).join('')}
+        ${HOWTO.filter(h => h.ready).map(h => `<a class="hm-howto-item" href="kontroller.html#${h.to}" target="_blank" rel="noopener"><img src="assets/howto/${h.img}.webp" alt="${h.label}" width="640" height="482" loading="lazy"><span>${h.label}</span></a>`).join('')}
       </div>
 
       <div class="hm-notice-toast" id="hm-cup-toast" hidden>

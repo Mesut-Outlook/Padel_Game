@@ -31,7 +31,7 @@ import { padDir } from './padnav.js';
 import { pointCall } from './pointcall.js';
 import { tipCycle } from './tips.js';
 import { newTally, tallyEvents, tallyFrame } from './matchstats.js';
-import { isTouch, mountTouch, offerKeyLabel } from './touch.js';
+import { isTouch, mountTouch, offerKeyLabel, showTouchTips } from './touch.js';
 import { keepAwake } from './wakelock.js';
 
 const $ = (id) => document.getElementById(id);
@@ -220,6 +220,7 @@ async function setupScene(venue, ids, roster, rk) {
   $('t0').textContent = name(0); $('t1').textContent = name(1);
   for (const id of ['hud', 'cam', 'help', 'fsBtn']) $(id).hidden = false;
   $('touchUi').hidden = !isTouch() || document.body.classList.contains('pad');
+  if (!$('touchUi').hidden) showTouchTips($('touchUi'));
   updateUnmuteBadge();
   keepAwake(true);
   $('msg').textContent = '';

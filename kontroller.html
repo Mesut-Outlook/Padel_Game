@@ -45,6 +45,24 @@
   kbd { display: inline-block; min-width: 26px; padding: 2px 7px; border-radius: 5px; background: #23384c; border-bottom: 2px solid #0a1520;
         font: 700 13px system-ui; text-align: center; color: #fff; margin: 1px 0; }
   .tip { color: var(--mut); font-size: 13px; }
+  .ways { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 18px; }
+  .ways a { padding: 6px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); text-decoration: none; font-weight: 700; font-size: 13px; }
+  .photo { display: block; width: 100%; max-width: 360px; height: auto; border-radius: 10px; border: 1px solid var(--line); margin: 4px 0 10px; }
+  ol { margin: 4px 0 0; padding-left: 20px; } ol li { margin: 4px 0; }
+  /* controller drawings: built by src/helpkeys.js (same as the in-game help), colours as there */
+  .pads { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-bottom: 14px; }
+  .pad-card { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .pad-card .hp-svg { width: 100%; max-width: 420px; height: auto; }
+  .hp-svg .body { fill: #1a2b3c; stroke: #ffffff26; } .hp-svg text { font: 800 8px system-ui; fill: #0b1520; text-anchor: middle; }
+  .hp-svg .off { fill: #2b3e52; }
+  .hp-svg .move circle { fill: var(--move); } .hp-svg .dot { fill: #0b1520; stroke: #ffffff40; }
+  .hp-svg .shot rect, .hp-svg .shot circle { fill: var(--shot); } .hp-svg .sys, .hp-svg .sys circle { fill: var(--sys); }
+  .xa circle, b.xa { fill: #5dc21e; background: #5dc21e; } .xb circle, b.xb { fill: #ff4d4d; background: #ff4d4d; }
+  .xx circle, b.xx { fill: #2f8cff; background: #2f8cff; } .xy circle, b.xy { fill: #ffc21a; background: #ffc21a; }
+  .hp-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 14px; font-size: 13px; color: var(--mut); }
+  .pk { display: flex; align-items: center; gap: 6px; }
+  .pk b { min-width: 26px; height: 18px; padding: 0 4px; border-radius: 4px; color: #0b1520; font: 800 11px/18px system-ui; text-align: center; }
+  .pk b.move { background: var(--move); } .pk b.shot { background: var(--shot); } .pk b.sys { background: var(--sys); }
   footer { margin-top: 30px; color: var(--mut); font-size: 13px; }
   @media (prefers-reduced-motion: reduce) { .key { transition: none; } }
 </style>
@@ -53,8 +71,9 @@
 <div class="wrap">
   <h1>PADEL <b>LEGENDS</b> · Controls</h1>
   <div class="sub">Press any key on your keyboard or hover over a key below to see what it does. <a href="./">← Back to game</a></div>
+  <div class="ways"><a href="#keyboard">⌨ Keyboard</a><a href="#controller">🎮 Xbox / PlayStation controller</a><a href="#touch">📱 Tablet &amp; phone (iPad, Android)</a></div>
 
-  <div class="legend">
+  <div class="legend" id="keyboard">
     <span><i style="background:var(--move)"></i>Movement</span>
     <span><i style="background:var(--hit)"></i>Strike</span>
     <span><i style="background:var(--shot)"></i>Special shots</span>
@@ -94,6 +113,7 @@
     </table></div>
     <div class="card"><h3>Camera &amp; System</h3><table>
       <tr><td><kbd>F11</kbd> · <kbd>F</kbd> in menus</td><td>Toggle fullscreen (also the ⛶ button and the pause menu; in a match F is the slice shot)</td></tr>
+      <tr><td><kbd>E</kbd></td><td>Eat: take the food offered at a changeover (energy low)</td></tr>
       <tr><td><kbd>C</kbd></td><td>Camera: TV, behind player, side, top, ball, drone, free</td></tr>
       <tr><td><kbd>R</kbd></td><td>Instant replay of the last point</td></tr>
       <tr><td><kbd>Esc</kbd></td><td>Pause menu · skip replay</td></tr>
@@ -109,7 +129,11 @@
     </table></div>
   </div>
 
-  <h2>Xbox / PlayStation Controller</h2>
+  <h2 id="controller">Xbox / PlayStation Controller</h2>
+  <div class="pads">
+    <div class="card pad-card"><h3>Xbox controller</h3><div id="pad-xbox"></div></div>
+    <div class="card pad-card"><h3>PlayStation controller (DualShock 4 / DualSense)</h3><div id="pad-ps"></div></div>
+  </div>
   <p class="tip"><b>PlayStation (DualShock 4 / DualSense):</b> same layout, the game shows the PlayStation symbols — <kbd>A</kbd> = <kbd>✕</kbd>, <kbd>B</kbd> = <kbd>○</kbd>, <kbd>X</kbd> = <kbd>□</kbd>, <kbd>Y</kbd> = <kbd>△</kbd>, <kbd>LB</kbd>/<kbd>RB</kbd> = <kbd>L1</kbd>/<kbd>R1</kbd>, <kbd>LT</kbd>/<kbd>RT</kbd> = <kbd>L2</kbd>/<kbd>R2</kbd>, View = Share/Create, Start = Options. Connect it by USB or Bluetooth and press a button once the page is open (Chrome / Edge recommended).</p>
   <div class="cols">
     <div class="card"><h3>Match</h3><table>
@@ -121,6 +145,7 @@
       <tr><td><kbd>RB</kbd></td><td>Víbora</td></tr>
       <tr><td><kbd>LB</kbd></td><td>Slice serve</td></tr>
       <tr><td><kbd>RT</kbd></td><td>Contrapared</td></tr>
+      <tr><td><kbd>LT</kbd></td><td>Eat the food offered at a changeover</td></tr>
       <tr><td><kbd>View</kbd></td><td>Cycle camera</td></tr>
       <tr><td><kbd>R3</kbd> (press right stick)</td><td>Instant replay</td></tr>
       <tr><td><kbd>Start</kbd></td><td>Pause menu · main menu after match · skip training lesson</td></tr>
@@ -135,6 +160,45 @@
     </table>
     <p class="tip">You can select Keyboard, Controller, or Both from the <b>Controls</b> setting in the menu. Test your gamepad on the <a href="tools/padtest.html">controller test</a> page.</p>
     <p class="tip"><b>Two players on one PC:</b> set <b>Human players</b> to 2. Player 1 plays on the keyboard, player 2 on the first Xbox controller (more controllers = players 3 and 4). In singles you play against each other; in doubles choose <b>Opponents</b> (each of you gets an AI partner) or <b>Same team</b> (you two against 2 AI).</p>
+    </div>
+  </div>
+
+
+  <h2 id="touch">Tablet &amp; Phone (iPad, Android)</h2>
+  <p class="tip">Turn the device sideways: the game plays in landscape. A tablet is the most comfortable; a phone works too, but the court is small.</p>
+  <div class="cols">
+    <div class="card"><h3>Touch screen</h3>
+      <img class="photo" src="assets/howto/tablet-touch.webp" alt="Playing on a tablet with the touch controls" width="640" height="482" loading="lazy">
+      <table>
+        <tr><td>Left half of the screen</td><td>Move: put your thumb down anywhere, a stick appears there; drag it the way you want to run</td></tr>
+        <tr><td><kbd>SHOT</kbd> (big button)</td><td>Smart shot · serve. Keep the stick left or right while you tap = aim</td></tr>
+        <tr><td><kbd>LOB</kbd></td><td>Lob over the opponents</td></tr>
+        <tr><td><kbd>SMASH</kbd></td><td>Smash on high balls</td></tr>
+        <tr><td>🎥 · ⏸ (top left)</td><td>Camera · pause menu</td></tr>
+        <tr><td>Food box</td><td>At a changeover with low energy: tap it to eat</td></tr>
+        <tr><td>❔ (top left)</td><td>Shows these touch tips again during a match</td></tr>
+      </table>
+      <p class="tip">Chiquita, víbora, contrapared and the slice serve need a keyboard or a controller.</p>
+    </div>
+    <div class="card"><h3>Getting started on iPad / iPhone</h3>
+      <ol>
+        <li>Open <b>padellegends.eu</b> in Safari.</li>
+        <li>For full screen: tap <b>Share</b> → <b>Add to Home Screen</b>, then start the game from the new icon. It opens like an app, without the address bar.</li>
+        <li>Turn the device sideways.</li>
+        <li>No sound? Tap the <b>🔇 Tap for sound</b> badge (Safari only plays sound after a touch).</li>
+      </ol>
+      <p class="tip"><b>Android:</b> Chrome → ⋮ menu → <b>Add to Home screen</b> works the same way.</p>
+    </div>
+    <div class="card"><h3>Tablet or phone + controller</h3>
+      <img class="photo" src="assets/howto/tablet-controller.webp" alt="Playing on a tablet with a controller" width="640" height="482" loading="lazy">
+      <ol>
+        <li>Pair the controller over Bluetooth (device <b>Settings → Bluetooth</b>):
+          <b>Xbox</b>: hold the small pair button on top until the Xbox button flashes fast.
+          <b>PlayStation</b>: hold <b>PS</b> + <b>Share/Create</b> until the light bar flashes.</li>
+        <li>Open the game and press any button on the controller.</li>
+        <li>The touch buttons hide by themselves and the screen shows the controller's buttons. Touch the screen to bring them back.</li>
+        <li>The buttons are the same as on a computer (see above). The screen stays on during a match.</li>
+      </ol>
     </div>
   </div>
 
@@ -158,6 +222,7 @@ const K = {
   KeyI: ['I', 'shot', 'víbora', 'Víbora: side-spin slicing overhead'],
   KeyO: ['O', 'shot', 'contra', 'Contrapared: hit off your own glass wall over the net; hold A/D for side glass'],
   KeyF: ['F', 'shot', 'slice', 'Slice serve: stays low and curves sideways'],
+  KeyE: ['E', 'sys', 'eat', 'Eat the food offered at a changeover when your energy is low'],
   KeyC: ['C', 'sys', 'cam', 'Cycle camera angle'],
   KeyR: ['R', 'sys', 'replay', 'Watch instant replay of the last point'],
   KeyM: ['M', 'sys', 'sound', 'Mute / unmute sound & music'],
@@ -201,6 +266,10 @@ addEventListener('keydown', (e) => {
   els[e.code]?.classList.add('on'); show(e.code);
 });
 addEventListener('keyup', (e) => els[e.code]?.classList.remove('on'));
+</script>
+<script type="module">
+import { padSvg, padLegend } from './src/helpkeys.js';
+for (const kind of ['xbox', 'ps']) document.getElementById(`pad-${kind}`).outerHTML = padSvg(kind) + padLegend(kind);
 </script>
 </body>
 </html>
