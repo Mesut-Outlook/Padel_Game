@@ -31,6 +31,7 @@ Kalıcı online sunucu henüz yok: plan ayrı bir sunucu (VPS / Fly.io vb.) + `s
 ## Ziyaret sayacı (GoatCounter)
 
 https://padellegends.goatcounter.com — çerezsiz, kişisel veri yok (AB'de onay penceresi gerekmez); localhost sayılmaz.
+Gizlilik sayfası: `privacy.html` (HOME alt çubuğunda **Privacy**) — yeni bir veri akışı eklenirse (yeni dış servis, sunucuya giden alan) orayı da güncelle. Yazı tipi `public/fonts/`'tan gelir; Google Fonts gibi ziyaretçi IP'sini üçüncü tarafa gönderen dış kaynak ekleme.
 Sayfa ziyaretlerine ek olarak oyun olayları (`src/track.js`, panelde `event` satırları). Yalnız sabit adlar ve enum değerler; isim, oda kodu, görünüm, serbest metin **gönderilmez** (`?room=` davet kodu sayaç yüklenmeden adresten çıkarılır):
 
 | Olay | Ne zaman |
