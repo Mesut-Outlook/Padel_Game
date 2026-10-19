@@ -302,3 +302,15 @@ test('fatigue is felt: at energy 0 a player runs at 60% speed, reaches less, and
   };
   assert.ok(Math.abs(drain(60) / drain(0) - ENERGY.rallyMax) < 0.01, `${drain(60)} vs ${drain(0)}`);
 });
+
+test('career form: a rusty player (-0.10) runs about 5% slower', () => {
+  const run = (form) => {
+    const w = newWorld({ form: { 0: form } }); w.state = 'play';
+    const p = w.players[0]; p.p = [-4, 8];
+    Object.assign(w.ball, { p: [0, -5, 0], v: [0, 0, 0], live: false });
+    for (let i = 0; i < 60; i++) stepWorld(w, { 0: { move: [1, 0] } }, 1 / 60);
+    return p.p[0] + 4;
+  };
+  const k = run(-0.1) / run(0);
+  assert.ok(k < 0.97 && k > 0.93, `ratio ${k}`);
+});

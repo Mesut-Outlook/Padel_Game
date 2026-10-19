@@ -39,6 +39,7 @@ export function newWorld(opts = {}) {
     racket: { power: 6, control: 6, spin: 6, sweetSpot: 6, ...(opts.rackets?.[id] || {}) },
     shoes: { speed: 0, agility: 0, ...(opts.shoes?.[id] || {}) },
     fuel: { boost: 0, tire: 1, ...(opts.fuel?.[id] || {}) },  // career energy product: extra per changeover, fatigue factor
+    form: Math.max(-0.1, Math.min(0, +opts.form?.[id] || 0)),  // career form (0 sharp .. -0.10 rusty): slower and more errors
   }));
   const w = { t: 0, ballSpec: { speed: 1, bounce: 1, ...opts.ball }, ball: newBall(), match: newMatch({ players: opts.players || 4, ...opts.match }), players,
     state: 'serve', timer: 0, events: [], rally: 0, opts };
@@ -110,6 +111,7 @@ function strike(w, pl, kind, aimX = 0) {
   if (overhead) statK *= 1 + (6 - pl.stats.smash) * 0.08;
   statK *= Math.max(0.5, 1 + Math.max(0, w.rally - 8) * 0.02 * (6 - pl.stats.stamina));
   statK *= 1 + (1 - pl.energy) * ENERGY.miss;  // a tired player misses more
+  statK *= 1 - pl.form;
   tire(w, pl, overhead ? ENERGY.smash : ENERGY.stroke);
 
   let depth = s.depth, t = s.t;
@@ -191,7 +193,7 @@ export function stepWorld(w, inputs, dt) {
     const len = Math.min(1, Math.hypot(mv[0], mv[1]));
     // feet planted while a stroke is pending or under way: aiming with the move keys must not walk you off the ball
     // (agile shoes keep a little more footwork during the stroke)
-    const spd = SPEED * (0.75 + pl.stats.speed / 24) * (1 + pl.shoes.speed) * (1 - ENERGY.slow * (1 - pl.energy)) * (pl.swing || pl.want ? 0.35 + pl.shoes.agility : 1);
+    const spd = SPEED * (0.75 + pl.stats.speed / 24) * (1 + pl.shoes.speed) * (1 - ENERGY.slow * (1 - pl.energy)) * (1 + pl.form / 2) * (pl.swing || pl.want ? 0.35 + pl.shoes.agility : 1);
     const tossing = w.state === 'toss' && pl.id === serverId(w.match);
     if (len > 0.05 && !tossing) {
       pl.p[0] += mv[0] / Math.hypot(...mv) * len * spd * dt;

@@ -132,7 +132,7 @@ export function settleMatch(profile, result, eco, startedAt, now = new Date()) {
   const reward = matchReward(result, eco, { firstWin, streak: Math.min(b.streakMax, round2(streak * b.streakStep)) });
   return {
     reward,
-    profile: { ...applyReward(profile, reward, result), streak, lastWinDay: firstWin ? today : (profile.lastWinDay ?? null), ...formUp(profile, eco, eco.form.match, now) },
+    profile: { ...applyReward(profile, reward, result), streak, lastWinDay: firstWin ? today : (profile.lastWinDay ?? null), ...(result.forfeit ? {} : formUp(profile, eco, eco.form.match, now)) },
   };
 }
 

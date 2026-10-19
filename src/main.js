@@ -304,7 +304,7 @@ export async function startMatch(cfg) {
     match: cfg.match,
     stats: Object.fromEntries(ids.map(id => [id, cfg.roster[id].stats])),
     rackets: Object.fromEntries(ids.map(id => [id, cfg.rackets[id].stats])),
-    shoes: cfg.shoes, ball: cfg.ball, fuel: cfg.fuel,
+    shoes: cfg.shoes, ball: cfg.ball, fuel: cfg.fuel, form: cfg.form,
   });
   await setupScene(cfg.venue, ids, cfg.roster, cfg.rackets);
 }

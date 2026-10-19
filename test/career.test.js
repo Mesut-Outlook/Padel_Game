@@ -209,6 +209,7 @@ test('settleMatch: streak +10% per match started within 20 min, max +50%, forfei
   const f = settleMatch(p, { ...club(false, 0), forfeit: true }, eco, at(19, 10, 40), at(19, 10, 41));
   assert.equal(f.profile.streak, 0);
   assert.equal(f.reward.credits, 0);
+  assert.equal(f.profile.formAt, p.formAt);  // quitting does not shake off the rust either
 });
 
 test('form: rusts 0.01/day after 7 idle days down to -0.10; a match gives +0.03, training +0.02', () => {

@@ -15,14 +15,16 @@ import {
   saveProfile,
   exportProfile,
   importProfile,
-  matchReward,
-  applyReward,
   trainCost,
   buyTraining,
   buyItem,
   equip,
   useFuel,
   applyRating,
+  settleMatch,
+  formNow,
+  addPoints,
+  expiringSoon,
   tournamentReward,
   canEnter,
   aiRankingTable,
@@ -246,6 +248,7 @@ const levelText = (p) => `Level ${(p.level ?? 1.5).toFixed(2)} · ${tierAt(p.lev
 const relPct = (p) => Math.round((p.reliability ?? 0.2) * 100);
 const tierByIndex = (i) => TIERS.find(t => t.index === i) || TIERS[0];
 const LEVEL_NOTE = 'Padel Legends level — Playtomic-style, not synced';
+const formText = (p) => { const f = formNow(p, eco); return f < 0 ? `Rusty (${Math.round(f * 100)}%)` : 'Sharp'; };
 
 function renderTopCreditsHtml(p = profile) {
   if (!p) return '';
@@ -295,7 +298,7 @@ function buildLeftPanelHtml(ch, stats, p = null) {
       </div>
     </div>
     ${currencyRow}
-    ${p ? `<div class="cr-left-level"><b>${escapeHtml(levelText(p))} · ${relPct(p)}%</b><span>${LEVEL_NOTE}</span></div>` : ''}
+    ${p ? `<div class="cr-left-level"><b>${escapeHtml(levelText(p))} · ${relPct(p)}%</b><span>Form: ${formText(p)}</span><span>${LEVEL_NOTE}</span></div>` : ''}
     <div class="pl-stats-list">
       ${statBarHtml('SPEED', s.speed ?? 4)}
       ${statBarHtml('POWER', s.power ?? 4)}
@@ -435,7 +438,7 @@ function persistProfile(nextProfile) {
 }
 
 function syncProfileFromStorage() {
-  const res = loadProfile(getStore());
+  const res = loadProfile(getStore(), new Date(), eco);
   // storage blocked (or empty because saving failed earlier): play on the in-memory / history copy
   if (res.status === 'unavailable' || (res.status === 'none' && (memProfile || backedUpProfile()))) {
     storageBlocked = true;
@@ -1089,6 +1092,13 @@ function renderLevelStartScreen() {
 }
 
 // 3. Career Hub
+// soft nudges back to play: rusty form, tournament points about to drop out (spec §7)
+function hubHintsHtml() {
+  const f = formNow(profile, eco), soon = expiringSoon(profile, eco);
+  return (f < 0 ? `<div class="cr-banner" role="status"><span>🏃 Form: ${formText(profile)} — play a match to shake off the rust.</span></div>` : '')
+    + (soon > 0 ? `<div class="cr-banner" role="status"><span>⏳ Points expiring in 7 days: ${soon} — play a tournament to keep your rank.</span></div>` : '');
+}
+
 function renderHubScreen() {
   if (!profile) {
     showScreen('templates');
@@ -1111,6 +1121,7 @@ function renderHubScreen() {
 
   careerPanel.innerHTML = `
     ${renderBannersHtml()}
+    ${hubHintsHtml()}
     <div class="cr-profile-banner">
       <div class="cr-prof-id">
         <span class="cr-prof-flag">${countryFlag(pl.countryCode)}</span>
@@ -1375,8 +1386,8 @@ const scaledAI = (c, ai) => ({ ...c, stats: scaleStats(c.stats, ai) });
 // rate the finished career match (spec §4.2): mates / opps = the other players' levels (null = unknown online player)
 function withRating(p, result, mates, opps) {
   const avg = (ls) => ls.reduce((a, b) => a + (b ?? 2.5), 0) / ls.length;
-  const r = applyRating(p, avg([p.level, ...mates]), avg(opps), result);
-  return { ...r.profile, lastReward: { ...p.lastReward, level: { from: p.level, to: r.profile.level, delta: r.delta, tierUp: r.tierUp?.name || null } } };
+  const r = applyRating(p, avg([p.level, ...mates]), avg(opps), result, new Date(), eco.tierUp);
+  return { ...r.profile, lastReward: { ...p.lastReward, level: { from: p.level, to: r.profile.level, delta: r.delta, tierUp: r.tierUp?.name || null, bonus: r.bonus } } };
 }
 
 // one bagged energy product per career match, used up as it starts (no refund when abandoned) -> { boost, tire, name } | null
@@ -1431,7 +1442,7 @@ async function launchCareerMatch() {
   const mates = players === 4 ? [lv(1)] : [], opps = players === 4 ? [lv(2), lv(3)] : [lv(2)];
 
   const venue = venues[playState.venueIdx] || venues[0];
-  const fuel = takeFuel();
+  const fuel = takeFuel(), startedAt = new Date();
 
   await startMatchFn({
     players,
@@ -1443,10 +1454,10 @@ async function launchCareerMatch() {
     shoes: { 0: { speed: shoeItem.speed, agility: shoeItem.agility } },
     ball: { speed: ballItem.speed, bounce: ballItem.bounce },
     fuel: fuel ? { 0: fuel } : undefined,
+    form: { 0: formNow(profile, eco) },
     venue,
     onEnd(result) {
-      const reward = matchReward(result, eco);
-      const updated = applyReward(profile, reward, result);
+      const { reward, profile: updated } = settleMatch(profile, result, eco, startedAt);
       updated.lastReward = {
         lines: reward.lines,
         mult: reward.mult,
@@ -2017,11 +2028,12 @@ function renderRewardScreen() {
             <b class="tabular">${r.level.delta >= 0 ? '+' : ''}${r.level.delta.toFixed(2)}</b>
           </div>` : ''}
           ${r.level?.tierUp ? `<div class="cr-reward-row is-mult"><span>TIER UP: ${escapeHtml(r.level.tierUp)}</span><b>⬆</b></div>` : ''}
+          ${r.level?.bonus ? `<div class="cr-reward-row"><span>Tier up bonus</span><b class="tabular">+${r.level.bonus}</b></div>` : ''}
         </div>
 
         <div class="cr-reward-total">
           <span>Total Reward</span>
-          <b class="tabular">+${r.credits} Credits</b>
+          <b class="tabular">+${r.credits + (r.level?.bonus || 0)} Credits</b>
         </div>
 
         <div class="cr-reward-balance">
@@ -2236,9 +2248,8 @@ function settleTournament(p) {
   const rw = tournamentReward(entry, place);
   const old = p.circuit?.[entry.id];
   return {
-    ...p,
+    ...addPoints(p, rw.rankingPoints),
     credits: p.credits + rw.credits,
-    rankingPoints: p.rankingPoints + rw.rankingPoints,
     circuit: { ...p.circuit, [entry.id]: old ? Math.min(old, place) : place },
     tournament: null,
     tournamentResult: { entryId: entry.id, name: entry.name, place, credits: rw.credits, rankingPoints: rw.rankingPoints },
@@ -2495,7 +2506,7 @@ async function launchTournamentMatch(m) {
   const rr = () => rackets[Math.floor(Math.random() * rackets.length)];
   const rally = T.format === 'americano' || T.format === 'mexicano';
   const quick = new URLSearchParams(location.search).has('quick');
-  const fuel = takeFuel();
+  const fuel = takeFuel(), startedAt = new Date();
   const tRoster = { 0: me, 1: scaledAI(partner, entry.ai), 2: scaledAI(o1 || characters[0], entry.ai), 3: scaledAI(o2 || characters[1], entry.ai) };
   const tLv = (id) => aiLevel(tRoster[id].stats, entry.ai);
 
@@ -2507,10 +2518,10 @@ async function launchTournamentMatch(m) {
     shoes: { 0: { speed: shoeItem.speed, agility: shoeItem.agility } },
     ball: { speed: ballItem.speed, bounce: ballItem.bounce },
     fuel: fuel ? { 0: fuel } : undefined,
+    form: { 0: formNow(profile, eco) },
     venue: venues.find(v => v.id === entry.venue) || venues[0],
     onEnd(result) {
-      const reward = matchReward(result, eco);
-      let updated = applyReward(profile, reward, result);
+      let { reward, profile: updated } = settleMatch(profile, result, eco, startedAt);
       const [t0, t1] = rally ? result.points : result.games;
       const fixed = result.won === (t0 > t1) ? [t0, t1] : result.won ? [t1 + 1, t1] : [t0, t0 + 1];  // guard against a tie
       const score = swapped ? { a: fixed[1], b: fixed[0] } : { a: fixed[0], b: fixed[1] };
@@ -2649,7 +2660,7 @@ function joinOnlineRoom(code, create) {
   const lookWithRacket = { ...look, racket: myRacket.id, racketColor: myRacket.color, racketShape: myRacket.shape };
   const ballItem = shop.items.find(i => i.id === onlineState.ballId) || equippedBall(profile);
   const venue = venues[onlineState.venueIdx] || venues[0];
-  const fuel = takeFuel() || undefined;
+  const fuel = takeFuel() || undefined, startedAt = new Date();  // ponytail: online counts from joining the room, not the first serve
   const net = startOnlineFn({
     url: onlineUrl() || undefined, code, players: onlineState.players,
     venue: venues.indexOf(venue), ai: 'club',
@@ -2661,8 +2672,7 @@ function joinOnlineRoom(code, create) {
     fuel,
     status: (t, l, err) => setOnlineStatus(t, l, err),
     onEnd(result) {
-      const reward = matchReward(result, eco);
-      const updated = applyReward(profile, reward, result);
+      const { reward, profile: updated } = settleMatch(profile, result, eco, startedAt);
       updated.lastReward = {
         lines: reward.lines, mult: reward.mult, credits: reward.credits, won: result.won, ai: result.ai || 'online',
         score: result.score?.sets || '',
