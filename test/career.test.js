@@ -305,7 +305,7 @@ test('settleMatch: match XP raises a stat at per × stat, never past the cap, no
   const p = { ...newProfile(chars[0]), xp: { volley: 195 } };  // volley 5: needs 200
   const m = settleMatch(p, { ...club(true, 6), tally: tally({ volley: [4, 0] }) }, eco, at(19, 9), at(19, 10));
   assert.equal(m.profile.stats.volley, 6);
-  assert.equal(m.profile.xp.volley, 195 + 10 - 200);
+  assert.equal(m.profile.xp.volley, 195 + 4 * eco.xp.volley - 200);
   assert.deepEqual(m.ups, [['volley', 5, 6]]);
   const capped = { ...p, stats: { ...p.stats, volley: 7 }, xp: { volley: 0 } };
   assert.equal(settleMatch(capped, { ...club(true, 6), tally: tally({ volley: [99, 0] }) }, eco, at(19, 9), at(19, 10)).profile.stats.volley, 7);

@@ -192,6 +192,7 @@ export const statCap = (profile) => TIERS[(profile.bestTier || 1) - 1].cap;
 const STAT_NAME = { speed: 'Speed', power: 'Power', control: 'Control', volley: 'Volley', smash: 'Smash', stamina: 'Stamina' };
 
 // match XP: a stat goes up when its XP reaches eco.xp.per × the stat; nothing is gained at the cap
+// (the cap is the one before this match's tier-up: the new tier lifts it from the next match on)
 function growStats(profile, gain, eco) {
   const cap = statCap(profile), stats = { ...profile.stats }, xp = { ...profile.xp }, ups = [];
   for (const k of STATS) {
@@ -216,7 +217,7 @@ export function coachTip(t, profile, eco) {
     : { text: `You were exhausted for ${Math.round(t.tiredSec)} s — keep food in your bag and eat at changeovers`, action: { restock: true } };
   const [vm, vx] = t.volley, [sm, sx] = t.smash;
   if (vm + vx >= 5 && vx / (vm + vx) >= 0.4) return train('volley', `Your volleys missed ${vx} of ${vm + vx}`, ' or play at the net more');
-  if (sm + sx >= 4 && sx / (sm + sx) >= 0.4) return train('smash', `Your smashes missed ${sx} of ${sm + sx}`, ' or play a bandeja instead');
+  if (sm + sx >= 4 && sx / (sm + sx) >= 0.4) return train('smash', `Your smashes missed ${sx} of ${sm + sx}`, ' or let more lobs bounce off the glass');
   const weak = STATS.reduce((a, k) => (profile.stats[k] < profile.stats[a] ? k : a));
   return train(weak, `Your weakest skill is ${STAT_NAME[weak]} (${profile.stats[weak]})`);
 }

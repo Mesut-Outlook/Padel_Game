@@ -45,3 +45,10 @@ test('xpFromTally: whole points per stat from eco.xp weights', () => {
 test('hit events say whether the ball was volleyed', () => {
   assert.equal(typeof newWorld, 'function');  // the flag itself is checked in game.test.js (volley hit)
 });
+
+test('an overhead before the bounce is a smash, not also a volley', () => {
+  const t = newTally();
+  tallyEvents(t, [hit(0, 'smash', { volley: true }), point(1, 'out', 1)], 0);
+  assert.deepEqual(t.smash, [0, 1]);
+  assert.deepEqual(t.volley, [0, 0]);
+});

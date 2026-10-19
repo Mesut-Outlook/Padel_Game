@@ -1,6 +1,7 @@
 // The career player's match, counted for stat growth (XP) and the coach tip. Pure: fed with world events
 // (offline or from the server) and the player's own row each frame, so online matches count too.
 import { pointCall, teamOf } from './pointcall.js';
+import { HYDRATION } from './game.js';
 
 const OVERHEAD = new Set(['smash', 'bandeja', 'vibora', 'bajada', 'rulo']);
 const HARD = 25;  // m/s off the racket: a hard drive (about the top 40% of AI drives)
@@ -15,14 +16,14 @@ export function tallyEvents(t, events, me) {
       t.last = e.pid;
       if (e.pid !== me) continue;
       t.mine = e; t.played = true;
-      if (e.volley) t.volley[e.mistake ? 1 : 0]++;
-      if (OVERHEAD.has(e.shot)) t.smash[e.mistake ? 1 : 0]++;
+      if (OVERHEAD.has(e.shot)) t.smash[e.mistake ? 1 : 0]++;  // overheads are taken in the air too: smash, not volley
+      else if (e.volley) t.volley[e.mistake ? 1 : 0]++;
       if (e.shot === 'drive' && !e.mistake && e.speed >= HARD) t.drives++;
     } else if (e.type === 'point') {
       const myErr = t.last === me && teamOf(me) !== e.team && pointCall(e.why, e.team, me).pid === me;
       if (myErr && t.mine && !t.mine.mistake) {  // the shot looked fine but lost the point: count it missed
-        if (t.mine.volley) { t.volley[0]--; t.volley[1]++; }
         if (OVERHEAD.has(t.mine.shot)) { t.smash[0]--; t.smash[1]++; }
+        else if (t.mine.volley) { t.volley[0]--; t.volley[1]++; }
       }
       if (t.played && !myErr && e.rally >= 4) t.clean++;
       if (e.rally >= 8) t.long++;
@@ -36,7 +37,7 @@ export function tallyFrame(t, { p, energy, hyd }, dt) {
   if (t.prev) { const d = Math.hypot(p[0] - t.prev[0], p[1] - t.prev[1]); if (d < 1) t.dist += d; }
   t.prev = [p[0], p[1]];
   if (energy < 0.25) t.tiredSec += dt;
-  if (hyd < 0.3) t.drySec += dt;
+  if (hyd < HYDRATION.dry) t.drySec += dt;
 }
 
 // eco.xp = { volley, smash, power, control, speed, stamina } weights; speed is per metre
