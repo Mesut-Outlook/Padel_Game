@@ -180,7 +180,7 @@ function strike(w, pl, kind, aimX = 0) {
   pl.swing = { kind, t: 0, anim: s.anim, backhand: (b.p[0] - pl.p[0]) * (pl.team === 0 ? -1 : 1) < 0 };
   pl.want = null;
   w.rally++;
-  w.events.push({ type: 'hit', pid: pl.id, shot: kind, t: w.t, mistake, speed: Math.hypot(...b.v), quality });
+  w.events.push({ type: 'hit', pid: pl.id, shot: kind, t: w.t, mistake, speed: Math.hypot(...b.v), quality, volley: w.match.rally.bouncesSinceHit === 0 && kind !== 'serve' });
   const r = onHit(w.match, pl.id);
   if (r?.point != null) endPoint(w, r);
   else if (r?.let) { w.events.push({ type: 'let', why: r.why, t: w.t }); w.state = 'dead'; w.timer = 1.0; }
