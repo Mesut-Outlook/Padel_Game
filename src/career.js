@@ -64,7 +64,9 @@ export function applyRating(profile, myPair, oppPair, result, now = new Date(), 
   const idle = profile.lastCareerMatch ? (now - new Date(profile.lastCareerMatch)) / 864e5 : 0;
   const r = rateMatch({ level: profile.level, reliability: idleReliability(profile.reliability, idle) }, myPair, oppPair, !!result.won, matchShare(result));
   const tier = tierAt(r.level), bestTier = Math.max(profile.bestTier || 1, tier.index);
-  const tierUp = bestTier > (profile.bestTier || 1) ? tier : null, bonus = tierUp ? tierUpCredits * tier.index : 0;
+  const old = profile.bestTier || 1, tierUp = bestTier > old ? tier : null;
+  let bonus = 0;
+  for (let i = old + 1; i <= bestTier; i++) bonus += tierUpCredits * i;  // a jump over several tiers pays each of them
   return {
     profile: { ...profile, level: r.level, reliability: r.reliability, bestTier, lastCareerMatch: now.toISOString(), credits: profile.credits + bonus },
     delta: r.delta, tierUp, bonus,
@@ -117,7 +119,7 @@ const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
 // formAt = when form was last set (a match or training), so idle days are never counted twice
 export function formNow(profile, eco, now = new Date()) {
   const f = eco.form, form = profile.form || 0;
-  if (!profile.lastCareerMatch) return form;
+  if (!profile.lastCareerMatch || !profile.formAt) return form;  // no formAt: a profile from before form, rust starts after its next match
   const from = Math.max(profile.formAt ? +new Date(profile.formAt) : 0, +new Date(profile.lastCareerMatch) + f.graceDays * DAY);
   return round2(Math.max(f.min, form - f.perDay * Math.max(0, Math.floor((now - from) / DAY))));
 }
@@ -132,24 +134,24 @@ export function settleMatch(profile, result, eco, startedAt, now = new Date()) {
   const reward = matchReward(result, eco, { firstWin, streak: Math.min(b.streakMax, round2(streak * b.streakStep)) });
   return {
     reward,
-    profile: { ...applyReward(profile, reward, result), streak, lastWinDay: firstWin ? today : (profile.lastWinDay ?? null), ...(result.forfeit ? {} : formUp(profile, eco, eco.form.match, now)) },
+    profile: { ...applyReward(profile, reward, result), streak, lastWinDay: firstWin ? today : (profile.lastWinDay ?? null), ...formUp(profile, eco, result.forfeit ? 0 : eco.form.match, now) },  // a forfeit pins the rust, no gain
   };
 }
 
 // ranking points from tournaments are logged with their date and drop out after eco.pointsDays (FIP's 52 weeks, shortened);
 // a profile from before the log starts it today with its whole total
-const pointsLog = (p, now) => p.pointsLog ?? (p.rankingPoints > 0 ? [{ at: now.toISOString(), pts: p.rankingPoints }] : []);
+const pointsLog = (p, now) => Array.isArray(p.pointsLog) ? p.pointsLog : (p.rankingPoints > 0 ? [{ at: now.toISOString(), pts: p.rankingPoints }] : []);
 export const addPoints = (p, pts, now = new Date()) =>
   ({ ...p, rankingPoints: p.rankingPoints + pts, pointsLog: [...pointsLog(p, now), { at: now.toISOString(), pts }] });
 
 export function expirePoints(p, eco, now = new Date()) {
   const log = pointsLog(p, now), live = log.filter(e => now - new Date(e.at) < eco.pointsDays * DAY);
-  if (p.pointsLog && live.length === log.length) return p;
+  if (log === p.pointsLog && live.length === log.length) return p;
   return { ...p, rankingPoints: Math.max(0, p.rankingPoints - log.reduce((n, e) => n + e.pts, 0) + live.reduce((n, e) => n + e.pts, 0)), pointsLog: live };
 }
 
 export const expiringSoon = (p, eco, now = new Date(), days = 7) =>
-  pointsLog(p, now).filter(e => +new Date(e.at) + eco.pointsDays * DAY - now <= days * DAY).reduce((n, e) => n + e.pts, 0);
+  pointsLog(p, now).filter(e => { const left = +new Date(e.at) + eco.pointsDays * DAY - now; return left > 0 && left <= days * DAY; }).reduce((n, e) => n + e.pts, 0);
 
 // Credits to raise a stat from `level` to level + 1
 export const trainCost = (level, eco) => Math.round(eco.training.base * eco.training.growth ** (level - eco.training.start));

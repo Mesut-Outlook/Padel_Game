@@ -24,6 +24,7 @@ import {
   settleMatch,
   formNow,
   addPoints,
+  expirePoints,
   expiringSoon,
   tournamentReward,
   canEnter,
@@ -1104,6 +1105,8 @@ function renderHubScreen() {
     showScreen('templates');
     return;
   }
+  const fresh = expirePoints(profile, eco);  // a tab left open past the 90-day mark
+  if (fresh !== profile) persistProfile(fresh);
   if (profile.lastReward) {
     showScreen('reward');
     return;

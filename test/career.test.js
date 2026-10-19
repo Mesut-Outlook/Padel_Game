@@ -209,12 +209,12 @@ test('settleMatch: streak +10% per match started within 20 min, max +50%, forfei
   const f = settleMatch(p, { ...club(false, 0), forfeit: true }, eco, at(19, 10, 40), at(19, 10, 41));
   assert.equal(f.profile.streak, 0);
   assert.equal(f.reward.credits, 0);
-  assert.equal(f.profile.formAt, p.formAt);  // quitting does not shake off the rust either
 });
 
 test('form: rusts 0.01/day after 7 idle days down to -0.10; a match gives +0.03, training +0.02', () => {
-  const p = { ...newProfile(chars[0]), lastCareerMatch: at(1).toISOString() };
+  const p = { ...newProfile(chars[0]), lastCareerMatch: at(1).toISOString(), formAt: at(1).toISOString() };
   assert.equal(formNow(p, eco, at(8)), 0);
+  assert.equal(formNow({ ...p, formAt: undefined }, eco, at(30)), 0);  // profile from before part B: rust starts with its next match
   assert.equal(formNow(p, eco, at(14)), -0.06);
   assert.equal(formNow(p, eco, at(30)), -0.1);
   assert.equal(formNow(newProfile(chars[0]), eco, at(30)), 0);  // never played: no rust
@@ -257,4 +257,17 @@ test('applyRating: a new best tier pays tierUpCredits × tier number, once', () 
   assert.equal(r.profile.credits, 600);
   const again = applyRating({ ...r.profile, level: 2.45 }, 2.45, 4, { won: true, games: [6, 0] }, at(19), eco.tierUp);
   assert.equal(again.bonus, 0);
+});
+
+test('review fixes: forfeit keeps the rust, multi-tier jump pays every tier, expiry edge cases', () => {
+  const rusty = { ...newProfile(chars[0]), lastCareerMatch: at(1).toISOString(), formAt: at(1).toISOString() };
+  const f = settleMatch(rusty, { ...club(false, 0), forfeit: true }, eco, at(30, 9), at(30)).profile;
+  const after = applyRating(f, 1.5, 1.5, { won: false, games: [0, 6] }, at(30), eco.tierUp).profile;
+  assert.equal(formNow(after, eco, at(30)), -0.1);
+  const low = { ...newProfile(chars[0], {}, { level: 0.9, reliability: 0 }), credits: 0 };  // Rookie (1) -> Intermediate (4)?
+  const jump = applyRating({ ...low, level: 2.45 }, 2.45, 6, { won: true, games: [6, 0] }, at(19), 150);
+  assert.equal(jump.bonus, 150 * (2 + 3 + 4));
+  const old = addPoints(newProfile(chars[0]), 100, at(1));
+  assert.equal(expiringSoon(old, eco, at(1 + 95)), 0);  // already past expiry: not 'expiring soon'
+  assert.equal(expirePoints({ ...old, pointsLog: {} }, eco, at(19)).rankingPoints, 100);  // a broken log does not crash
 });
