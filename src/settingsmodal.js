@@ -6,7 +6,7 @@
 
 import { loadSettings, saveSettings, VALID_CONTROLS, VALID_SPEEDS } from './settings.js';
 import { padText } from './padstyle.js';
-import { LANGS, t } from './i18n.js';
+import { LANGS, t, I18N_LIVE } from './i18n.js';
 import { padDir, spatialFocus } from './padnav.js';
 
 let modalEl = null;
@@ -95,8 +95,8 @@ export function openSettingsModal() {
           <button type="button" class="sm-speed-btn ${selTips ? '' : 'is-selected'}" data-tips="0" tabindex="0">${t('Off')}</button>
         </div>
 
-        <div class="sm-section-label">${t('LANGUAGE')}</div>
-        <div class="sm-speed-row sm-lang" id="sm-lang-options">
+        <div class="sm-section-label" ${I18N_LIVE ? '' : 'hidden'}>${t('LANGUAGE')}</div>
+        <div class="sm-speed-row sm-lang" id="sm-lang-options" ${I18N_LIVE ? '' : 'hidden'}>
           ${[['', `🌐 ${t('Auto')}`], ...LANGS].map(([c, name]) => `<button type="button" class="sm-speed-btn ${selLang === c ? 'is-selected' : ''}" data-lang="${c}" lang="${c || 'en'}" tabindex="0">${name}</button>`).join('')}
         </div>
       </div>
