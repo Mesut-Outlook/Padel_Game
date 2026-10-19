@@ -89,6 +89,8 @@ export function initMenu() {
           <canvas id="pl-preview-canvas" class="pl-preview-canvas"></canvas>
           <div class="pl-preview-badge">LIVE PREVIEW</div>
           <div class="pl-preview-racket-pill" id="pl-preview-racket-pill">Starter Nova</div>
+          <button type="button" class="pl-preview-nav is-prev" data-step="-1" aria-label="Previous player">‹</button>
+          <button type="button" class="pl-preview-nav is-next" data-step="1" aria-label="Next player">›</button>
         </div>
         <div class="pl-char-info" id="pl-char-info">
           <!-- Populated dynamically -->
@@ -406,6 +408,7 @@ export function initMenu() {
     const req = ++previewReqId;
     const badge = shell.querySelector('.pl-preview-badge');
     if (badge) badge.textContent = badgeText;
+    previewCanvas.parentElement.dataset.custom = '1';  // career/online player: no Friendly ‹ › arrows
     const pill = shell.querySelector('#pl-preview-racket-pill');
     if (pill) pill.textContent = rk?.name || 'Starter Nova';
     const info = shell.querySelector('#pl-char-info');
@@ -534,6 +537,15 @@ export function initMenu() {
       grid.appendChild(card);
     });
   }
+
+  // ‹ › on the preview step through the player cards (same gender filter), wrapping around
+  shell.querySelectorAll('.pl-preview-nav').forEach(b => {
+    b.onclick = () => {
+      const cards = [...shell.querySelectorAll('.pl-char-card')];
+      const i = cards.findIndex(c => c.classList.contains('is-selected'));
+      cards[(i + +b.dataset.step + cards.length) % cards.length]?.click();
+    };
+  });
 
   // Populate Venue Cards
   function populateVenueGrid(filter = 'all') {
@@ -890,6 +902,7 @@ export function initMenu() {
     restoreQuickMatch() {
       const badge = shell.querySelector('.pl-preview-badge');
       if (badge) badge.textContent = 'LIVE PREVIEW';
+      delete previewCanvas.parentElement.dataset.custom;
       updateAvatarPreview(selectedCharIdx, selectedRacketIdx, true);
     },
     setPadHandler(fn) {
