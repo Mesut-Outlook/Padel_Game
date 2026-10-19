@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { newProfile, tierOf, buyItem, equip } from '../src/career.js';
+import { newProfile, tierOf, buyItem, equip, useFuel } from '../src/career.js';
 
 const read = (f) => JSON.parse(fs.readFileSync(new URL(`../data/${f}`, import.meta.url)));
 const shop = read('shop.json'), chars = read('characters.json'), rackets = read('rackets.json');
@@ -61,3 +61,26 @@ test('every kit and roster character has allowed style and pattern', () => {
   }
 });
 
+
+test('energy products: packs stack, go into the bag, one is used per match and the bag empties itself', () => {
+  const banana = shop.items.find(i => i.id === 'fuel_banana'), gel = shop.items.find(i => i.id === 'fuel_gel');
+  let p = { ...newProfile(chars[0], {}), credits: 1000 };
+  assert.equal(useFuel(p, shop).fuel, null);  // nothing bagged: water only
+  p = buyItem(p, banana, shop).profile;
+  p = buyItem(p, banana, shop).profile;  // a second pack stacks instead of 'owned'
+  assert.equal(p.supplies.fuel_banana, 10);
+  assert.equal(p.equipped.fuel, 'fuel_banana');
+  assert.equal(p.credits, 1000 - 2 * banana.price);
+  assert.equal(buyItem(p, gel, shop).reason, 'tier');
+  assert.equal(equip(p, 'fuel', 'fuel_gel').equipped.fuel, 'fuel_banana');  // none of it in the bag
+  assert.equal(equip(p, 'fuel', null).equipped.fuel, null);
+  const used = useFuel(p, shop);
+  assert.deepEqual(used.fuel, { boost: banana.boost, tire: banana.tire, name: 'Banana' });
+  assert.equal(used.profile.supplies.fuel_banana, 9);
+  const last = useFuel({ ...p, supplies: { fuel_banana: 1 } }, shop);
+  assert.equal(last.profile.supplies.fuel_banana, 0);
+  assert.equal(last.profile.equipped.fuel, null);
+  const old = { ...newProfile(chars[0], {}) }; delete old.supplies; delete old.equipped.fuel;  // profiles saved before energy products
+  assert.equal(useFuel(old, shop).fuel, null);
+  assert.equal(buyItem({ ...old, credits: 100 }, banana, shop).profile.supplies.fuel_banana, 5);
+});

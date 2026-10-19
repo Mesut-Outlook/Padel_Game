@@ -13,7 +13,8 @@ export function newProfile(template, look = {}) {
     stats: Object.fromEntries(STATS.map(k => [k, 4])),
     credits: 0, rankingPoints: 0,
     inventory: ['r01', 'shoe_starter', 'kit_starter', 'ball_standard'],
-    equipped: { racket: 'r01', shoes: 'shoe_starter', kit: 'kit_starter', ball: 'ball_standard' },
+    equipped: { racket: 'r01', shoes: 'shoe_starter', kit: 'kit_starter', ball: 'ball_standard', fuel: null },
+    supplies: {},  // energy products (type 'fuel'): id -> count left; older profiles have no field = {}
     history: { played: 0, won: 0, pointsWon: 0 },
     circuit: {}, tournament: null,
   };
@@ -81,14 +82,33 @@ export function tierOf(rankingPoints, shop) {
   return Object.entries(shop.tiers).filter(([, min]) => rankingPoints >= min).sort((a, b) => b[1] - a[1])[0][0];
 }
 
+// energy products stack (a pack of item.pack per purchase) and the first one bought goes straight into the bag
 export function buyItem(profile, item, shop) {
-  if (profile.inventory.includes(item.id)) return { ok: false, reason: 'owned' };
+  const fuel = item.type === 'fuel';
+  if (!fuel && profile.inventory.includes(item.id)) return { ok: false, reason: 'owned' };
   if (profile.rankingPoints < shop.tiers[item.tier]) return { ok: false, reason: 'tier' };
   if (profile.credits < item.price) return { ok: false, reason: 'credits' };
-  return { ok: true, profile: { ...profile, credits: profile.credits - item.price, inventory: [...profile.inventory, item.id] } };
+  const credits = profile.credits - item.price;
+  if (!fuel) return { ok: true, profile: { ...profile, credits, inventory: [...profile.inventory, item.id] } };
+  const supplies = { ...profile.supplies, [item.id]: (profile.supplies?.[item.id] || 0) + item.pack };
+  return { ok: true, profile: { ...profile, credits, supplies, equipped: { ...profile.equipped, fuel: profile.equipped.fuel || item.id } } };
 }
 
-export const equip = (profile, slot, id) => profile.inventory.includes(id) ? { ...profile, equipped: { ...profile.equipped, [slot]: id } } : profile;
+// slot 'fuel' takes a product with some left, or null to play without one
+const has = (profile, slot, id) => (slot === 'fuel' ? id === null || profile.supplies?.[id] > 0 : profile.inventory.includes(id));
+export const equip = (profile, slot, id) => has(profile, slot, id) ? { ...profile, equipped: { ...profile.equipped, [slot]: id } } : profile;
+
+// at the start of a career match: one of the bagged product is used up (no refund if the match is abandoned);
+// fuel = { boost, tire, name } for game.js, or null. The bag empties itself when the last one goes.
+export function useFuel(profile, shop) {
+  const id = profile.equipped?.fuel, item = shop.items.find(i => i.id === id && i.type === 'fuel');
+  if (!item || !(profile.supplies?.[id] > 0)) return { profile, fuel: null };
+  const left = profile.supplies[id] - 1;
+  return {
+    profile: { ...profile, supplies: { ...profile.supplies, [id]: left }, equipped: { ...profile.equipped, fuel: left > 0 ? id : null } },
+    fuel: { boost: item.boost, tire: item.tire, name: item.name },
+  };
+}
 
 // circuit entry (data/tournaments.json): champion gets championPoints and 10x that in Credits; lower places get a share
 const SHARE = [[1, 1], [2, 0.6], [4, 0.36], [8, 0.18]];

@@ -133,7 +133,7 @@ docs/     re-findings.md (rea tersine mühendislik notları)
 - [x] Oyuncu portreleri kameraya bakıyor ve ortalı
 - [x] Oyuncu enerjisi / yorgunluk ve taraf değişiminde su molası
 - [x] PlayStation kolu (DualShock 4 / DualSense) etiketleri
-- [ ] Kariyer marketinde enerji ürünleri (muz, izotonik, jel) — karar verildi, tasarım: `docs/superpowers/specs/2026-10-18-home-modes-energy-design.md`
+- [x] Kariyer marketinde enerji ürünleri: muz, izotonik, jel (5'li paket, Energy sekmesi, dolapta Bag yuvası, her kariyer maçında 1 adet; molada ek enerji + daha yavaş yorulma; online'da sunucu sınırlıyor) — tasarım: `docs/superpowers/specs/2026-10-18-home-modes-energy-design.md` §4
 - [ ] Telefon desteği: maçta dokunmatik kontroller (sol sanal çubuk, sağda vuruş düğmeleri), dikte "telefonu çevir" uyarısı, menülerin dokunmaya ve küçük ekrana uygun hale gelmesi — planlandı (2026-10-19 gece, enerji ürünlerinden sonra)
 - [ ] İki kolla yan yana: 2 kişi + 2 kol takılıysa kontrol kendiliğinden "Controller only" (P1 = 1. kol, P2 = 2. kol); her oyuncu kendi kolunun tuş yazılarını görür (Xbox A/B, PS ✕/○) — planlandı (2026-10-19 gece)
 - [ ] Yorgunluk hissedilsin: enerjisi düşen oyuncunun koşusu (hız, toparlanma, uzanma) ve vuruş kalitesi belirgin düşsün; enerji değerlerinin oynayarak ince ayarı (`ENERGY` tablosu, `src/game.js`) — planlandı (2026-10-19 gece)

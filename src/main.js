@@ -119,7 +119,7 @@ addEventListener('resize', resize); resize();
 window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorld, inputs, tut, humans, fx });
 const rig = createCameraRig(camera, renderer.domElement);
 const replay = createReplay(15, 60);
-let onEnd = null, pointsWon = [0, 0], lastCfg = null;
+let onEnd = null, pointsWon = [0, 0], lastCfg = null, fuelName = null;  // fuelName: the career energy product named at changeovers
 let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, msgTimer = 0, hypeTimer = 0, net = null, marker, loadingScene = false, control = 'auto', gameSpeed = 0.85;
 let styleStats = { pts: 0, streak: 0, maxRally: 0, smashes: 0, medals: [] };
 const MEDALS = {
@@ -205,7 +205,7 @@ async function setupScene(venue, ids, roster, rk) {
 
 // Online entry for the menu button and for Career. url defaults to serverUrl() (?server= / static build: none / :8080 / same host). look = remote-visible appearance (its stats are ignored).
 // status(text, lobby?) mirrors the #lobby line for callers that show their own panel; returns the net handle (or null if it did not connect).
-export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, onEnd: end, status } = {}) {
+export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, fuel, onEnd: end, status } = {}) {
   unlockAudio();
   const settings = loadSettings();
   gameSpeed = settings.speed;
@@ -217,9 +217,9 @@ export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', ma
   if (!url) { say(NO_SERVER); return null; }
   code = String(code || '').trim().toUpperCase();
   if (!code) { say('Enter a room code first.'); return null; }
-  onEnd = end || null; pointsWon = [0, 0];
+  onEnd = end || null; pointsWon = [0, 0]; fuelName = fuel?.name || null;
   net = connect({
-    url, code, char, stats, racket, public: isPublic, name, look, shoes, ball,
+    url, code, char, stats, racket, public: isPublic, name, look, shoes, ball, fuel,
     cfg: { players, ...match, ai, venue },
     onError: (e) => say(escapeText(e)),
     onLobby: (l) => {
@@ -275,7 +275,7 @@ $('start').onclick = async () => {
   }
 };
 
-// One entry for every offline match. cfg = { players, humans, ai, match, roster: {id: Character}, rackets: {id: racket}, venue, shoes?: {id: {speed, agility}}, ball?: {speed, bounce}, sameTeam?, onEnd? }.
+// One entry for every offline match. cfg = { players, humans, ai, match, roster: {id: Character}, rackets: {id: racket}, venue, shoes?: {id: {speed, agility}}, ball?: {speed, bounce}, fuel?: {id: {boost, tire, name}}, sameTeam?, onEnd? }.
 // onEnd gets team 0's MatchResult (+ score text) once; the menu key then returns to #career instead of the plain menu.
 export async function startMatch(cfg) {
   lastCfg = cfg;
@@ -285,7 +285,7 @@ export async function startMatch(cfg) {
   gameSpeed = settings.speed;
   control = settings.control;
   aiLevel = cfg.ai;
-  onEnd = cfg.onEnd || null; pointsWon = [0, 0];
+  onEnd = cfg.onEnd || null; pointsWon = [0, 0]; fuelName = cfg.fuel?.[0]?.name || null;
   const ids = cfg.players === 2 ? [0, 2] : [0, 2, 1, 3];
   humans = (cfg.sameTeam && cfg.humans === 2 ? [0, 1] : ids).slice(0, cfg.humans);  // P2 partners P1 instead of facing them
   // keyboard + controller: with several local humans the keyboard is P1's alone so the first pad goes to P2
@@ -295,7 +295,7 @@ export async function startMatch(cfg) {
     match: cfg.match,
     stats: Object.fromEntries(ids.map(id => [id, cfg.roster[id].stats])),
     rackets: Object.fromEntries(ids.map(id => [id, cfg.rackets[id].stats])),
-    shoes: cfg.shoes, ball: cfg.ball,
+    shoes: cfg.shoes, ball: cfg.ball, fuel: cfg.fuel,
   });
   await setupScene(cfg.venue, ids, cfg.roster, cfg.rackets);
 }
@@ -536,7 +536,7 @@ function handleEvents(events, score, winner) {
     else if (e.type === 'fault') { flash('SERVE FAULT', 1); sfxCrowdReact('murmur'); }
     else if (e.type === 'let') flash('LET', 1);
     else if (e.type === 'drink') {  // after the point call; then one tip, so they come every other game at most
-      setTimeout(() => showHype('💧 CHANGEOVER — water & banana, energy back up', 0, 2.4), 1300);
+      setTimeout(() => showHype(fuelName ? `💧 CHANGEOVER — ${fuelName.toLowerCase()}, energy +` : '💧 CHANGEOVER — water break, energy back up', 0, 2.4), 1300);
       if (humans.length && loadSettings().tips) setTimeout(() => showHype('💡 ' + (device === 'pad' ? padText(nextTip('pad')) : nextTip('kb')), 0, 5), 4000);
     }
     else if (e.type === 'point') {

@@ -29,6 +29,10 @@
     { "id": "hw_band_red", "type": "headwear", "name": "Red headband", "tier": "amateur", "price": 80, "headwear": { "type": "headband", "color": "#E63946" } },
     { "id": "hw_band_white", "type": "headwear", "name": "White headband", "tier": "amateur", "price": 80, "headwear": { "type": "headband", "color": "#FFFFFF" } },
     { "id": "hw_visor_navy", "type": "headwear", "name": "Navy visor", "tier": "club", "price": 250, "headwear": { "type": "visor", "color": "#1D3557" } },
-    { "id": "hw_visor_white", "type": "headwear", "name": "White visor", "tier": "regional", "price": 400, "headwear": { "type": "visor", "color": "#FFFFFF" } }
+    { "id": "hw_visor_white", "type": "headwear", "name": "White visor", "tier": "regional", "price": 400, "headwear": { "type": "visor", "color": "#FFFFFF" } },
+
+    { "id": "fuel_banana", "type": "fuel", "name": "Banana", "tier": "amateur", "price": 60, "pack": 5, "boost": 0.06, "tire": 0.9, "desc": "Slow release: you tire 10% slower all match" },
+    { "id": "fuel_isotonic", "type": "fuel", "name": "Isotonic drink", "tier": "club", "price": 100, "pack": 5, "boost": 0.12, "tire": 0.95, "desc": "Balanced: fluid, salts and carbs" },
+    { "id": "fuel_gel", "type": "fuel", "name": "Energy gel", "tier": "regional", "price": 150, "pack": 5, "boost": 0.2, "tire": 1, "desc": "Fast boost: the biggest refill at every changeover" }
   ]
 }

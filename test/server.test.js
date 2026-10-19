@@ -52,17 +52,18 @@ test('join keeps a small look, drops an oversized one, and works without one', a
   } finally { await srv.close(); }
 });
 
-test('host ball spec and player shoes are clamped into the room world', async () => {
+test('host ball spec, player shoes and energy product are clamped into the room world', async () => {
   const srv = await startServer(0);
   try {
     const a = client(srv.port);
     const lob = a.next('lobby');
-    await a.send({ type: 'join', code: 'BALL', cfg: { players: 2 }, ball: { speed: 9, bounce: 1.04 }, shoes: { speed: 5, agility: 0.1 } });
+    await a.send({ type: 'join', code: 'BALL', cfg: { players: 2 }, ball: { speed: 9, bounce: 1.04 }, shoes: { speed: 5, agility: 0.1 }, fuel: { boost: 0.9, tire: 0.2, name: 'x' } });
     await lob;
     const w = srv.rooms.get('BALL').world;
     assert.deepEqual(w.ballSpec, { speed: 1.12, bounce: 1.04 });
     assert.equal(w.ball.bounce, 1.04);
     assert.deepEqual(w.players[0].shoes, { speed: 0.12, agility: 0.1 });
+    assert.deepEqual(w.players[0].fuel, { boost: 0.2, tire: 0.9 });  // energy product clamped to the shop's range
     a.ws.close();
   } finally { await srv.close(); }
 });

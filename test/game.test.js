@@ -244,3 +244,25 @@ test('aiming updates pl.aim while swing is armed and during hit', () => {
   assert.equal(p.aim, -1, 'pl.aim updated to -1 while swing was armed');
 });
 
+
+test('energy product: extra refill at the changeover and slower tiring', () => {
+  const changeover = (fuel) => {
+    const w = newWorld({ fuel: { 0: fuel } });
+    for (const p of w.players) p.energy = 0.3;
+    Object.assign(w.match, { sets: [[0, 0]], points: [3, 0] });
+    w.state = 'play'; Object.assign(w.match.rally, { phase: 'rally', lastHitTeam: 0, bouncesSinceHit: 1 });
+    Object.assign(w.ball, { p: [0, 0.5, -5], v: [0, -3, 0], w: [0, 0, 0], live: true });
+    for (let i = 0; i < 60 && !w.events.some(e => e.type === 'drink'); i++) stepWorld(w, {}, 1 / 60);
+    return w.players;
+  };
+  const [gel, , noFuel] = changeover({ boost: 0.2, tire: 1 });
+  assert.ok(Math.abs(gel.energy - noFuel.energy - 0.2) < 1e-9, `${gel.energy} vs ${noFuel.energy}`);
+  const run = (fuel) => {
+    const w = newWorld({ fuel: { 0: fuel } }); w.state = 'play';
+    Object.assign(w.ball, { p: [0, -5, 0], v: [0, 0, 0], live: false });
+    w.players[0].p = [-4, 8];
+    for (let i = 0; i < 60; i++) stepWorld(w, { 0: { move: [1, 0] } }, 1 / 60);
+    return 1 - w.players[0].energy;
+  };
+  assert.ok(run({ tire: 0.9 }) < run({}) * 0.95, `${run({ tire: 0.9 })} vs ${run({})}`);
+});

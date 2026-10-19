@@ -121,6 +121,7 @@ export function startServer(port) {
         clampKeys(pl.stats, m.stats);
         clampKeys(pl.racket, m.racket);
         if (m.shoes) pl.shoes = { speed: clamp(m.shoes.speed, 0, 0.12), agility: clamp(m.shoes.agility, 0, 0.3) };
+        if (m.fuel) pl.fuel = { boost: clamp(+m.fuel.boost || 0, 0, 0.2), tire: clamp(+m.fuel.tire || 1, 0.9, 1) };  // career energy product
         if (fresh && m.ball) {  // the host's match ball
           room.world.ballSpec = { speed: clamp(m.ball.speed, 1, 1.12), bounce: clamp(m.ball.bounce, 1, 1.07) };
           room.world.ball.bounce = room.world.ballSpec.bounce;

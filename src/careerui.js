@@ -22,6 +22,7 @@ import {
   tierOf,
   buyItem,
   equip,
+  useFuel,
   tournamentReward,
   canEnter,
   aiRankingTable,
@@ -114,6 +115,7 @@ const SHOP_TABS = [
   { id: 'ball', label: 'Balls' },
   { id: 'kit', label: 'Kit' },
   { id: 'headwear', label: 'Headwear' },
+  { id: 'fuel', label: 'Energy' },
 ];
 
 function buildCountriesList() {
@@ -1256,6 +1258,13 @@ function renderPlayScreen() {
   careerPanel.querySelector('#cr-play-start').onclick = () => launchCareerMatch();
 }
 
+// one bagged energy product per career match, used up as it starts (no refund when abandoned) -> { boost, tire, name } | null
+function takeFuel() {
+  const { profile: next, fuel } = useFuel(profile, shop);
+  if (fuel) persistProfile(next);
+  return fuel;
+}
+
 async function launchCareerMatch() {
   if (!startMatchFn || !profile) return;
   const players = playState.players;
@@ -1298,6 +1307,7 @@ async function launchCareerMatch() {
 
   const venue = venues[playState.venueIdx] || venues[0];
   const ai = playState.ai;
+  const fuel = takeFuel();
 
   await startMatchFn({
     players,
@@ -1308,6 +1318,7 @@ async function launchCareerMatch() {
     rackets: rk,
     shoes: { 0: { speed: shoeItem.speed, agility: shoeItem.agility } },
     ball: { speed: ballItem.speed, bounce: ballItem.bounce },
+    fuel: fuel ? { 0: fuel } : undefined,
     venue,
     onEnd(result) {
       const reward = matchReward(result, eco);
@@ -1414,6 +1425,15 @@ function renderTrainingScreen() {
 }
 
 // 6. Shop Screen
+// energy products: what one does per match (boost at every changeover, fatigue factor), e.g. "+12% energy · tire 5% slower"
+function fuelSpecHtml(item) {
+  const tire = Math.round((1 - item.tire) * 100);
+  return `
+      <div class="cr-shop-spec">Pack of ${item.pack} · one per career match · +${Math.round(item.boost * 100)}% energy at every changeover${tire ? ` · tire ${tire}% slower` : ''}</div>
+      <div class="pl-card-sub">${escapeHtml(item.desc || '')}</div>
+    `;
+}
+
 function renderShopItemSpecHtml(item, tabId) {
   if (tabId === 'racket') {
     return `
@@ -1458,6 +1478,7 @@ function renderShopItemSpecHtml(item, tabId) {
       <div class="cr-shop-spec">${escapeHtml(label)}</div>
     `;
   }
+  if (tabId === 'fuel') return fuelSpecHtml(item);
   if (tabId === 'headwear') {
     const hw = item.headwear || { type: 'headband', color: '#ffffff' };
     return `
@@ -1485,7 +1506,7 @@ function renderShopScreen() {
     <div class="cr-head">
       <div>
         <h2 class="cr-title">CAREER · <span>SHOP</span></h2>
-        <div class="cr-sub">Unlock pro rackets, court shoes, match balls, kits and headwear.</div>
+        <div class="cr-sub">Unlock pro rackets, court shoes, match balls, kits, headwear and energy products.</div>
       </div>
       <div class="cr-head-right">
         ${renderTopCreditsHtml(profile)}
@@ -1530,7 +1551,8 @@ function renderShopScreen() {
 
   const grid = careerPanel.querySelector('#cr-shop-grid');
   items.forEach((item, idx) => {
-    const isOwned = profile.inventory.includes(item.id);
+    const fuel = item.type === 'fuel', left = fuel ? (profile.supplies?.[item.id] || 0) : 0;  // energy products stack
+    const isOwned = fuel ? left > 0 : profile.inventory.includes(item.id);
     const isEquipped = profile.equipped?.[shopTab] === item.id;
     const minRp = shop.tiers[item.tier] ?? 0;
     const tierName = capitalize(item.tier);
@@ -1553,8 +1575,8 @@ function renderShopScreen() {
           <div class="cr-shop-title-row">
             <div class="pl-card-title" lang="en">${escapeHtml(item.name)}</div>
             <div class="cr-badges">
-              ${isOwned ? '<span class="cr-badge is-owned">Owned</span>' : ''}
-              ${isEquipped ? '<span class="cr-badge is-equipped">Equipped</span>' : ''}
+              ${isOwned ? `<span class="cr-badge is-owned">${fuel ? `In bag ×${left}` : 'Owned'}</span>` : ''}
+              ${isEquipped ? `<span class="cr-badge is-equipped">${fuel ? 'In use' : 'Equipped'}</span>` : ''}
             </div>
           </div>
           <div class="cr-shop-meta-row">
@@ -1571,10 +1593,10 @@ function renderShopScreen() {
       ${errText ? `<div class="cr-card-error" role="alert">${escapeHtml(errText)}</div>` : ''}
 
       <div class="cr-shop-foot">
-        <button type="button" class="cr-btn ${!isOwned && !isTierLocked && canAfford ? 'cr-btn-acc' : 'cr-btn-muted'} cr-shop-buy" data-buy="${item.id}">
-          Buy
+        <button type="button" class="cr-btn ${(fuel || !isOwned) && !isTierLocked && canAfford ? 'cr-btn-acc' : 'cr-btn-muted'} cr-shop-buy" data-buy="${item.id}">
+          ${fuel ? `Buy ${item.pack}` : 'Buy'}
         </button>
-        ${isOwned && !isEquipped ? `<button type="button" class="cr-btn cr-shop-equip" data-equip-shop="${item.id}">Equip</button>` : ''}
+        ${isOwned && !isEquipped ? `<button type="button" class="cr-btn cr-shop-equip" data-equip-shop="${item.id}">${fuel ? 'Use in matches' : 'Equip'}</button>` : ''}
       </div>
     `;
 
@@ -1636,6 +1658,7 @@ function renderLockerScreen() {
   const ownedBalls = shop.items.filter(i => i.type === 'ball' && profile.inventory.includes(i.id));
   const ownedKits = shop.items.filter(i => i.type === 'kit' && profile.inventory.includes(i.id));
   const ownedHeadwear = shop.items.filter(i => i.type === 'headwear' && profile.inventory.includes(i.id));
+  const bagged = shop.items.filter(i => i.type === 'fuel' && profile.supplies?.[i.id] > 0);
 
   careerPanel.innerHTML = `
     ${renderBannersHtml()}
@@ -1756,6 +1779,35 @@ function renderLockerScreen() {
           <button type="button" class="cr-btn" id="cr-locker-buy-hw">Shop Headwear →</button>
         </div>
       `}
+
+      <div class="pl-section-label">BAG · ENERGY (ONE USED PER CAREER MATCH)</div>
+      ${bagged.length > 0 ? `
+        <div class="cr-locker-grid" id="cr-locker-fuel">
+          <button type="button" class="pl-card cr-locker-card ${profile.equipped?.fuel ? '' : 'is-selected'}" data-slot="fuel" data-id="">
+            <div class="cr-locker-card-head"><div class="pl-card-title">Water only</div></div>
+            <div class="cr-shop-spec">Save your products for later</div>
+            <span class="pl-check">✓</span>
+          </button>
+          ${bagged.map(f => {
+            const isEq = profile.equipped?.fuel === f.id;
+            return `
+              <button type="button" class="pl-card cr-locker-card ${isEq ? 'is-selected' : ''}" data-slot="fuel" data-id="${f.id}">
+                <div class="cr-locker-card-head">
+                  <div class="pl-card-title" lang="en">${escapeHtml(f.name)}</div>
+                  <span class="cr-badge ${isEq ? 'is-equipped' : 'is-owned'}">×${profile.supplies[f.id]}</span>
+                </div>
+                ${fuelSpecHtml(f)}
+                <span class="pl-check">✓</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      ` : `
+        <div class="cr-empty-slot">
+          <span>Your bag is empty. Bananas, isotonic drinks and gels give extra energy at every changeover.</span>
+          <button type="button" class="cr-btn" id="cr-locker-buy-fuel">Shop Energy →</button>
+        </div>
+      `}
     </div>
   `;
 
@@ -1777,10 +1829,13 @@ function renderLockerScreen() {
     };
   }
 
+  const buyFuelBtn = careerPanel.querySelector('#cr-locker-buy-fuel');
+  if (buyFuelBtn) buyFuelBtn.onclick = () => { shopTab = 'fuel'; flashMsg = null; showScreen('shop'); };
+
   careerPanel.querySelectorAll('[data-slot][data-id]').forEach(btn => {
     btn.onclick = () => {
       const slot = btn.dataset.slot;
-      const id = btn.dataset.id;
+      const id = btn.dataset.id || null;  // '' = the bag's "Water only" card
       const next = equip(profile, slot, id);
       persistProfile(next);
       renderLockerScreen();
@@ -2277,6 +2332,7 @@ async function launchTournamentMatch(m) {
   const rr = () => rackets[Math.floor(Math.random() * rackets.length)];
   const rally = T.format === 'americano' || T.format === 'mexicano';
   const quick = new URLSearchParams(location.search).has('quick');
+  const fuel = takeFuel();
 
   await startMatchFn({
     players: 4, humans: 1, ai: entry.ai,
@@ -2285,6 +2341,7 @@ async function launchTournamentMatch(m) {
     rackets: { 0: myRacket, 1: rr(), 2: rr(), 3: rr() },
     shoes: { 0: { speed: shoeItem.speed, agility: shoeItem.agility } },
     ball: { speed: ballItem.speed, bounce: ballItem.bounce },
+    fuel: fuel ? { 0: fuel } : undefined,
     venue: venues.find(v => v.id === entry.venue) || venues[0],
     onEnd(result) {
       const reward = matchReward(result, eco);
@@ -2417,6 +2474,7 @@ function joinOnlineRoom(code, create) {
   const myRacket = rackets.find(r => r.id === profile.equipped?.racket) || rackets[0];
   const ballItem = shop.items.find(i => i.id === onlineState.ballId) || equippedBall(profile);
   const venue = venues[onlineState.venueIdx] || venues[0];
+  const fuel = takeFuel() || undefined;
   const net = startOnlineFn({
     url: onlineUrl() || undefined, code, players: onlineState.players,
     venue: venues.indexOf(venue), ai: 'club',
@@ -2425,6 +2483,7 @@ function joinOnlineRoom(code, create) {
     public: create && onlineState.isPublic, name: profile.player.name, look,
     shoes: { speed: shoeItem.speed, agility: shoeItem.agility },
     ball: create ? { speed: ballItem.speed, bounce: ballItem.bounce } : undefined,
+    fuel,
     status: (t, l) => setOnlineStatus(t, l),
     onEnd(result) {
       const reward = matchReward(result, eco);

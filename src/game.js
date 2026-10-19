@@ -8,7 +8,7 @@ export const REACH = 1.35, MAX_HIT_H = 2.9, SPEED = 5.2;
 export const ENERGY = { run: 0.012, stroke: 0.006, smash: 0.012, rallyFrom: 6, rallyStep: 0.08, rest: 0.008, drink: 0.3 };
 const tire = (w, pl, amount) => {
   const k = (16 - pl.stats.stamina) / 10 * (1 + Math.max(0, w.rally - ENERGY.rallyFrom) * ENERGY.rallyStep);
-  pl.energy = Math.max(0, pl.energy - amount * k);
+  pl.energy = Math.max(0, pl.energy - amount * k * pl.fuel.tire);
 };
 
 // depth = metres from net on opponent side, t = flight time to first bounce, spin = topspin(+)/slice(-) rad/s
@@ -34,6 +34,7 @@ export function newWorld(opts = {}) {
     stats: { speed: 6, power: 6, control: 6, volley: 6, smash: 6, stamina: 6, ...(opts.stats?.[id] || {}) },
     racket: { power: 6, control: 6, spin: 6, sweetSpot: 6, ...(opts.rackets?.[id] || {}) },
     shoes: { speed: 0, agility: 0, ...(opts.shoes?.[id] || {}) },
+    fuel: { boost: 0, tire: 1, ...(opts.fuel?.[id] || {}) },  // career energy product: extra per changeover, fatigue factor
   }));
   const w = { t: 0, ballSpec: { speed: 1, bounce: 1, ...opts.ball }, ball: newBall(), match: newMatch({ players: opts.players || 4, ...opts.match }), players,
     state: 'serve', timer: 0, events: [], rally: 0, opts };
@@ -166,7 +167,7 @@ function endPoint(w, r) {
   w.events.push({ type: 'point', team: r.point, why: r.why, rally: w.rally, t: w.t });
   const m = w.match, total = m.points[0] + m.points[1];
   if (m.winner == null && (r.changeEnds || (m.opts.pointsTo && total % 8 === 0))) {  // changeover: water and a banana
-    for (const pl of w.players) pl.energy = Math.min(1, pl.energy + ENERGY.drink);
+    for (const pl of w.players) pl.energy = Math.min(1, pl.energy + ENERGY.drink + pl.fuel.boost);
     w.events.push({ type: 'drink', t: w.t });
   }
   w.state = w.match.winner != null ? 'over' : 'dead';
