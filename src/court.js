@@ -89,7 +89,7 @@ export function buildVenue(scene, venue) {
     }
   }
 
-  // sponsor branding: back-glass decals, net band, LED boards in front of the stands
+  // sponsor branding: net band, LED boards in front of the stands
   const sign = (text, w, h, bg, fg) => {
     const cv = document.createElement('canvas'); cv.width = 512; cv.height = Math.round(512 * h / w);
     const t = cv.getContext('2d');
@@ -103,10 +103,6 @@ export function buildVenue(scene, venue) {
     back.rotation.y = Math.PI; m.add(back);
     return m;
   };
-  for (const zs of [1, -1]) {
-    const d = sign('MESUT', 2.2, 0.55, 'transparent', 'rgba(255,255,255,0.85)');
-    d.position.set(0, 2.3, zs * 10.01); g.add(d);
-  }
   const band = sign('MESUT PADEL', 3, 0.14, '#111', '#d8f53a'); band.position.set(0, 0.8, 0.012); band.children[0].position.z = -0.024; g.add(band);  // both faces just off the net
   for (const xs of [1, -1]) for (const [z, text] of [[-8, 'MESUT PADEL'], [0, 'Developed by MESUT'], [8, 'MESUT PADEL']]) {
     const b = sign(text, 7.6, 0.8, '#0b1520', '#d8f53a');
