@@ -37,6 +37,10 @@ function pollPadKeys() {
 // drop queued presses (e.g. the key that skipped a replay must not become a swing afterwards)
 export function clearPressed() { pressed.clear(); }
 
+// touch controls (src/touch.js): the virtual stick adds to the keyboard's direction (its buttons send key events)
+let touchMove = [0, 0];
+export function setTouchMove(x, y) { touchMove = [x, y]; }
+
 export function consumePressed(code) { pollPadKeys(); const had = pressed.has(code); pressed.delete(code); return had; }
 
 // Translates screen input (sx, sy: -1..1) to world movement [x, z].
@@ -57,8 +61,9 @@ export function toWorld(sx, sy, team, camPlane) {
 }
 
 export function readKeyboard(team, camPlane) {
-  const sx = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
-  const sy = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
+  const clamp1 = (v) => Math.max(-1, Math.min(1, v));
+  const sx = clamp1((keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0) + touchMove[0]);
+  const sy = clamp1((keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0) + touchMove[1]);
   let swing = null;
   for (const k in SWING_KEYS) if (consumePressed(k)) swing = SWING_KEYS[k];
   const move = toWorld(sx, sy, team, camPlane);

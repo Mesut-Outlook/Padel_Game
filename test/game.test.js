@@ -266,3 +266,11 @@ test('energy product: extra refill at the changeover and slower tiring', () => {
   };
   assert.ok(run({ tire: 0.9 }) < run({}) * 0.95, `${run({ tire: 0.9 })} vs ${run({})}`);
 });
+
+test('touch stick moves like the keyboard', async () => {
+  const { setTouchMove, readKeyboard } = await import('../src/input.js');
+  setTouchMove(0.5, 1);
+  assert.deepEqual(readKeyboard(0).move, [0.5, -1]);  // team 0: screen up = toward the net (-z)
+  setTouchMove(0, 0);
+  assert.deepEqual(readKeyboard(0).move, [0, 0]);
+});

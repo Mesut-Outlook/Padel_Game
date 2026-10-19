@@ -30,6 +30,7 @@ import { bindFullscreenKey, toggleFullscreen, isFullscreen } from './fullscreen.
 import { padDir } from './padnav.js';
 import { pointCall } from './pointcall.js';
 import { tipCycle } from './tips.js';
+import { isTouch, mountTouch } from './touch.js';
 
 const $ = (id) => document.getElementById(id);
 const matchOpts = () => ({ sets: parseInt($('sets').value), superTiebreak: $('sets').value === '3s', goldenPoint: $('golden').value === '1', starPoint: $('golden').value === 'star' });
@@ -40,6 +41,8 @@ fill($('racket'), rackets, r => `${r.name} · ${r.shape} · P${r.stats.power}/C$
 initMenu();
 initCareer({ startMatch, startOnline });
 mountKeyHelp($('help'));
+mountTouch($('touchUi'));
+if (isTouch()) document.body.classList.add('touch');  // CSS: no key help, rotate-to-landscape overlay
 addEventListener('pointerdown', unlockAudio, { once: true });
 addEventListener('keydown', unlockAudio, { once: true });
 // which input devices visitors use (once per session each)
@@ -192,6 +195,7 @@ async function setupScene(venue, ids, roster, rk) {
   const name = (t) => ids.filter(id => (id < 2 ? 0 : 1) === t).map(id => roster[id].name.split(' ').pop()).join(' / ');
   $('t0').textContent = name(0); $('t1').textContent = name(1);
   for (const id of ['hud', 'cam', 'help', 'fsBtn']) $(id).hidden = false;
+  $('touchUi').hidden = !isTouch();
   $('msg').textContent = '';
   acc = 0; freeze = 0; slow = 0; shake = 0; approach = 0; bannerMode = ''; rallyFlags = {};
   energyUi = null; tiredWarned = false;

@@ -1,0 +1,43 @@
+// Touch controls for phones and tablets (only on touch screens, or with ?touch for testing on a desktop):
+// a floating stick where the left thumb lands, shot buttons on the right, pause/camera at the top.
+// They feed input.js like a keyboard, so the {move, swing, aim} input stays the same everywhere.
+import { setTouchMove } from './input.js';
+
+export const isTouch = () => matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).has('touch');
+
+const STICK_R = 56;  // px from the centre to full speed
+const BUTTONS = [['Space', 'SHOT', 'tc-shot'], ['KeyK', 'LOB', 'tc-lob'], ['KeyL', 'SMASH', 'tc-smash']];
+
+export function mountTouch(el) {
+  el.innerHTML = `
+    <div class="tc-zone"><div class="tc-base" hidden><i class="tc-knob"></i></div></div>
+    <div class="tc-btns">${BUTTONS.map(([code, label, cls]) => `<button type="button" class="tc-btn ${cls}" data-key="${code}">${label}</button>`).join('')}</div>
+    <div class="tc-top"><button type="button" class="tc-btn tc-small" data-key="KeyC" aria-label="Camera">🎥</button><button type="button" class="tc-btn tc-small" data-key="Escape" aria-label="Pause">⏸</button></div>`;
+  const zone = el.querySelector('.tc-zone'), base = el.querySelector('.tc-base'), knob = el.querySelector('.tc-knob');
+  let id = null, cx = 0, cy = 0;
+  const move = (e) => {
+    let dx = e.clientX - cx, dy = e.clientY - cy;
+    const d = Math.hypot(dx, dy);
+    if (d > STICK_R) { dx *= STICK_R / d; dy *= STICK_R / d; }
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    setTouchMove(dx / STICK_R, -dy / STICK_R);  // screen up = stick up
+  };
+  zone.addEventListener('pointerdown', (e) => {
+    if (id !== null) return;
+    id = e.pointerId; cx = e.clientX; cy = e.clientY;
+    try { zone.setPointerCapture(id); } catch { /* synthetic or already lifted pointer */ }
+    base.style.left = `${cx}px`; base.style.top = `${cy}px`; base.hidden = false;
+    move(e);
+  });
+  zone.addEventListener('pointermove', (e) => { if (e.pointerId === id) move(e); });
+  const end = (e) => { if (e.pointerId !== id) return; id = null; base.hidden = true; setTouchMove(0, 0); };
+  zone.addEventListener('pointerup', end);
+  zone.addEventListener('pointercancel', end);
+  for (const b of el.querySelectorAll('[data-key]')) {
+    b.addEventListener('pointerdown', (e) => {
+      e.preventDefault();  // a button is a key press: input.js queues it, and a tap skips a replay like a key does
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: b.dataset.key }));
+      window.dispatchEvent(new KeyboardEvent('keyup', { code: b.dataset.key }));
+    });
+  }
+}
