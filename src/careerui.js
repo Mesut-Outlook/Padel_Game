@@ -19,7 +19,6 @@ import {
   applyReward,
   trainCost,
   buyTraining,
-  tierOf,
   buyItem,
   equip,
   useFuel,
@@ -29,6 +28,7 @@ import {
   worldRanking,
 } from './career.js';
 import { listRooms } from './net.js';
+import { TIERS, tierAt } from './level.js';
 import { padDir, spatialFocus } from './padnav.js';
 import { createTournament, myMatch, reportResult, simulateOthers, simulateUntilMine, standings, isFinished, placement } from './tournament.js';
 import {
@@ -241,7 +241,7 @@ function buildEquippedPlayer(p = profile) {
 
 function renderTopCreditsHtml(p = profile) {
   if (!p) return '';
-  const curTier = capitalize(tierOf(p.rankingPoints, shop));
+  const curTier = tierAt(p.level ?? 1.5).name;
   return `
     <div class="cr-top-currencies" aria-label="Player currencies">
       <div class="cr-top-curr"><span>Credits</span><b class="tabular">${p.credits}</b></div>
@@ -1008,7 +1008,7 @@ function renderHubScreen() {
   setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'CAREER HUB');
 
   const h = profile.history || { played: 0, won: 0, pointsWon: 0 };
-  const curTier = capitalize(tierOf(profile.rankingPoints, shop));
+  const curTier = tierAt(profile.level ?? 1.5).name;
 
   careerPanel.innerHTML = `
     ${renderBannersHtml()}

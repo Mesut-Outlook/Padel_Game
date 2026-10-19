@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { newProfile, loadProfile, saveProfile, matchReward, applyReward, exportProfile, importProfile, trainCost, buyTraining, tournamentReward, canEnter, worldRanking, aiRankingTable } from '../src/career.js';
+import { newProfile, loadProfile, saveProfile, matchReward, applyReward, exportProfile, importProfile, trainCost, buyTraining, tournamentReward, canEnter, worldRanking, aiRankingTable, migrateProfile, applyRating } from '../src/career.js';
 
 const eco = JSON.parse(fs.readFileSync(new URL('../data/economy.json', import.meta.url)));
 const chars = JSON.parse(fs.readFileSync(new URL('../data/characters.json', import.meta.url)));
@@ -21,10 +21,14 @@ test('match reward: rally scoring loss pays per point, rookie multiplier', () =>
   assert.equal(matchReward({ won: false, pointsWon: 12, scoring: 'rally', ai: 'rookie' }, eco).credits, Math.round(32 * 0.6));
 });
 
-test('new profile starts at stat 4 with starter kit', () => {
+test('newProfile v2 starts average with starter kit, at level 1.50', () => {
   const p = newProfile(chars[0], { name: 'Mesut' });
   assert.equal(p.player.name, 'Mesut');
-  assert.deepEqual(Object.values(p.stats), [4, 4, 4, 4, 4, 4]);
+  assert.equal(p.version, 2);
+  assert.deepEqual(Object.values(p.stats), [5, 5, 5, 5, 5, 5]);
+  assert.deepEqual([p.level, p.reliability, p.bestTier, p.lastCareerMatch], [1.5, 0.2, 3, null]);
+  const high = newProfile(chars[0], {}, { level: 2.5, reliability: 0.3 });
+  assert.deepEqual([high.credits, high.bestTier, high.reliability], [750, 4, 0.3]);
   assert.equal(p.credits, 0);
   assert.equal(p.equipped.racket, 'r01');
   assert.ok(p.inventory.includes('ball_standard'));
@@ -57,7 +61,7 @@ test('export / import round trip; bad import throws', () => {
 });
 
 test('training cost grows by 1.6 per level from 50', () => {
-  assert.deepEqual([4, 5, 9].map(l => trainCost(l, eco)), [50, 80, 524]);
+  assert.deepEqual([5, 6, 9].map(l => trainCost(l, eco)), [50, 80, 328]);
 });
 
 test('buyTraining: max, credits, unknown stat rejected unchanged; success deducts and raises', () => {
@@ -68,8 +72,8 @@ test('buyTraining: max, credits, unknown stat rejected unchanged; success deduct
   const r = buyTraining({ ...p, credits: 100 }, 'power', eco);
   assert.equal(r.ok, true);
   assert.equal(r.profile.credits, 50);
-  assert.equal(r.profile.stats.power, 5);
-  assert.equal(p.stats.power, 4);
+  assert.equal(r.profile.stats.power, 6);
+  assert.equal(p.stats.power, 5);
 });
 
 const circuit = JSON.parse(fs.readFileSync(new URL('../data/tournaments.json', import.meta.url))).circuit;
@@ -83,12 +87,13 @@ test('tournament reward: P1 runner-up gets 60% of 1000 points and 10x that in cr
 });
 
 test('canEnter: ranking minimum, entry fee, and Premier Finals by invitation (top 8)', () => {
-  const p = { ...newProfile(chars[0], {}), rankingPoints: 100, credits: 50 };
+  const p = { ...newProfile(chars[0], {}), rankingPoints: 100, credits: 50, bestTier: 5 };
   assert.deepEqual(canEnter(p, entry('fip_gold'), 40), { ok: false, reason: 'ranking' });
   assert.deepEqual(canEnter(p, entry('fip_silver'), 40), { ok: false, reason: 'credits' });
   assert.deepEqual(canEnter(p, entry('fip_bronze'), 40), { ok: true });
-  assert.deepEqual(canEnter({ ...p, credits: 9999 }, entry('premier_finals'), 9), { ok: false, reason: 'invite' });
-  assert.deepEqual(canEnter({ ...p, credits: 9999 }, entry('premier_finals'), 8), { ok: true });
+  assert.deepEqual(canEnter({ ...p, credits: 9999, bestTier: 7 }, entry('premier_finals'), 9), { ok: false, reason: 'invite' });
+  assert.deepEqual(canEnter({ ...p, credits: 9999, bestTier: 7 }, entry('premier_finals'), 8), { ok: true });
+  assert.deepEqual(canEnter({ ...p, bestTier: 4, rankingPoints: 9999, credits: 9999 }, entry('p1'), 1), { ok: false, reason: 'tier' });
 });
 
 test('world ranking: AI players hold fixed points 0-6000 and the profile slots in by points', () => {
@@ -115,4 +120,39 @@ test('a v1 profile missing credits/equipped/history counts as corrupt and cannot
   assert.throws(() => importProfile(partial), /invalid profile/);
   const p = newProfile(chars[0], {});
   assert.throws(() => importProfile(JSON.stringify({ ...p, credits: '<b>9</b>' })), /invalid profile/);
+});
+
+test('migrateProfile keeps everything and backs up', () => {
+  const v1 = { ...newProfile(chars[0], {}), version: 1, stats: { speed: 4, power: 7, control: 4, volley: 4, smash: 4, stamina: 4 },
+    rankingPoints: 70, credits: 1733, inventory: ['r01', 'r04', 'shoe_starter', 'kit_starter', 'ball_standard'] };
+  for (const k of ['level', 'reliability', 'bestTier', 'lastCareerMatch']) delete v1[k];
+  const raw = JSON.stringify(v1), saved = {};
+  const store = { getItem: (k) => (k === 'padel.career.v1' ? raw : null), setItem: (k, v) => { saved[k] = v; } };
+  const { profile: p, status } = loadProfile(store);
+  assert.equal(status, 'ok');
+  assert.deepEqual([p.version, p.level, p.reliability, p.bestTier], [2, 3, 0.5, 4]);
+  assert.deepEqual(p.stats, { speed: 5, power: 7, control: 5, volley: 5, smash: 5, stamina: 5 });
+  assert.equal(p.credits, 1733);
+  assert.deepEqual(p.inventory, v1.inventory);
+  assert.equal(saved['padel.career.v1.bak'], raw);
+  assert.equal(migrateProfile(JSON.parse(raw)).level, 3);
+});
+
+test('applyRating updates level, bestTier and date; a tier-up is reported', () => {
+  const p = newProfile(chars[0], {}), now = new Date('2026-10-19T12:00:00Z');
+  const r = applyRating(p, 1.5, 2.5, { won: true, games: [6, 3] }, now);
+  assert.ok(r.profile.level > 1.5 && r.delta > 0);
+  assert.equal(r.profile.lastCareerMatch, now.toISOString());
+  assert.equal(r.tierUp, null);
+  const up = applyRating({ ...p, level: 2.45, reliability: 0 }, 2.45, 4, { won: true, games: [6, 0] }, now);
+  assert.equal(up.profile.bestTier, 4);
+  assert.equal(up.tierUp.id, 'intermediate');
+});
+
+test('bestTier never goes down', () => {
+  const p = { ...newProfile(chars[0], {}), level: 2.55, bestTier: 4, reliability: 0 };
+  const r = applyRating(p, 2.55, 1, { won: false, games: [0, 6] });
+  assert.ok(r.profile.level < 2.5);
+  assert.equal(r.profile.bestTier, 4);
+  assert.equal(r.tierUp, null);
 });

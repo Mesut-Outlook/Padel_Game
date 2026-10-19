@@ -1,17 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { newProfile, tierOf, buyItem, equip, useFuel } from '../src/career.js';
+import { newProfile, buyItem, equip, useFuel } from '../src/career.js';
 
 const read = (f) => JSON.parse(fs.readFileSync(new URL(`../data/${f}`, import.meta.url)));
 const shop = read('shop.json'), chars = read('characters.json'), rackets = read('rackets.json');
 const item = (id) => shop.items.find(i => i.id === id) || rackets.find(r => r.id === id);
 
-test('tier thresholds from ranking points', () => {
-  assert.equal(tierOf(0, shop), 'amateur');
-  assert.equal(tierOf(59, shop), 'club');
-  assert.equal(tierOf(60, shop), 'regional');
-  assert.equal(tierOf(99999, shop), 'elite');
+test('shop gating follows bestTier', () => {
+  const p = { ...newProfile(chars[0], {}), credits: 99999, bestTier: 3 };
+  assert.equal(buyItem(p, shop.items.find(i => i.tier === 'club'), shop).ok, true);
+  assert.equal(buyItem(p, shop.items.find(i => i.tier === 'regional'), shop).reason, 'tier');
 });
 
 test('buyItem rejects owned, locked and unaffordable items without changing the profile', () => {
@@ -19,7 +18,7 @@ test('buyItem rejects owned, locked and unaffordable items without changing the 
   const before = structuredClone(p);
   assert.deepEqual(buyItem(p, item('r01'), shop), { ok: false, reason: 'owned' });
   assert.deepEqual(buyItem(p, item('ball_pro_s'), shop), { ok: false, reason: 'tier' });
-  assert.deepEqual(buyItem({ ...p, rankingPoints: 10 }, item('r04'), shop), { ok: false, reason: 'credits' });
+  assert.deepEqual(buyItem({ ...p, bestTier: 3 }, item('r04'), shop), { ok: false, reason: 'credits' });
   assert.deepEqual(p, before);
 });
 
