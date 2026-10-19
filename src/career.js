@@ -36,8 +36,8 @@ export function loadProfile(storage) {
   let p;
   try { p = JSON.parse(raw); } catch { return { profile: null, status: 'corrupt' }; }
   if (valid(p, 1)) {  // one-time v1 -> v2 migration; the v1 JSON stays next to it as a backup
-    try { storage.setItem(PROFILE_KEY + '.bak', raw); } catch { /* backup is best effort */ }
     p = migrateProfile(p);
+    try { storage.setItem(PROFILE_KEY + '.bak', raw); storage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch { /* best effort: migrates again next load */ }
   }
   return valid(p) ? { profile: p, status: 'ok' } : { profile: null, status: 'corrupt' };
 }

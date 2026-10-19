@@ -608,8 +608,11 @@ function handleEvents(events, score, winner) {
         track(`match-end/${!humans.length ? 'watch' : winner === myTeam ? 'win' : 'loss'}`);
         if (onEnd && net) {  // online: no local world, the server's score decides
           const done = onEnd; onEnd = null;
-          const sets = net.score?.board?.sets || [];
-          done({ won: winner === myTeam, gamesWon: sets.reduce((n, g) => n + g[myTeam], 0), pointsWon: pointsWon[myTeam], scoring: 'sets', ai: 'online', style: styleStats.pts, score: net.score });
+          const sets = net.score?.board?.sets || [], ids = avatars.map((a, id) => (a ? id : -1)).filter(id => id >= 0);
+          const lv = (id) => avatars[id].ch.level ?? null;  // career players share their level in the lobby look
+          done({ won: winner === myTeam, gamesWon: sets.reduce((n, g) => n + g[myTeam], 0), pointsWon: pointsWon[myTeam], scoring: 'sets', ai: 'online', style: styleStats.pts, score: net.score,
+            games: [sets.reduce((n, g) => n + g[myTeam], 0), sets.reduce((n, g) => n + g[1 - myTeam], 0)],
+            mates: ids.filter(id => teamOf(id) === myTeam && id !== net.seat).map(lv), opps: ids.filter(id => teamOf(id) !== myTeam).map(lv) });
           onEnd = () => {};
         } else if (onEnd && world) {
           const done = onEnd; onEnd = null;

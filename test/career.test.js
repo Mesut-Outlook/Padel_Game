@@ -135,6 +135,7 @@ test('migrateProfile keeps everything and backs up', () => {
   assert.equal(p.credits, 1733);
   assert.deepEqual(p.inventory, v1.inventory);
   assert.equal(saved['padel.career.v1.bak'], raw);
+  assert.equal(JSON.parse(saved['padel.career.v1']).version, 2, 'migrated once: the v2 profile is saved back');
   assert.equal(migrateProfile(JSON.parse(raw)).level, 3);
 });
 

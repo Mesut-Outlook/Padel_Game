@@ -22,13 +22,14 @@ import {
   buyItem,
   equip,
   useFuel,
+  applyRating,
   tournamentReward,
   canEnter,
   aiRankingTable,
   worldRanking,
 } from './career.js';
 import { listRooms } from './net.js';
-import { TIERS, tierAt } from './level.js';
+import { TIERS, tierAt, scaleStats, aiLevel } from './level.js';
 import { padDir, spatialFocus } from './padnav.js';
 import { createTournament, myMatch, reportResult, simulateOthers, simulateUntilMine, standings, isFinished, placement } from './tournament.js';
 import {
@@ -1258,6 +1259,16 @@ function renderPlayScreen() {
   careerPanel.querySelector('#cr-play-start').onclick = () => launchCareerMatch();
 }
 
+// career AI opponents and partners play at their difficulty: same stat shape, average 5/6/7/8 (level.js scaleStats)
+const scaledAI = (c, ai) => ({ ...c, stats: scaleStats(c.stats, ai) });
+
+// rate the finished career match (spec §4.2): mates / opps = the other players' levels (null = unknown online player)
+function withRating(p, result, mates, opps) {
+  const avg = (ls) => ls.reduce((a, b) => a + (b ?? 2.5), 0) / ls.length;
+  const r = applyRating(p, avg([p.level, ...mates]), avg(opps), result);
+  return { ...r.profile, lastReward: { ...p.lastReward, level: { from: p.level, to: r.profile.level, delta: r.delta, tierUp: r.tierUp?.name || null } } };
+}
+
 // one bagged energy product per career match, used up as it starts (no refund when abandoned) -> { boost, tire, name } | null
 function takeFuel() {
   const { profile: next, fuel } = useFuel(profile, shop);
@@ -1293,20 +1304,22 @@ async function launchCareerMatch() {
   roster[0] = me;
   rk[0] = myRacket;
 
+  const ai = playState.ai;
   if (players === 2) {
-    roster[2] = oppPool[0] || characters[0];
+    roster[2] = scaledAI(oppPool[0] || characters[0], ai);
     rk[2] = rackets[Math.floor(Math.random() * rackets.length)];
   } else {
-    roster[1] = partner;
+    roster[1] = scaledAI(partner, ai);
     rk[1] = rackets[Math.floor(Math.random() * rackets.length)];
-    roster[2] = oppPool[0] || characters[0];
+    roster[2] = scaledAI(oppPool[0] || characters[0], ai);
     rk[2] = rackets[Math.floor(Math.random() * rackets.length)];
-    roster[3] = oppPool[1] || characters[1] || characters[0];
+    roster[3] = scaledAI(oppPool[1] || characters[1] || characters[0], ai);
     rk[3] = rackets[Math.floor(Math.random() * rackets.length)];
   }
+  const lv = (id) => aiLevel(roster[id].stats, ai);
+  const mates = players === 4 ? [lv(1)] : [], opps = players === 4 ? [lv(2), lv(3)] : [lv(2)];
 
   const venue = venues[playState.venueIdx] || venues[0];
-  const ai = playState.ai;
   const fuel = takeFuel();
 
   await startMatchFn({
@@ -1331,7 +1344,7 @@ async function launchCareerMatch() {
         ai: result.ai || ai,
         score: result.score?.sets || '',
       };
-      persistProfile(updated);
+      persistProfile(withRating(updated, result, mates, opps));
     },
   });
 }
@@ -1888,6 +1901,11 @@ function renderRewardScreen() {
             <span>${escapeHtml(aiName)} ×${multVal}</span>
             <b class="tabular">×${multVal}</b>
           </div>
+          ${r.level ? `<div class="cr-reward-row">
+            <span>Level ${r.level.from.toFixed(2)} → ${r.level.to.toFixed(2)}</span>
+            <b class="tabular">${r.level.delta >= 0 ? '+' : ''}${r.level.delta.toFixed(2)}</b>
+          </div>` : ''}
+          ${r.level?.tierUp ? `<div class="cr-reward-row is-mult"><span>TIER UP: ${escapeHtml(r.level.tierUp)}</span><b>⬆</b></div>` : ''}
         </div>
 
         <div class="cr-reward-total">
@@ -2333,11 +2351,13 @@ async function launchTournamentMatch(m) {
   const rally = T.format === 'americano' || T.format === 'mexicano';
   const quick = new URLSearchParams(location.search).has('quick');
   const fuel = takeFuel();
+  const tRoster = { 0: me, 1: scaledAI(partner, entry.ai), 2: scaledAI(o1 || characters[0], entry.ai), 3: scaledAI(o2 || characters[1], entry.ai) };
+  const tLv = (id) => aiLevel(tRoster[id].stats, entry.ai);
 
   await startMatchFn({
     players: 4, humans: 1, ai: entry.ai,
     match: rally ? { pointsTo: quick ? 4 : 16 } : { sets: 1, goldenPoint: true, superTiebreak: false, starPoint: false },
-    roster: { 0: me, 1: partner, 2: o1 || characters[0], 3: o2 || characters[1] },
+    roster: tRoster,
     rackets: { 0: myRacket, 1: rr(), 2: rr(), 3: rr() },
     shoes: { 0: { speed: shoeItem.speed, agility: shoeItem.agility } },
     ball: { speed: ballItem.speed, bounce: ballItem.bounce },
@@ -2354,6 +2374,7 @@ async function launchTournamentMatch(m) {
         lines: reward.lines, mult: reward.mult, credits: reward.credits, won: result.won, ai: result.ai || entry.ai,
         score: rally ? `${t0}-${t1}` : (result.score?.sets || `${t0}-${t1}`),
       };
+      updated = withRating(updated, result, [tLv(1)], [tLv(2), tLv(3)]);
       updated = settleTournament({ ...updated, tournament: { ...tour, T: next } });
       persistProfile(updated);
     },
@@ -2469,7 +2490,7 @@ function joinOnlineRoom(code, create) {
   if (!code) { setOnlineStatus('Enter a room code first.'); return; }
   if (!profile || onlineState.net) return;
   track(create ? 'online-create' : 'online-join');
-  const { stats: _s, ...look } = buildEquippedPlayer(profile);
+  const { stats: _s, ...look } = { ...buildEquippedPlayer(profile), level: profile.level };  // level: rivals rate against it
   const shoeItem = equippedShoes(profile);
   const myRacket = rackets.find(r => r.id === profile.equipped?.racket) || rackets[0];
   const ballItem = shop.items.find(i => i.id === onlineState.ballId) || equippedBall(profile);
@@ -2492,7 +2513,7 @@ function joinOnlineRoom(code, create) {
         lines: reward.lines, mult: reward.mult, credits: reward.credits, won: result.won, ai: 'online',
         score: result.score?.sets || '',
       };
-      persistProfile(updated);
+      persistProfile(withRating(updated, result, result.mates || [], result.opps?.length ? result.opps : [null]));
     },
   });
   onlineState.net = net;
