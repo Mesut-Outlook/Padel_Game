@@ -157,3 +157,19 @@ test('bestTier never goes down', () => {
   assert.equal(r.profile.bestTier, 4);
   assert.equal(r.tierUp, null);
 });
+
+test('a v1 export file still imports (migrated)', () => {
+  const v1 = { ...newProfile(chars[0], {}), version: 1, rankingPoints: 70 };
+  for (const k of ['level', 'reliability', 'bestTier', 'lastCareerMatch']) delete v1[k];
+  const p = importProfile(JSON.stringify(v1));
+  assert.deepEqual([p.version, p.level], [2, 3]);
+});
+
+test('migration keeps every tournament a v1 player could enter', () => {
+  for (const rp of [0, 10, 30, 59, 60, 80, 179, 180, 199, 200, 350, 599, 600, 700, 1299, 1300, 1499, 1500, 2500]) {
+    const v1 = { ...newProfile(chars[0], {}), version: 1, rankingPoints: rp };
+    const p = migrateProfile(v1);
+    for (const e of circuit.filter(x => !x.inviteTop && rp >= x.minRankingPoints))
+      assert.ok(p.bestTier >= e.minTier, `${rp} pts lost ${e.id} (bestTier ${p.bestTier} < ${e.minTier})`);
+  }
+});

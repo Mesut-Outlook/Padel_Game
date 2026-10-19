@@ -44,10 +44,12 @@ export function loadProfile(storage) {
 
 // v1 had no level: estimate it from the old ranking-point tier; stats below the new average start (5) come up to 5
 const V1_LEVELS = [[10, 1], [60, 2], [200, 3], [600, 4], [1500, 5]];
+const V1_ENTRY_TIERS = [[1300, 7], [180, 5]];  // FIP Gold / Premier P1 were open at these ranking points: keep them open
 export function migrateProfile(p) {
   const level = (V1_LEVELS.find(([below]) => p.rankingPoints < below) || [0, 6])[1];
+  const entryTier = (V1_ENTRY_TIERS.find(([from]) => p.rankingPoints >= from) || [0, 1])[1];
   return {
-    ...p, version: VERSION, level, reliability: 0.5, bestTier: tierAt(level).index, lastCareerMatch: null,
+    ...p, version: VERSION, level, reliability: 0.5, bestTier: Math.max(tierAt(level).index, entryTier), lastCareerMatch: null,
     stats: Object.fromEntries(Object.entries(p.stats).map(([k, v]) => [k, Math.max(5, v)])),
   };
 }
@@ -72,6 +74,7 @@ export const exportProfile = (profile) => JSON.stringify(profile, null, 2);
 export function importProfile(text) {
   let p;
   try { p = JSON.parse(text); } catch { throw new Error('invalid profile'); }
+  if (valid(p, 1)) p = migrateProfile(p);  // exports saved before v2 (and the history.state backup)
   if (!valid(p)) throw new Error('invalid profile');
   return p;
 }
