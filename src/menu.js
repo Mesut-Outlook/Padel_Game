@@ -73,8 +73,8 @@ export function initMenu() {
         <div class="pl-tour-tag">MESUT PADEL TOUR</div>
       </div>
       <div class="pl-top-right">
-        <button type="button" class="pl-home-top-btn" id="pl-home-btn">← HOME</button>
-        <button type="button" class="pl-home-top-btn fs-btn-sync" id="pl-fs-btn" data-icon-only="1" title="Fullscreen">⛶</button>
+        <button type="button" class="pl-home-top-btn is-home" id="pl-home-btn" title="Back to the home screen (Esc)">🏠 HOME</button>
+        <button type="button" class="pl-home-top-btn fs-btn-sync" id="pl-fs-btn" title="Fullscreen (F)">⛶ Fullscreen</button>
         <span class="pl-pad-hint" id="pl-pad-status">🎮 Checking controller…</span>
         <a class="pl-dev" href="kontroller.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;margin-right:14px">⌨ <b>Controls</b></a>
         <span class="pl-dev">Developer: <b>Mesut</b></span>

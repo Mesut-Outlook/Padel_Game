@@ -636,7 +636,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
     .pl-shell { gap: 6px; padding: 6px max(10px, env(safe-area-inset-right)) 6px max(10px, env(safe-area-inset-left)); }
     .pl-topbar { padding: 2px 10px; }
     .pl-tour-tag, .pl-pad-hint, .pl-dev { display: none; }
-    .pl-home-top-btn { padding-top: 2px; padding-bottom: 2px; }
+    .pl-home-top-btn { padding-top: 2px; padding-bottom: 2px; min-height: 30px; font-size: 13px; }
     .pl-main { grid-template-columns: 30fr 70fr; gap: 8px; }
     .pl-left-panel, .pl-right-panel { padding: 8px; gap: 6px; }
     .pl-preview-stage { min-height: 0; }
@@ -2068,17 +2068,23 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   .pl-where-card.is-selected { border-color: var(--acc); background: rgba(216, 245, 58, 0.1); }
   .pl-home-top-btn {
     font-family: var(--head-font);
-    font-weight: 700;
-    font-size: 13px;
+    font-weight: 800;
+    font-size: 15px;
     letter-spacing: 1.2px;
-    padding: 5px 12px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid var(--border);
+    text-transform: uppercase;
+    min-height: 36px;
+    padding: 6px 16px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.35);
     color: #fff;
     cursor: pointer;
+    white-space: nowrap;
+    transition: background .14s, border-color .14s, color .14s;
   }
   .pl-home-top-btn:hover, .pl-home-top-btn:focus-visible { border-color: var(--acc); color: var(--acc); outline: none; }
+  .pl-home-top-btn.is-home { border: 2px solid var(--acc); color: var(--acc); background: rgba(216, 245, 58, 0.12); }
+  .pl-home-top-btn.is-home:hover, .pl-home-top-btn.is-home:focus-visible { background: var(--acc); color: #0b1520; }
   .pl-online-section {
     background: rgba(14, 25, 38, 0.7);
     border: 1px solid var(--border);
