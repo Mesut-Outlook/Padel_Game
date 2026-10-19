@@ -14,7 +14,8 @@ export function offerKeyLabel({ pid = 0, humans = [0], device = 'kb', control = 
 
 const TIPS_SEEN = 'padel.touchTipsSeen';
 const STICK_R = 56;  // px from the centre to full speed
-const BUTTONS = [['Space', 'SHOT', 'tc-shot'], ['KeyK', 'LOB', 'tc-lob'], ['KeyL', 'SMASH', 'tc-smash']];
+const BUTTONS = [['Space', 'SHOT', 'tc-shot'], ['KeyK', 'LOB', 'tc-lob'], ['KeyL', 'SMASH', 'tc-smash'],
+  ['KeyU', 'CHIQUITA', 'tc-mini'], ['KeyI', 'VÍBORA', 'tc-mini'], ['KeyO', 'CONTRA', 'tc-mini'], ['KeyF', 'SLICE', 'tc-mini']];  // minis: special shots, slice = serve
 
 export function mountTouch(el) {
   el.innerHTML = `
@@ -23,7 +24,7 @@ export function mountTouch(el) {
     <div class="tc-top"><button type="button" class="tc-btn tc-small" data-key="KeyC" aria-label="Camera">🎥</button><button type="button" class="tc-btn tc-small" data-key="Escape" aria-label="Pause">⏸</button><button type="button" class="tc-btn tc-small tc-q" aria-label="How to play">❔</button></div>
     <div class="tc-tips" hidden>
       <div class="tc-tip tt-move">👆 Put your thumb down anywhere here<br>and drag to run</div>
-      <div class="tc-tip tt-btns">SHOT: smart shot · serve<br>stick left / right while tapping = aim<br>LOB · SMASH</div>
+      <div class="tc-tip tt-btns">SHOT: smart shot · serve<br>stick left / right while tapping = aim<br>LOB · SMASH · small buttons: special shots<br>(CONTRA = off your own glass, SLICE = serve)</div>
       <div class="tc-tip tt-top">camera · pause · these tips</div>
       <button type="button" class="tc-tip tt-ok">Got it ✓</button>
     </div>`;
