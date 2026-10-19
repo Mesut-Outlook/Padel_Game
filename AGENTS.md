@@ -31,5 +31,6 @@ Read `CLAUDE.md` — it is the shared guide for every agent (Claude, Antigravity
 | `agy-18` | Sayı bildiriminde tek oyuncunun adı | `agents/reports/agy-18-point-call-player-name.md` | Completed, Opus reviewed (`pointcall.js` table instead of six copied branches) |
 | `agy-19` | Career Polish & Fixes Package (forfeit on quit, template clone filter, clean 16-pair draw, online form recovery, remote racket, bot multiplier) | `agents/reports/agy-19-career-fixes.md` | Completed, Opus reviewed (a forfeit pays 0 Credits, otherwise quit-farming paid "Played") |
 | `agy-20` | Friendly karakter kartı: güçlü/zayıf yanlar + oyun ipucu (`src/charcard.js`) | `agents/reports/agy-20-friendly-character-card.md` | Assigned 2026-10-19 |
+| `agy-21` | Telefon/tablet + Xbox/PS kumandası: pad varken dokunmatik kontroller gizli, ekran kararmaz, sesi aç rozeti, uygulama modu (manifest) | `agents/reports/agy-21-mobile-gamepad.md` | Assigned 2026-10-19 (after agy-20) |
 
 

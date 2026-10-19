@@ -30,6 +30,7 @@ import { bindFullscreenKey, toggleFullscreen, isFullscreen } from './fullscreen.
 import { padDir } from './padnav.js';
 import { pointCall } from './pointcall.js';
 import { tipCycle } from './tips.js';
+import { newTally, tallyEvents, tallyFrame } from './matchstats.js';
 import { isTouch, mountTouch } from './touch.js';
 
 const $ = (id) => document.getElementById(id);
@@ -122,7 +123,7 @@ addEventListener('resize', resize); resize();
 window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorld, inputs, tut, humans, fx });
 const rig = createCameraRig(camera, renderer.domElement);
 const replay = createReplay(15, 60);
-let onEnd = null, pointsWon = [0, 0], lastCfg = null, bagLeft = null;  // bagLeft: the career player's bag, counted down from 'consume' events
+let onEnd = null, pointsWon = [0, 0], lastCfg = null, bagLeft = null, tally = null;  // tally: the career player's match for XP and the coach tip  // bagLeft: the career player's bag, counted down from 'consume' events
 let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, msgTimer = 0, hypeTimer = 0, net = null, marker, loadingScene = false, control = 'auto', gameSpeed = 0.85;
 let styleStats = { pts: 0, streak: 0, maxRally: 0, smashes: 0, medals: [] };
 const MEDALS = {
@@ -221,7 +222,7 @@ export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', ma
   if (!url) { say(NO_SERVER, null, true); return null; }
   code = String(code || '').trim().toUpperCase();
   if (!code) { say('Enter a room code first.', null, true); return null; }
-  onEnd = end || null; pointsWon = [0, 0]; bagLeft = bag ? { ...bag } : null;
+  onEnd = end || null; pointsWon = [0, 0]; bagLeft = bag ? { ...bag } : null; tally = end ? newTally() : null;
   net = connect({
     url, code, char, stats, racket, public: isPublic, name, look, shoes, ball, bag,
     cfg: { players, ...match, ai, venue, outdoor: venues[venue]?.type === 'outdoor' },
@@ -296,7 +297,7 @@ export async function startMatch(cfg) {
   gameSpeed = $('speed') ? +$('speed').value : settings.speed;
   control = $('control') ? $('control').value : settings.control;
   aiLevel = cfg.ai;
-  onEnd = cfg.onEnd || null; pointsWon = [0, 0]; bagLeft = cfg.bag?.[0] ? { ...cfg.bag[0] } : null;
+  onEnd = cfg.onEnd || null; pointsWon = [0, 0]; bagLeft = cfg.bag?.[0] ? { ...cfg.bag[0] } : null; tally = cfg.onEnd ? newTally() : null;
   const ids = cfg.players === 2 ? [0, 2] : [0, 2, 1, 3];
   humans = (cfg.sameTeam && cfg.humans === 2 ? [0, 1] : ids).slice(0, cfg.humans);  // P2 partners P1 instead of facing them
   world = newWorld({
@@ -521,6 +522,7 @@ $('eatOffers')?.addEventListener('pointerdown', (e) => { const b = e.target.clos
 
 function handleEvents(events, score, winner) {
   const myTeam = humans.length ? teamOf(humans[0]) : 0;
+  if (tally) tallyEvents(tally, events, localPid());
   for (const e of events) {
     if (e.type === 'hit') {
       replay.markHit();
@@ -679,11 +681,11 @@ function handleEvents(events, score, winner) {
           const lv = (id) => avatars[id].ch.level ?? null;  // career players share their level in the lobby look
           done({ won: winner === myTeam, gamesWon: sets.reduce((n, g) => n + g[myTeam], 0), pointsWon: pointsWon[myTeam], scoring: 'sets', ai: aiMode, style: styleStats.pts, score: net.score,
             games: [sets.reduce((n, g) => n + g[myTeam], 0), sets.reduce((n, g) => n + g[1 - myTeam], 0)],
-            mates: ids.filter(id => teamOf(id) === myTeam && id !== net.seat).map(lv), opps: ids.filter(id => teamOf(id) !== myTeam).map(lv), bag: bagLeft });
+            mates: ids.filter(id => teamOf(id) === myTeam && id !== net.seat).map(lv), opps: ids.filter(id => teamOf(id) !== myTeam).map(lv), bag: bagLeft, tally });
           onEnd = () => {};
         } else if (onEnd && world) {
           const done = onEnd; onEnd = null;
-          done({ won: winner === 0, gamesWon: world.match.sets.reduce((n, g) => n + g[0], 0), pointsWon: pointsWon[0], points: [...pointsWon], style: styleStats.pts, games: world.match.sets.reduce((g, s) => [g[0] + s[0], g[1] + s[1]], [0, 0]), scoring: world.match.opts.pointsTo ? 'rally' : 'sets', ai: aiLevel, score: scoreText(world.match), bag: bagLeft });
+          done({ won: winner === 0, gamesWon: world.match.sets.reduce((n, g) => n + g[0], 0), pointsWon: pointsWon[0], points: [...pointsWon], style: styleStats.pts, games: world.match.sets.reduce((g, s) => [g[0] + s[0], g[1] + s[1]], [0, 0]), scoring: world.match.opts.pointsTo ? 'rally' : 'sets', ai: aiLevel, score: scoreText(world.match), bag: bagLeft, tally });
           onEnd = () => {};  // keeps toMenu pointed at #career without paying twice
         }
         const winningTeam = winner === 0 ? $('t0').textContent : $('t1').textContent;
@@ -953,10 +955,12 @@ function loop(now) {
     if (!view) { requestAnimationFrame(loop); return; }
     replay.record(view);
     handleEvents(net.events, net.score, net.winner);
+    const row = tally && view.pl[net.seat];
+    if (row) tallyFrame(tally, { p: [row[0], row[1]], energy: row[7] ?? 1, hyd: row[8] ?? 1 }, dt);
   } else {
     if (freeze > 0) freeze -= dt; else acc += dt * pace() * (slow > 0 ? 0.35 : approach > 0 ? 0.45 : 1);
     if (slow > 0) slow -= dt;
-    while (acc >= STEP) { stepWorld(world, inputs(), STEP); tut?.onStep(); replay.record(snapshot(world)); handleEvents(world.events, scoreText(world.match), world.match.winner); acc -= STEP; }
+    while (acc >= STEP) { stepWorld(world, inputs(), STEP); tut?.onStep(); if (tally) { const me = world.players[humans[0]]; tallyFrame(tally, { p: me.p, energy: me.energy, hyd: me.hyd }, STEP); } replay.record(snapshot(world)); handleEvents(world.events, scoreText(world.match), world.match.winner); acc -= STEP; }
     view = snapshot(world);
   }
   updateSmashBanner();

@@ -23,6 +23,8 @@ import {
   equip,
   applyRating,
   settleMatch,
+  statCap,
+  coachTip,
   formNow,
   addPoints,
   expirePoints,
@@ -1456,8 +1458,9 @@ async function launchCareerMatch() {
     form: { 0: formNow(profile, eco) },
     venue,
     onEnd(result) {
-      const { reward, profile: updated } = settleMatch(profile, result, eco, startedAt);
+      const { reward, profile: updated, ups } = settleMatch(profile, result, eco, startedAt);
       updated.lastReward = {
+        ups, coach: result.tally && !result.forfeit ? coachTip(result.tally, updated, eco) : null,
         lines: reward.lines,
         mult: reward.mult,
         credits: reward.credits,
@@ -1495,23 +1498,23 @@ function renderTrainingScreen() {
     <div class="cr-body">
       <div class="cr-train-list" id="cr-train-list">
         ${TRAINING_STATS.map(st => {
-          const level = profile.stats[st.key] ?? 4;
-          const isMax = level >= maxLevel;
+          const level = profile.stats[st.key] ?? 5, cap = statCap(profile);
+          const isMax = level >= Math.min(cap, maxLevel), nextTier = TIERS.find(t => t.cap > cap);
           const cost = isMax ? 0 : trainCost(level, eco);
           const deficit = Math.max(0, cost - profile.credits);
           const canBuy = !isMax && deficit === 0;
           const pct = Math.min(100, (level / maxLevel) * 100);
-          const reasonText = isMax ? 'Maxed' : deficit > 0 ? `Need ${deficit} more Credits` : '';
+          const reasonText = isMax ? (level >= maxLevel || !nextTier ? 'Maxed' : `Reach ${nextTier.name} to train beyond ${cap}`) : deficit > 0 ? `Need ${deficit} more Credits` : '';
 
           return `
             <div class="cr-train-card" data-stat-card="${st.key}">
               <div class="cr-train-top">
                 <div class="cr-train-title-group">
                   <span class="cr-train-name">${escapeHtml(st.label)}</span>
-                  <span class="cr-train-lvl tabular">${level}/${maxLevel}</span>
+                  <span class="cr-train-lvl tabular">${level}/${Math.max(level, Math.min(cap, maxLevel))}</span>
                 </div>
                 <div class="cr-train-actions">
-                  <span class="cr-train-cost tabular">${isMax ? 'Maxed' : `Next: ${cost} Credits`}</span>
+                  <span class="cr-train-cost tabular">${isMax ? (level >= maxLevel ? 'Maxed' : 'Tier cap') : `Next: ${cost} Credits`}</span>
                   ${reasonText ? `<span class="cr-train-reason">${escapeHtml(reasonText)}</span>` : ''}
                   <button type="button" class="cr-btn cr-btn-acc cr-train-buy" data-train="${st.key}" ${canBuy ? '' : 'disabled'}>Buy</button>
                 </div>
@@ -1548,6 +1551,8 @@ function renderTrainingScreen() {
         const cost = level >= maxLevel ? 0 : trainCost(level, eco);
         const msg = res.reason === 'max'
           ? 'Maxed'
+          : res.reason === 'cap'
+          ? `Tier cap: reach ${TIERS.find(t => t.cap > statCap(profile))?.name || 'the next tier'} to train beyond ${statCap(profile)}`
           : res.reason === 'credits'
           ? `Need ${Math.max(1, cost - profile.credits)} more Credits`
           : 'Cannot train this stat.';
@@ -2019,6 +2024,7 @@ function renderRewardScreen() {
           </div>` : ''}
           ${r.level?.tierUp ? `<div class="cr-reward-row is-mult"><span>TIER UP: ${escapeHtml(r.level.tierUp)}</span><b>⬆</b></div>` : ''}
           ${r.level?.bonus ? `<div class="cr-reward-row"><span>Tier up bonus</span><b class="tabular">+${r.level.bonus}</b></div>` : ''}
+          ${(r.ups || []).map(([k, from, to]) => `<div class="cr-reward-row is-mult"><span>📈 ${escapeHtml(TRAINING_STATS.find(x => x.key === k)?.label || k)} ${from} → ${to} (match play)</span><b>⬆</b></div>`).join('')}
         </div>
 
         <div class="cr-reward-total">
@@ -2031,7 +2037,8 @@ function renderRewardScreen() {
           <b class="tabular">${profile.credits} Credits</b>
         </div>
 
-        ${needsRestock(profile) ? '<div class="cr-reward-balance"><span>Bag running low</span>' + restockBtn() + '</div>' : ''}
+        ${r.coach ? `<div class="cr-reward-balance"><span>💡 ${escapeHtml(r.coach.text)}</span>${r.coach.action ? `<button type="button" class="cr-btn cr-btn-acc" id="cr-coach-go">${r.coach.action.train ? 'Train' : 'Restock'}</button>` : ''}</div>` : ''}
+        ${needsRestock(profile) && !r.coach?.action?.restock ? '<div class="cr-reward-balance"><span>Bag running low</span>' + restockBtn() + '</div>' : ''}
         <button type="button" class="pl-start-btn" id="cr-reward-continue" style="width:100%;margin-top:4px">Continue</button>
       </div>
     </div>
@@ -2039,6 +2046,13 @@ function renderRewardScreen() {
 
   wireBannerButtons();
   wireRestock();
+  const coachBtn = careerPanel.querySelector('#cr-coach-go');
+  if (coachBtn) coachBtn.onclick = () => {  // leaves the reward screen like Continue, then goes where the tip points
+    const { lastReward: _removed, ...clean } = profile;
+    persistProfile(clean);
+    flashMsg = null;
+    if (r.coach.action.train) showScreen('training'); else { shopTab = 'bag'; shopErrors = {}; showScreen('shop'); }
+  };
   const contBtn = careerPanel.querySelector('#cr-reward-continue');
   contBtn.onclick = () => {
     const { lastReward: _removed, ...clean } = profile;
@@ -2513,12 +2527,13 @@ async function launchTournamentMatch(m) {
     form: { 0: formNow(profile, eco) },
     venue: venues.find(v => v.id === entry.venue) || venues[0],
     onEnd(result) {
-      let { reward, profile: updated } = settleMatch(profile, result, eco, startedAt);
+      let { reward, profile: updated, ups } = settleMatch(profile, result, eco, startedAt);
       const [t0, t1] = rally ? result.points : result.games;
       const fixed = result.won === (t0 > t1) ? [t0, t1] : result.won ? [t1 + 1, t1] : [t0, t0 + 1];  // guard against a tie
       const score = swapped ? { a: fixed[1], b: fixed[0] } : { a: fixed[0], b: fixed[1] };
       const next = simulateOthers(reportResult(T, m, score));
       updated.lastReward = {
+        ups, coach: result.tally && !result.forfeit ? coachTip(result.tally, updated, eco) : null,
         lines: reward.lines, mult: reward.mult, credits: reward.credits, won: result.won, ai: result.ai || entry.ai,
         score: rally ? `${t0}-${t1}` : (result.score?.sets || `${t0}-${t1}`),
       };
@@ -2664,8 +2679,9 @@ function joinOnlineRoom(code, create) {
     bag: { ...profile.bag },
     status: (t, l, err) => setOnlineStatus(t, l, err),
     onEnd(result) {
-      const { reward, profile: updated } = settleMatch(profile, result, eco, startedAt);
+      const { reward, profile: updated, ups } = settleMatch(profile, result, eco, startedAt);
       updated.lastReward = {
+        ups, coach: result.tally && !result.forfeit ? coachTip(result.tally, updated, eco) : null,
         lines: reward.lines, mult: reward.mult, credits: reward.credits, won: result.won, ai: result.ai || 'online',
         score: result.score?.sets || '',
       };
