@@ -13,8 +13,10 @@ import { padDir, spatialFocus } from './padnav.js';
 import { padText } from './padstyle.js';
 import { loadSettings, saveSettings } from './settings.js';
 import { toggleFullscreen } from './fullscreen.js';
+import { charCard } from './charcard.js';
 
 const $ = (id) => document.getElementById(id);
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 export function countryFlag(cc) {
   if (!cc || cc.length !== 2) return '';
@@ -436,11 +438,12 @@ export function initMenu() {
     const gText = ch.gender === 'f' ? 'FEMALE' : 'MALE';
     const hText = ch.hand === 'left' ? 'LEFT-HANDED' : 'RIGHT-HANDED';
     const s = ch.stats || {};
+    const card = charCard(s);
     info.innerHTML = `
       <div class="pl-char-header">
         <div class="pl-char-title-wrap">
           <span class="pl-char-flag">${flag}</span>
-          <h2 class="pl-char-name" lang="en">${ch.name}</h2>
+          <h2 class="pl-char-name" lang="en">${escapeHtml(ch.name)}</h2>
         </div>
         <div class="pl-char-tags">
           <span class="pl-meta-pill">${gText}</span>
@@ -453,8 +456,18 @@ export function initMenu() {
         ${statRow('CONTROL', s.control || 6)}
         ${statRow('VOLLEY', s.volley || 6)}
         ${statRow('SMASH', s.smash || 6)}
+        ${statRow('STAMINA', s.stamina || 6)}
       </div>
+      <div class="pl-char-tags" style="margin-top:10px;gap:6px;flex-wrap:wrap">
+        <span class="pl-meta-pill">💪 ${card.strengths[0][0].toUpperCase()} ${card.strengths[0][1]}</span>
+        <span class="pl-meta-pill">💪 ${card.strengths[1][0].toUpperCase()} ${card.strengths[1][1]}</span>
+        <span class="pl-meta-pill" style="color:#ff8fa3">⚠ ${card.weakness[0].toUpperCase()} ${card.weakness[1]}</span>
+      </div>
+      <div class="pl-card-sub" style="margin-top:6px;font-size:12px;line-height:1.4">${escapeHtml(card.tip)}</div>
+      <button type="button" id="pl-to-career-btn" class="pl-card-sub" style="margin-top:8px;background:none;border:none;padding:0;color:var(--acc);font-weight:700;font-size:12px;cursor:pointer;text-align:left;display:inline-block">Build your own player in Career →</button>
     `;
+    const toCareerBtn = info.querySelector('#pl-to-career-btn');
+    if (toCareerBtn) toCareerBtn.onclick = () => { location.hash = '#career'; };
   }
 
   function statRow(name, val) {
