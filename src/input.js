@@ -20,8 +20,8 @@ const PAD_BTN = { 0: 'auto', 1: 'lob', 3: 'smash', 2: 'chiquita', 5: 'vibora', 4
 const padPrev = {};
 
 // gamepad shortcuts mapped onto keyboard codes so the game checks one thing: View = camera, R3 = replay,
-// Start = pause menu (any button skips a replay, see main.js)
-const PAD_KEYS = { 8: 'KeyC', 11: 'KeyR', 9: 'Pause' };
+// Start = pause menu (any button skips a replay, see main.js), D-pad ↓ = scoreboard mode
+const PAD_KEYS = { 8: 'KeyC', 11: 'KeyR', 9: 'Pause', 13: 'KeyB' };
 const padKeyPrev = {};
 function pollPadKeys() {
   for (const gp of navigator.getGamepads?.() || []) {

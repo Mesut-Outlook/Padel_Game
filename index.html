@@ -726,7 +726,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   #touchUi .tc-tip { position: absolute; padding: 8px 12px; border-radius: 10px; background: rgba(10,18,28,.85); border: 1px dashed var(--acc); color: #fff; font: 700 14px/1.35 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: .5px; text-align: center; }
   #touchUi .tt-move { left: 22.5%; top: 62%; transform: translate(-50%, -50%); }
   #touchUi .tt-btns { right: max(290px, calc(env(safe-area-inset-right) + 290px)); bottom: max(28px, env(safe-area-inset-bottom)); }
-  #touchUi .tt-top { left: max(280px, calc(env(safe-area-inset-left) + 280px)); top: max(18px, env(safe-area-inset-top)); }
+  #touchUi .tt-top { left: max(330px, calc(env(safe-area-inset-left) + 330px)); top: max(18px, env(safe-area-inset-top)); }
   #touchUi .tt-ok { left: 50%; top: 40%; transform: translateX(-50%); pointer-events: auto; border-style: solid; background: var(--acc); color: #0b1520; font-size: 16px; padding: 10px 22px; }
   body.touch { overscroll-behavior: none; touch-action: manipulation; }
   body.touch #fsBtn { display: none !important; }  /* fullscreen stays in the pause menu */
@@ -738,6 +738,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   #fsHint[hidden] { display: none; }
   @media (display-mode: standalone), (display-mode: fullscreen) { .fs-btn-sync { display: none !important; } }  /* opened from the home-screen icon: already full screen */
   @media (max-height: 500px) { #hud { transform: translateX(-50%) scale(.78); transform-origin: top center; } }
+  #hud { transition: opacity .25s, visibility .25s; } #hud.away { opacity: 0; visibility: hidden; }  /* scoreboard mode (main.js hudAway) */
   #rotate { display: none; }
   @media (orientation: portrait) {
     body.touch #rotate { display: flex; position: fixed; inset: 0; z-index: 50; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; background: #0b1520; color: #fff; text-align: center; font: 800 22px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 1.5px; }

@@ -114,6 +114,7 @@
     <div class="card"><h3>Camera &amp; System</h3><table>
       <tr><td><kbd>F11</kbd> · <kbd>F</kbd> in menus</td><td>Toggle fullscreen (also the ⛶ button and the pause menu; in a match F is the slice shot)</td></tr>
       <tr><td><kbd>E</kbd></td><td>Eat: take the food offered at a changeover (energy low)</td></tr>
+      <tr><td><kbd>B</kbd></td><td>Scoreboard: auto (hidden while a point is played) → hidden → always on</td></tr>
       <tr><td><kbd>C</kbd></td><td>Camera: TV, behind player, side, top, ball, drone, free</td></tr>
       <tr><td><kbd>R</kbd></td><td>Instant replay of the last point</td></tr>
       <tr><td><kbd>Esc</kbd></td><td>Pause menu · skip replay</td></tr>
@@ -150,6 +151,7 @@
       <tr><td><kbd>R3</kbd> (press right stick)</td><td>Instant replay</td></tr>
       <tr><td><kbd>Start</kbd></td><td>Pause menu · main menu after match · skip training lesson</td></tr>
       <tr><td><kbd>D-pad ↑</kbd></td><td>Show / hide the on-screen controller help</td></tr>
+      <tr><td><kbd>D-pad ↓</kbd></td><td>Scoreboard: auto → hidden → always on</td></tr>
     </table></div>
     <div class="card"><h3>Menu</h3><table>
       <tr><td>D-pad / Left stick</td><td>Navigate cards</td></tr>
@@ -174,7 +176,7 @@
         <tr><td><kbd>SHOT</kbd> (big button, bottom right)</td><td>Smart shot · serve. Keep the stick left or right while you tap = aim (works for every shot)</td></tr>
         <tr><td>Inner ring</td><td><kbd>LOB</kbd> high over the opponents · <kbd>VÍBORA</kbd> slicing overhead · <kbd>SMASH</kbd> on high balls — low shot on the left, overheads on top</td></tr>
         <tr><td>Outer ring (orange)</td><td><kbd>CHIQUITA</kbd> soft ball just over the net · <kbd>CONTRA</kbd> contrapared, off your own glass · <kbd>SLICE</kbd> slice serve</td></tr>
-        <tr><td>🎥 · ⏸ · 🔁 · 🔈 · ❔ (top left)</td><td>Camera · pause menu · replay of the last point · sound on / off · touch tips</td></tr>
+        <tr><td>🎥 · ⏸ · 🔁 · 🔈 · 📊 · ❔ (top left)</td><td>Camera · pause menu · replay of the last point · sound on / off · scoreboard (auto / hidden / always on) · touch tips</td></tr>
         <tr><td>Food box</td><td>At a changeover with low energy: tap it to eat</td></tr>
       </table>
     </div>
@@ -221,6 +223,7 @@ const K = {
   KeyO: ['O', 'shot', 'contra', 'Contrapared: hit off your own glass wall over the net; hold A/D for side glass'],
   KeyF: ['F', 'shot', 'slice', 'Slice serve: stays low and curves sideways'],
   KeyE: ['E', 'sys', 'eat', 'Eat the food offered at a changeover when your energy is low'],
+  KeyB: ['B', 'sys', 'score', 'Scoreboard: auto (hidden during points) → hidden → always on'],
   KeyC: ['C', 'sys', 'cam', 'Cycle camera angle'],
   KeyR: ['R', 'sys', 'replay', 'Watch instant replay of the last point'],
   KeyM: ['M', 'sys', 'sound', 'Mute / unmute sound & music'],

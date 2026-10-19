@@ -219,6 +219,7 @@ async function setupScene(venue, ids, roster, rk) {
   const name = (t) => ids.filter(id => (id < 2 ? 0 : 1) === t).map(id => roster[id].name.split(' ').pop()).join(' / ');
   $('t0').textContent = name(0); $('t1').textContent = name(1);
   for (const id of ['hud', 'cam', 'help', 'fsBtn']) $(id).hidden = false;
+  clearPressed();  // a D-pad ↓ / key pressed in the menus must not act in the match
   $('touchUi').hidden = !isTouch() || document.body.classList.contains('pad');
   if (!$('touchUi').hidden) showTouchTips($('touchUi'));
   updateUnmuteBadge();
@@ -772,6 +773,18 @@ function renderEnergy(view) {
   });
 }
 
+// scoreboard mode, cycled with B / pad D-pad ↓ / touch 📊 and remembered: auto = hidden while a point is played
+const HUD_MODES = ['auto', 'off', 'on'], HUD_MODE_KEY = 'padel.hudMode';
+const HUD_NAME = { auto: 'SCOREBOARD: AUTO (HIDDEN DURING POINTS)', off: 'SCOREBOARD: HIDDEN', on: 'SCOREBOARD: ALWAYS ON' };
+let hudMode = 'auto';
+try { const m = localStorage.getItem(HUD_MODE_KEY); if (HUD_MODES.includes(m)) hudMode = m; } catch { /* storage blocked: auto */ }
+function nextHudMode() {
+  hudMode = HUD_MODES[(HUD_MODES.indexOf(hudMode) + 1) % HUD_MODES.length];
+  try { localStorage.setItem(HUD_MODE_KEY, hudMode); } catch { /* not kept */ }
+  flash('📊 ' + HUD_NAME[hudMode], 1.4);
+}
+const hudAway = (state) => $('hud').classList.toggle('away', hudMode === 'off' || (hudMode === 'auto' && (state === 'toss' || state === 'play')));
+
 // score board: rows per team with games per set, the current point and a ball marking the server
 let hudKey = '';
 function renderHud(s) {
@@ -984,6 +997,7 @@ function loop(now) {
   if (consumePressed('KeyC')) rig.next();
   if (consumePressed('KeyR')) startReplay(false);
   if (consumePressed('KeyM')) flash(toggleMute() ? '🔇 SOUND OFF' : '🔊 SOUND ON', 1);
+  if (consumePressed('KeyB')) nextHudMode();
   if (!tut && consumePressed('Enter') && (world?.match.winner != null || net?.winner != null)) { toMenu(); return; }
   let view;
   if (replay.playing) {
@@ -1021,6 +1035,7 @@ function loop(now) {
   tut?.onFrame(dt);
   // serve: the ball sits in the server's hand, then eases onto the simulated drop
   const srv = view.pl.findIndex(s => s[3] === 'serveReady');
+  hudAway(view.s);
   if (view.s === 'serve' && avatars[srv]) avatars[srv].ballHand(ballHold).sub(tmpV.set(...view.b));
   else if (view.s === 'toss') ballHold.multiplyScalar(Math.exp(-dt / 0.08));
   else ballHold.set(0, 0, 0);

@@ -8,7 +8,7 @@ const K = {
   Space: ['Space', 'hit', 'shot · serve'], KeyJ: ['J', 'hit', 'shot'],
   KeyK: ['K', 'shot', 'lob'], KeyL: ['L', 'shot', 'smash'], KeyU: ['U', 'shot', 'chiq.'], KeyI: ['I', 'shot', 'víbora'],
   KeyO: ['O', 'shot', 'contra'], KeyF: ['F', 'shot', 'slice'],
-  KeyE: ['E', 'sys', 'eat'], KeyC: ['C', 'sys', 'cam'], KeyR: ['R', 'sys', 'replay'], KeyM: ['M', 'sys', 'sound'], KeyH: ['H', 'sys', 'hide'],
+  KeyE: ['E', 'sys', 'eat'], KeyB: ['B', 'sys', 'score'], KeyC: ['C', 'sys', 'cam'], KeyR: ['R', 'sys', 'replay'], KeyM: ['M', 'sys', 'sound'], KeyH: ['H', 'sys', 'hide'],
   Escape: ['Esc', 'sys', 'pause'], Enter: ['Enter', 'sys', 'menu'],
 };
 const ROWS = [
@@ -28,15 +28,16 @@ const PAD = [
   [0, 'xa', 'A', 176, 76, 'shot · serve'], [1, 'xb', 'B', 190, 62, 'lob'], [2, 'xx', 'X', 162, 62, 'chiquita'], [3, 'xy', 'Y', 176, 48, 'smash'],
   [8, 'sys', '', 104, 58, 'camera (View)'], [9, 'sys', '', 136, 58, 'pause (Start)'], [11, 'sys', 'R3', 148, 92, 'replay (press R stick)'],
   [12, 'sys', '', 92, 83, 'hide this help (D-pad ↑)'],
+  [13, 'sys', '', 92, 97, 'scoreboard (D-pad ↓)'],
 ];
 const PAD_BODY = 'M60 30C80 22 160 22 180 30C205 34 222 50 228 80C236 118 230 142 210 144C192 146 182 126 170 112C160 104 80 104 70 112C58 126 48 146 30 144C10 142 4 118 12 80C18 50 35 34 60 30Z';
 export function padSvg(kind) {
   const btn = ([b, c, t, x, y]) => b === 6 || b === 7 ? `<g data-b="${b}" class="${c}"><rect x="${x}" y="${y}" width="28" height="11" rx="5"/><text x="${x + 14}" y="${y + 8.5}">${padText(t, kind)}</text></g>`
     : b === 4 || b === 5 ? `<g data-b="${b}" class="${c}"><rect x="${x}" y="${y}" width="44" height="11" rx="5"/><text x="${x + 22}" y="${y + 8.5}">${padText(t, kind)}</text></g>`
     : b === 11 ? `<g data-b="11" class="${c}"><circle cx="${x}" cy="${y}" r="11"/><circle class="dot" data-stick="2" cx="${x}" cy="${y}" r="6"/></g>`
-    : b === 12 ? ''
+    : b === 12 || b === 13 ? ''
     : `<g data-b="${b}" class="${c}"><circle cx="${x}" cy="${y}" r="${t ? 7 : 5}"/>${t ? `<text x="${x}" y="${y + 3}">${padText(t, kind)}</text>` : ''}</g>`;
-  const dpad = [[12, 88, 79], [13, 88, 97], [14, 79, 88], [15, 97, 88]].map(([b, x, y]) => `<rect data-b="${b}" class="${b === 12 ? 'sys' : 'off'}" x="${x}" y="${y}" width="9" height="9" rx="1.5"/>`).join('');
+  const dpad = [[12, 88, 79], [13, 88, 97], [14, 79, 88], [15, 97, 88]].map(([b, x, y]) => `<rect data-b="${b}" class="${b === 12 || b === 13 ? 'sys' : 'off'}" x="${x}" y="${y}" width="9" height="9" rx="1.5"/>`).join('');
   return `<svg class="hp-svg" viewBox="0 0 240 150" width="230" height="144">
     <path class="body" d="${PAD_BODY}"/><circle class="off" cx="120" cy="42" r="7"/>
     <g data-b="10" class="move"><circle cx="64" cy="62" r="13"/><circle class="dot" data-stick="0" cx="64" cy="62" r="7"/></g>
@@ -44,7 +45,7 @@ export function padSvg(kind) {
 }
 export const padLegend = (kind) => `<div class="hp-legend">
     <div class="pk" data-b="10"><b class="move">L</b>move · tilt while hitting = aim</div>
-    ${PAD.filter(p => p[5]).map(([b, c, t, , , txt]) => `<div class="pk" data-b="${b}"><b class="${c}">${t ? padText(t, kind) : { 8: '⧉', 9: '≡', 12: '↑' }[b]}</b>${padText(txt, kind)}</div>`).join('')}
+    ${PAD.filter(p => p[5]).map(([b, c, t, , , txt]) => `<div class="pk" data-b="${b}"><b class="${c}">${t ? padText(t, kind) : { 8: '⧉', 9: '≡', 12: '↑', 13: '↓' }[b]}</b>${padText(txt, kind)}</div>`).join('')}
   </div>`;
 
 const STORE = 'padel.helpHidden', POS_STORE = 'padel.helpPos';
