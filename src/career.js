@@ -68,8 +68,8 @@ export function migrateProfile(p) {
 // limit is kept, only buying more is blocked
 export function normalizeProfile(p) {
   if (isObj(p.bag)) return p;
-  const { supplies = {}, ...rest } = p, { fuel: _f, ...equipped } = p.equipped, bag = { ...STARTER_BAG };
-  for (const [id, n] of Object.entries(supplies)) if (n > 0) { const k = id.replace('fuel_', 'bag_'); bag[k] = (bag[k] || 0) + n; }
+  const { supplies, ...rest } = p, { fuel: _f, ...equipped } = p.equipped, bag = { ...STARTER_BAG };
+  for (const [id, n] of Object.entries(supplies || {})) if (n > 0) { const k = id.replace('fuel_', 'bag_'); bag[k] = (bag[k] || 0) + n; }
   return { ...rest, equipped, bag };
 }
 
@@ -168,7 +168,7 @@ export function settleMatch(profile, result, eco, startedAt, now = new Date()) {
 }
 
 // result.bag = what is left of the bag after the match (counted from the match's consume events)
-const settleBag = (bag, left) => (isObj(left) ? { ...bag, ...Object.fromEntries(Object.entries(left).filter(([k]) => k in bag).map(([k, n]) => [k, Math.max(0, Math.floor(+n) || 0)])) } : bag);
+const settleBag = (bag, left) => (isObj(left) ? { ...bag, ...Object.fromEntries(Object.entries(left).filter(([k]) => k in bag).map(([k, n]) => [k, Number.isFinite(+n) ? Math.max(0, Math.floor(+n)) : 0])) } : bag);
 
 // ranking points from tournaments are logged with their date and drop out after eco.pointsDays (FIP's 52 weeks, shortened);
 // a profile from before the log starts it today with its whole total

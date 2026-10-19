@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { newProfile, loadProfile, saveProfile, matchReward, applyReward, exportProfile, importProfile, trainCost, buyTraining, tournamentReward, canEnter, worldRanking, aiRankingTable, migrateProfile, applyRating, settleMatch, formNow, addPoints, expirePoints, expiringSoon } from '../src/career.js';
+import { newProfile, loadProfile, saveProfile, matchReward, applyReward, exportProfile, importProfile, trainCost, buyTraining, tournamentReward, canEnter, worldRanking, aiRankingTable, migrateProfile, applyRating, settleMatch, formNow, addPoints, expirePoints, expiringSoon, normalizeProfile } from '../src/career.js';
 
 const eco = JSON.parse(fs.readFileSync(new URL('../data/economy.json', import.meta.url)));
 const chars = JSON.parse(fs.readFileSync(new URL('../data/characters.json', import.meta.url)));
@@ -280,4 +280,11 @@ test('bag after a match: remaining counts come back; a tier up adds 2 bananas + 
   const low = { ...newProfile(chars[0], {}, { level: 2.45, reliability: 0 }), bag: { bag_water: 6, bag_banana: 1 } };
   const r = applyRating(low, 2.45, 4, { won: true, games: [6, 0] }, at(19), eco.tierUp, eco.tierUpBag);
   assert.deepEqual(r.profile.bag, { bag_water: 8, bag_banana: 3 });
+});
+
+test('bag review fixes: Infinity never reaches the profile, supplies: null loads', () => {
+  const p0 = newProfile(chars[0]);
+  assert.equal(settleMatch(p0, { ...club(true, 6), bag: { bag_water: Infinity } }, eco, at(19, 9), at(19, 10)).profile.bag.bag_water, 0);
+  const old = { ...p0, supplies: null }; delete old.bag;
+  assert.deepEqual(normalizeProfile(old).bag, { bag_water: 4, bag_banana: 3 });
 });

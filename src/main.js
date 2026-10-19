@@ -514,7 +514,7 @@ function hideOffer(pid) { const o = offers.get(pid); if (o) { clearTimeout(o.tim
 function clearOffers() { for (const o of offers.values()) clearTimeout(o.timer); offers.clear(); renderOffers(); }
 function showOffer(e) {
   hideOffer(e.pid);
-  offers.set(e.pid, { item: e.item, energy: e.energy, timer: setTimeout(() => hideOffer(e.pid), 6000) });
+  offers.set(e.pid, { item: e.item, energy: e.energy, timer: net ? setTimeout(() => hideOffer(e.pid), 6000) : null });  // offline the world's offer closes it (game time)
   renderOffers();
 }
 $('eatOffers')?.addEventListener('pointerdown', (e) => { const b = e.target.closest('[data-pid]'); if (b) { e.preventDefault(); requestEat(+b.dataset.pid); } });
@@ -708,6 +708,7 @@ function handleEvents(events, score, winner) {
 // energy bars for all active players (offline from the world, online from the snapshot); red and pulsing when spent
 let energyUi = null, tiredWarned = false;
 function renderEnergy(view) {
+  if (world) for (const pid of offers.keys()) if (!world.players[pid]?.offer) hideOffer(pid);
   const box = $('hudEnergy');
   if (!box) return;
   const isDoubles = world ? (world.players[1]?.active ?? true) : !!avatars[1];
@@ -768,7 +769,7 @@ let lastPadNavA = false, lastPadNavB = false, lastPadNavStart = false;
 function pauseItems() {
   const items = [['Resume', () => setPaused(false)]];
   if (tut) items.push(['Skip lesson', () => { setPaused(false); tut.skip(); }]);
-  else if (!net) items.push(['Restart match', () => { setPaused(false); if (replay.playing) endReplay(); lastCfg?.onEnd ? startMatch(lastCfg) : $('start').click(); }]);  // career matches restart as career matches
+  else if (!net) items.push(['Restart match', () => { setPaused(false); if (replay.playing) endReplay(); lastCfg?.onEnd ? startMatch(lastCfg.bag && bagLeft ? { ...lastCfg, bag: { ...lastCfg.bag, 0: { ...bagLeft } } } : lastCfg) : $('start').click(); }]);  // career matches restart as career matches, with what is left in the bag
   items.push([isFullscreen() ? 'Exit Fullscreen' : 'Fullscreen', async () => { await toggleFullscreen(); drawPause(); }]);
   items.push(['Main menu', toMenu]);
   return items;
