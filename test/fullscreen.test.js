@@ -122,3 +122,15 @@ test('updateFullscreenButtons updates label and icon based on fullscreen state',
   assert.equal(btn1.textContent, '⛶');
   assert.equal(btn2.textContent, '⛶ Fullscreen');
 });
+
+test('toggleFullscreen without the Fullscreen API (iPhone) shows the home-screen hint instead', async () => {
+  const added = [];
+  const el = { hidden: true, setAttribute() {}, querySelector: () => ({}), set innerHTML(v) { this.html = v; } };
+  const fakeDoc = { getElementById: () => added[0] || null, createElement: () => el, body: { appendChild: (e) => added.push(e) } };
+  const result = await toggleFullscreen({}, fakeDoc);
+  assert.equal(result, false);
+  assert.equal(added.length, 1);
+  assert.equal(el.hidden, false);
+  assert.match(el.html, /Add to Home Screen/);
+  clearTimeout(el._t);
+});
