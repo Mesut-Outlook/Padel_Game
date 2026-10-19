@@ -1276,6 +1276,18 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   }
   .cr-top-curr.is-rp b { color: #6ec6ff; }
   .cr-top-curr.is-tier b { color: #fff; }
+  .cr-left-level { display: flex; flex-direction: column; gap: 2px; margin: 8px 0; font-size: 12px; color: var(--muted); }
+  .cr-left-level b { color: #fff; font-size: 14px; }
+  .cr-rec { margin-left: 6px; font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--acc); }
+  .cr-lvl-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .cr-lvl-choice { text-align: left; padding: 16px; }
+  .cr-lvl-q { margin-bottom: 10px; }
+  .cr-lvl-actions { margin-top: 12px; }
+  .cr-lvl-ptm, .cr-lvl-result { display: flex; flex-direction: column; gap: 10px; max-width: 420px; }
+  .cr-lvl-input { font: inherit; font-size: 20px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.25); background: rgba(0,0,0,.35); color: #fff; width: 140px; }
+  .cr-lvl-input:focus-visible { outline: 2px solid var(--acc); }
+  .cr-lvl-big { font-size: 28px; font-weight: 800; color: #fff; }
+  @media (max-height: 500px) { .cr-lvl-choice { padding: 10px; } .cr-lvl-big { font-size: 20px; } .cr-lvl-q { margin-bottom: 4px; } }
 
   /* Training Screen */
   .cr-train-list {

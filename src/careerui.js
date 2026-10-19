@@ -29,7 +29,7 @@ import {
   worldRanking,
 } from './career.js';
 import { listRooms } from './net.js';
-import { TIERS, tierAt, scaleStats, aiLevel } from './level.js';
+import { TIERS, tierAt, scaleStats, aiLevel, questionnaireLevel, playtomicStart, startCredits } from './level.js';
 import { padDir, spatialFocus } from './padnav.js';
 import { createTournament, myMatch, reportResult, simulateOthers, simulateUntilMine, standings, isFinished, placement } from './tournament.js';
 import {
@@ -178,6 +178,8 @@ let shopErrors = {}; // { [itemId]: string }
 let creatorMode = 'create'; // 'create' | 'edit'
 let creatorTemplate = characters[0];
 let creatorState = null;
+let pendingLook = null; // look from the creator, waiting for the level step
+let lvl = { mode: 'choose', answers: [null, null, null, null, null], input: '', error: '', start: null };
 let previewDebounceTimer = null;
 
 // Play state
@@ -240,14 +242,18 @@ function buildEquippedPlayer(p = profile) {
   };
 }
 
+const levelText = (p) => `Level ${(p.level ?? 1.5).toFixed(2)} · ${tierAt(p.level ?? 1.5).name}`;
+const relPct = (p) => Math.round((p.reliability ?? 0.2) * 100);
+const tierByIndex = (i) => TIERS.find(t => t.index === i) || TIERS[0];
+const LEVEL_NOTE = 'Padel Legends level — Playtomic-style, not synced';
+
 function renderTopCreditsHtml(p = profile) {
   if (!p) return '';
-  const curTier = tierAt(p.level ?? 1.5).name;
   return `
     <div class="cr-top-currencies" aria-label="Player currencies">
       <div class="cr-top-curr"><span>Credits</span><b class="tabular">${p.credits}</b></div>
       <div class="cr-top-curr is-rp"><span>Ranking pts</span><b class="tabular">${p.rankingPoints}</b></div>
-      <div class="cr-top-curr is-tier"><span>Tier</span><b>${escapeHtml(curTier)}</b></div>
+      <div class="cr-top-curr is-tier"><span>Level</span><b>${escapeHtml(levelText(p).replace('Level ', ''))} · ${relPct(p)}%</b></div>
     </div>
   `;
 }
@@ -267,7 +273,7 @@ function buildLeftPanelHtml(ch, stats, p = null) {
   const flag = countryFlag(ch.countryCode);
   const gText = ch.gender === 'f' ? 'FEMALE' : 'MALE';
   const hText = ch.hand === 'left' ? 'LEFT-HANDED' : 'RIGHT-HANDED';
-  const s = stats || ch.stats || { speed: 4, power: 4, control: 4, volley: 4, smash: 4, stamina: 4 };
+  const s = stats || ch.stats || START_STATS;
   const currencyRow = p
     ? `
       <div class="cr-left-currencies">
@@ -289,6 +295,7 @@ function buildLeftPanelHtml(ch, stats, p = null) {
       </div>
     </div>
     ${currencyRow}
+    ${p ? `<div class="cr-left-level"><b>${escapeHtml(levelText(p))} · ${relPct(p)}%</b><span>${LEVEL_NOTE}</span></div>` : ''}
     <div class="pl-stats-list">
       ${statBarHtml('SPEED', s.speed ?? 4)}
       ${statBarHtml('POWER', s.power ?? 4)}
@@ -403,7 +410,7 @@ function scheduleCreatorPreview(immediate = false) {
       id: 'me_preview_' + Date.now(),
     });
     const rk = equippedRacket(profile);
-    const stats = creatorMode === 'edit' && profile ? profile.stats : { speed: 4, power: 4, control: 4, volley: 4, smash: 4, stamina: 4 };
+    const stats = creatorMode === 'edit' && profile ? profile.stats : START_STATS;
     setCareerPreview(previewChar, rk, buildLeftPanelHtml(previewChar, stats, creatorMode === 'edit' ? profile : null), 'CAREER CREATOR');
   };
   if (immediate) run();
@@ -534,6 +541,7 @@ function renderCurrentScreen() {
   if (!careerPanel) return;
   if (curScreen === 'templates') renderTemplatesScreen();
   else if (curScreen === 'creator') renderCreatorScreen();
+  else if (curScreen === 'levelstart') renderLevelStartScreen();
   else if (curScreen === 'reward') renderRewardScreen();
   else if (curScreen === 'play') renderPlayScreen();
   else if (curScreen === 'training') renderTrainingScreen();
@@ -555,7 +563,7 @@ function renderTemplatesScreen() {
   setCareerPreview(
     previewCh,
     rackets[0],
-    buildLeftPanelHtml(previewCh, { speed: 4, power: 4, control: 4, volley: 4, smash: 4, stamina: 4 }, null),
+    buildLeftPanelHtml(previewCh, START_STATS, null),
     'CHOOSE TEMPLATE'
   );
 
@@ -624,7 +632,7 @@ function renderTemplatesScreen() {
       setCareerPreview(
         ch,
         rackets[0],
-        buildLeftPanelHtml(ch, { speed: 4, power: 4, control: 4, volley: 4, smash: 4, stamina: 4 }, null),
+        buildLeftPanelHtml(ch, START_STATS, null),
         'CHOOSE TEMPLATE'
       );
     };
@@ -979,14 +987,105 @@ function renderCreatorScreen() {
       flashMsg = { type: 'ok', text: 'Appearance updated.' };
       showScreen('profile');
     } else {
-      const created = newProfile(creatorTemplate || characters[0], look);
-      track('career-create');
-      created.player = cleanCharacterLook(created.player);
-      persistProfile(created);
+      pendingLook = look;
+      lvl = { mode: 'choose', answers: [null, null, null, null, null], input: '', error: '', start: null };
       flashMsg = null;
-      showScreen('hub');
+      showScreen('levelstart');
     }
   };
+}
+
+// 2b. Level start (new career only): questionnaire, Playtomic level or skip
+const LEVEL_QUESTIONS = [
+  ['How long have you played padel?', ['Never / just started', 'Under a year', '1 to 3 years', 'Over 3 years']],
+  ['How do you use the back glass?', ['I avoid it', 'I let the ball bounce off it', 'I play most balls off the glass', 'I use it for tactics and attack']],
+  ['Bandeja and víbora?', ['What are those?', 'I know them but rarely hit them', 'I hit them fairly often', 'Reliable weapons']],
+  ['Holding the net?', ['I stay at the back', 'I go up when I can', 'I win the net most points', 'I dominate the net']],
+  ['Tournaments?', ['Never', 'Friendly events', 'Club or local tournaments', 'Regional or national']],
+];
+
+function renderLevelStartScreen() {
+  if (!pendingLook) { showScreen('templates'); return; }
+  const tpl = creatorTemplate || characters[0];
+  const pl = { ...tpl, ...pendingLook, id: 'me' };
+  setCareerPreview(pl, rackets[0], buildLeftPanelHtml(pl, START_STATS, null), 'YOUR LEVEL');
+
+  let body = '';
+  if (lvl.mode === 'choose') {
+    body = `
+      <div class="cr-lvl-choices">
+        <button type="button" class="pl-card cr-lvl-choice" id="cr-lvl-quiz"><div class="pl-card-title">Answer 5 quick questions</div><div class="pl-card-sub">We estimate your level (up to 4.00).</div></button>
+        <button type="button" class="pl-card cr-lvl-choice" id="cr-lvl-ptm"><div class="pl-card-title">I have a Playtomic level</div><div class="pl-card-sub">Type the level shown in the app.</div></button>
+        <button type="button" class="pl-card cr-lvl-choice" id="cr-lvl-skip"><div class="pl-card-title">Skip — start at 1.50</div><div class="pl-card-sub">Climb from Club level.</div></button>
+      </div>`;
+  } else if (lvl.mode === 'quiz') {
+    body = LEVEL_QUESTIONS.map(([q, opts], qi) => `
+      <div class="cr-lvl-q"><div class="pl-section-label">${qi + 1}. ${escapeHtml(q)}</div>
+        <div class="pl-seg-row">${opts.map((o, oi) => `<button type="button" class="pl-seg-btn ${lvl.answers[qi] === oi ? 'is-selected' : ''}" data-q="${qi}" data-a="${oi}">${escapeHtml(o)}</button>`).join('')}</div>
+      </div>`).join('') + `
+      <div class="cr-lvl-actions"><button type="button" class="cr-btn cr-btn-acc" id="cr-lvl-quiz-go" ${lvl.answers.includes(null) ? 'disabled' : ''}>See my level</button></div>`;
+  } else if (lvl.mode === 'playtomic') {
+    body = `
+      <div class="cr-lvl-ptm">
+        <div class="cr-sub">We can't read your Playtomic account; type the level shown in the app.</div>
+        <input type="text" inputmode="decimal" id="cr-lvl-input" class="cr-lvl-input" placeholder="e.g. 2.75" maxlength="6" value="${escapeHtml(lvl.input)}" autocomplete="off" />
+        ${lvl.error ? `<div class="cr-card-error" role="alert">${escapeHtml(lvl.error)}</div>` : ''}
+        <div class="cr-lvl-actions"><button type="button" class="cr-btn cr-btn-acc" id="cr-lvl-ptm-go">Use this level</button></div>
+      </div>`;
+  } else {
+    const st = lvl.start, bonus = startCredits(st.level);
+    body = `
+      <div class="cr-lvl-result">
+        <div class="cr-lvl-big">Level ${st.level.toFixed(2)} · ${escapeHtml(tierAt(st.level).name)}</div>
+        ${bonus > 0 ? `<div class="cr-sub">Starting bonus: ${bonus} Credits</div>` : ''}
+        <div class="cr-sub">${LEVEL_NOTE}</div>
+        <div class="cr-lvl-actions"><button type="button" class="cr-btn cr-btn-acc" id="cr-lvl-continue">Continue</button></div>
+      </div>`;
+  }
+
+  careerPanel.innerHTML = `
+    ${renderBannersHtml()}
+    <div class="cr-head">
+      <div>
+        <h2 class="cr-title">NEW CAREER · <span>WHAT'S YOUR PADEL LEVEL?</span></h2>
+        <div class="cr-sub">Sets your starting level, tier and bonus Credits. It keeps changing as you play.</div>
+      </div>
+      <div class="cr-banner-actions"><button type="button" class="cr-btn" id="cr-lvl-back">← Back</button></div>
+    </div>
+    <div class="cr-body">${body}</div>
+  `;
+  wireBannerButtons();
+  const q = (sel) => careerPanel.querySelector(sel);
+  const go = (mode, start = null) => { lvl.mode = mode; lvl.start = start; lvl.error = ''; renderLevelStartScreen(); };
+  q('#cr-lvl-back').onclick = goBack;
+  if (q('#cr-lvl-quiz')) {
+    q('#cr-lvl-quiz').onclick = () => go('quiz');
+    q('#cr-lvl-ptm').onclick = () => go('playtomic');
+    q('#cr-lvl-skip').onclick = () => go('result', { level: 1.5, reliability: 0.2 });
+  }
+  careerPanel.querySelectorAll('[data-q]').forEach(b => {
+    b.onclick = () => { lvl.answers[+b.dataset.q] = +b.dataset.a; renderLevelStartScreen(); q(`[data-q="${b.dataset.q}"][data-a="${b.dataset.a}"]`)?.focus(); };
+  });
+  if (q('#cr-lvl-quiz-go')) q('#cr-lvl-quiz-go').onclick = () => go('result', { level: questionnaireLevel(lvl.answers), reliability: 0.25 });
+  const input = q('#cr-lvl-input');
+  if (input) {
+    input.oninput = () => { lvl.input = input.value; };
+    q('#cr-lvl-ptm-go').onclick = () => {
+      const st = playtomicStart(lvl.input);
+      if (st) go('result', st);
+      else { lvl.error = 'Enter a level between 0.5 and 7, like 2.75.'; renderLevelStartScreen(); q('#cr-lvl-input')?.focus(); }
+    };
+  }
+  if (q('#cr-lvl-continue')) q('#cr-lvl-continue').onclick = () => {
+    const created = newProfile(creatorTemplate || characters[0], pendingLook, lvl.start);
+    track('career-create');
+    created.player = cleanCharacterLook(created.player);
+    persistProfile(created);
+    pendingLook = null;
+    flashMsg = null;
+    showScreen('hub');
+  };
+  (q('#cr-lvl-continue') || q('#cr-lvl-quiz') || q('.pl-seg-btn.is-selected') || q('.pl-seg-btn') || input)?.focus();
 }
 
 // 3. Career Hub
@@ -1009,7 +1108,6 @@ function renderHubScreen() {
   setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'CAREER HUB');
 
   const h = profile.history || { played: 0, won: 0, pointsWon: 0 };
-  const curTier = tierAt(profile.level ?? 1.5).name;
 
   careerPanel.innerHTML = `
     ${renderBannersHtml()}
@@ -1018,7 +1116,7 @@ function renderHubScreen() {
         <span class="cr-prof-flag">${countryFlag(pl.countryCode)}</span>
         <div>
           <div class="cr-prof-name" lang="en">${escapeHtml(pl.name)}</div>
-          <div class="cr-prof-rank">World rank: #${myWorldRank(profile)} · Tier: ${escapeHtml(curTier)} · Record: ${h.won}W – ${Math.max(0, h.played - h.won)}L (${h.played} played)</div>
+          <div class="cr-prof-rank">World rank: #${myWorldRank(profile)} · ${escapeHtml(levelText(profile))} · ${relPct(profile)}% reliability · Record: ${h.won}W – ${Math.max(0, h.played - h.won)}L (${h.played} played)</div>
         </div>
       </div>
       <div class="cr-currencies">
@@ -1074,7 +1172,7 @@ function renderHubScreen() {
         <button type="button" class="pl-card cr-hub-card" id="cr-hub-shop">
           <div class="cr-hub-card-top">
             <div class="pl-card-title">🛒 Shop</div>
-            <span class="pl-meta-pill">${escapeHtml(curTier)} Tier</span>
+            <span class="pl-meta-pill">${escapeHtml(tierAt(profile.level).name)} Tier</span>
           </div>
           <div class="pl-card-sub">Unlock pro rackets, shoes, kits, headwear & match balls.</div>
         </button>
@@ -1164,7 +1262,7 @@ function renderPlayScreen() {
       <div class="pl-seg-row" id="cr-play-ai">
         ${AI_LEVELS.map(lv => `
           <button type="button" class="pl-seg-btn ${playState.ai === lv.id ? 'is-selected' : ''}" data-ai="${lv.id}">
-            ${lv.label} ${lv.stars} (×${eco.mult[lv.id]})
+            ${lv.label} ${lv.stars} (×${eco.mult[lv.id]})${lv.id === tierAt(profile.level ?? 1.5).ai ? ' <span class="cr-rec">Recommended</span>' : ''}
           </button>
         `).join('')}
       </div>
@@ -1258,6 +1356,9 @@ function renderPlayScreen() {
 
   careerPanel.querySelector('#cr-play-start').onclick = () => launchCareerMatch();
 }
+
+// a new career's stats (career.js newProfile): shown on the template, creator and level screens
+const START_STATS = { speed: 5, power: 5, control: 5, volley: 5, smash: 5, stamina: 5 };
 
 // career AI opponents and partners play at their difficulty: same stat shape, average 5/6/7/8 (level.js scaleStats)
 const scaledAI = (c, ai) => ({ ...c, stats: scaleStats(c.stats, ai) });
@@ -1567,9 +1668,9 @@ function renderShopScreen() {
     const fuel = item.type === 'fuel', left = fuel ? (profile.supplies?.[item.id] || 0) : 0;  // energy products stack
     const isOwned = fuel ? left > 0 : profile.inventory.includes(item.id);
     const isEquipped = profile.equipped?.[shopTab] === item.id;
-    const minRp = shop.tiers[item.tier] ?? 0;
-    const tierName = capitalize(item.tier);
-    const isTierLocked = profile.rankingPoints < minRp;
+    const minTier = shop.tiers[item.tier] ?? 0;
+    const tierName = tierByIndex(minTier).name;
+    const isTierLocked = (profile.bestTier || 1) < minTier;
     const canAfford = profile.credits >= item.price;
     const errText = shopErrors[item.id] || '';
 
@@ -1595,7 +1696,7 @@ function renderShopScreen() {
           <div class="cr-shop-meta-row">
             <span class="cr-shop-price tabular">${item.price} Credits</span>
             <span class="cr-tier-pill ${isTierLocked ? 'is-locked' : ''}">
-              ${minRp > 0 ? `Unlocks at ${escapeHtml(tierName)} — ${minRp} ranking pts` : 'Amateur — 0 ranking pts'}
+              ${minTier > 1 ? `Unlocks at ${escapeHtml(tierName)}` : 'Available to everyone'}
             </span>
           </div>
         </div>
@@ -1636,7 +1737,7 @@ function renderShopScreen() {
         if (res.reason === 'owned') {
           msg = 'Already owned (owned)';
         } else if (res.reason === 'tier') {
-          msg = `Locked (tier): Unlocks at ${tierName} — ${minRp} ranking pts`;
+          msg = `Locked (tier): Unlocks at ${tierName}`;
         } else if (res.reason === 'credits') {
           msg = `Not enough Credits (credits): Need ${Math.max(1, item.price - profile.credits)} more Credits`;
         }
@@ -1961,6 +2062,8 @@ function renderProfileScreen() {
           <div>
             <div class="cr-prof-name" lang="en">${escapeHtml(pl.name)}</div>
             <div class="cr-prof-rank">${escapeHtml(pl.country || '')} · ${pl.hand === 'left' ? 'Left-handed' : 'Right-handed'} · World rank: #${myWorldRank(profile)}</div>
+            <div class="cr-prof-rank">${escapeHtml(levelText(profile))} · ${relPct(profile)}% reliability</div>
+            <div class="cr-prof-rank">${LEVEL_NOTE}</div>
           </div>
         </div>
         <div class="cr-currencies">
@@ -2108,6 +2211,7 @@ function lockReason(entry, rank) {
   const c = canEnter(profile, entry, rank);
   if (c.ok) return '';
   if (c.reason === 'invite') return `Invitation: world top ${entry.inviteTop}`;
+  if (c.reason === 'tier') return `Requires ${tierByIndex(entry.minTier).name}`;
   if (c.reason === 'ranking') return `Needs ${entry.minRankingPoints} ranking pts`;
   return `Needs ${entry.entryFee} Credits`;
 }
@@ -2624,6 +2728,10 @@ function goBack() {
   if (curScreen === 'tpartner') { showScreen('tournaments'); return; }
   if (curScreen === 'tresult') {
     careerPanel?.querySelector('#cr-tr-continue')?.click();
+    return;
+  }
+  if (curScreen === 'levelstart') {
+    if (lvl.mode === 'choose') showScreen('creator'); else { lvl.mode = 'choose'; lvl.start = null; renderLevelStartScreen(); }
     return;
   }
   if (curScreen === 'creator') {
