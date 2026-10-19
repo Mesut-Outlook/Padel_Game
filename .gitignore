@@ -2,3 +2,5 @@ node_modules/
 dist/
 .directory
 .superpowers/
+# security audits list open weaknesses: keep them out of the public repo
+agents/reports/security-*.md
