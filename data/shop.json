@@ -31,8 +31,10 @@
     { "id": "hw_visor_navy", "type": "headwear", "name": "Navy visor", "tier": "club", "price": 250, "headwear": { "type": "visor", "color": "#1D3557" } },
     { "id": "hw_visor_white", "type": "headwear", "name": "White visor", "tier": "regional", "price": 400, "headwear": { "type": "visor", "color": "#FFFFFF" } },
 
-    { "id": "fuel_banana", "type": "fuel", "name": "Banana", "tier": "amateur", "price": 60, "pack": 5, "boost": 0.06, "tire": 0.9, "desc": "Slow release: you tire 10% slower all match" },
-    { "id": "fuel_isotonic", "type": "fuel", "name": "Isotonic drink", "tier": "club", "price": 100, "pack": 5, "boost": 0.12, "tire": 0.95, "desc": "Balanced: fluid, salts and carbs" },
-    { "id": "fuel_gel", "type": "fuel", "name": "Energy gel", "tier": "regional", "price": 150, "pack": 5, "boost": 0.2, "tire": 1, "desc": "Fast boost: the biggest refill at every changeover" }
+    { "id": "bag_water", "type": "bag", "name": "Water bottle", "tier": "amateur", "price": 30, "pack": 6, "desc": "Drunk at every changeover: hydration +50%" },
+    { "id": "bag_banana", "type": "bag", "name": "Banana", "tier": "amateur", "price": 60, "pack": 5, "desc": "Offered when you're tired: energy +12%, you tire 5% slower for the rest of the match" },
+    { "id": "bag_isotonic", "type": "bag", "name": "Isotonic drink", "tier": "club", "price": 100, "pack": 5, "desc": "When the water is gone: hydration +35% and energy +12%" },
+    { "id": "bag_gel", "type": "bag", "name": "Energy gel", "tier": "regional", "price": 150, "pack": 5, "desc": "Offered when you're tired: energy +22% at once" },
+    { "id": "bag_pro", "type": "bag", "upgrade": true, "name": "Pro bag", "tier": "national", "price": 1200, "desc": "Room for 16 drinks and 16 food instead of 8" }
   ]
 }

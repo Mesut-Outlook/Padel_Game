@@ -5,6 +5,8 @@ import { tierAt, rateMatch, matchShare, idleReliability, startCredits } from './
 export const PROFILE_KEY = 'padel.career.v1';
 const VERSION = 2;  // 2: level / reliability / bestTier, stats start at 5 (v1 profiles migrate on load)
 const STATS = ['speed', 'power', 'control', 'volley', 'smash', 'stamina'];
+const STARTER_BAG = { bag_water: 4, bag_banana: 3 };
+const DRINKS = ['bag_water', 'bag_isotonic'], FOODS = ['bag_banana', 'bag_gel'];
 
 // template = a roster character (data/characters.json) whose look is the starting point; look = the player's edits;
 // start = the level from the questionnaire / Playtomic entry (level.js), a high start comes with some Credits
@@ -17,8 +19,8 @@ export function newProfile(template, look = {}, start = { level: 1.5, reliabilit
     level: start.level, reliability: start.reliability, bestTier: tierAt(start.level).index, lastCareerMatch: null,
     credits: startCredits(start.level), rankingPoints: 0,
     inventory: ['r01', 'shoe_starter', 'kit_starter', 'ball_standard'],
-    equipped: { racket: 'r01', shoes: 'shoe_starter', kit: 'kit_starter', ball: 'ball_standard', fuel: null },
-    supplies: {},  // energy products (type 'fuel'): id -> count left; older profiles have no field = {}
+    equipped: { racket: 'r01', shoes: 'shoe_starter', kit: 'kit_starter', ball: 'ball_standard' },
+    bag: { ...STARTER_BAG },  // food and drinks (shop type 'bag'): id -> count; game.js BAG has the effects
     history: { played: 0, won: 0, pointsWon: 0 },
     circuit: {}, tournament: null,
   };
@@ -39,6 +41,10 @@ export function loadProfile(storage, now = new Date(), eco = null) {  // eco: ex
     p = migrateProfile(p);
     try { storage.setItem(PROFILE_KEY + '.bak', raw); storage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch { /* best effort: migrates again next load */ }
   }
+  if (valid(p)) {
+    const q = normalizeProfile(p);
+    if (q !== p) { p = q; saveProfile(storage, p); }
+  }
   if (valid(p) && eco) {
     const q = expirePoints(p, eco, now);
     if (q !== p) { p = q; saveProfile(storage, p); }
@@ -58,17 +64,40 @@ export function migrateProfile(p) {
   };
 }
 
+// profiles from before the bag: the starter bag plus their old energy products (fuel_x -> bag_x); a count above the
+// limit is kept, only buying more is blocked
+export function normalizeProfile(p) {
+  if (isObj(p.bag)) return p;
+  const { supplies = {}, ...rest } = p, { fuel: _f, ...equipped } = p.equipped, bag = { ...STARTER_BAG };
+  for (const [id, n] of Object.entries(supplies)) if (n > 0) { const k = id.replace('fuel_', 'bag_'); bag[k] = (bag[k] || 0) + n; }
+  return { ...rest, equipped, bag };
+}
+
+export const bagLimit = (profile) => (profile.inventory.includes('bag_pro') ? 16 : 8);
+// free places for this item's kind (drinks or food)
+export function bagRoom(profile, item) {
+  const kind = DRINKS.includes(item.id) ? DRINKS : FOODS;
+  return Math.max(0, bagLimit(profile) - kind.reduce((n, k) => n + (profile.bag?.[k] || 0), 0));
+}
+// items = { id: count } added as far as the bag has room
+function addToBag(profile, items) {
+  let p = profile;
+  for (const [id, n] of Object.entries(items)) p = { ...p, bag: { ...p.bag, [id]: (p.bag?.[id] || 0) + Math.min(n, bagRoom(p, { id })) } };
+  return p;
+}
+
 // after a career match: myPair / oppPair = the two sides' average levels (level.js aiLevel for AI players)
-// a new best tier pays tierUpCredits × its number (economy.json tierUp), once
-export function applyRating(profile, myPair, oppPair, result, now = new Date(), tierUpCredits = 0) {
+// a new best tier pays tierUpCredits × its number (economy.json tierUp), once, and puts tierUpBag into the bag
+export function applyRating(profile, myPair, oppPair, result, now = new Date(), tierUpCredits = 0, tierUpBag = {}) {
   const idle = profile.lastCareerMatch ? (now - new Date(profile.lastCareerMatch)) / 864e5 : 0;
   const r = rateMatch({ level: profile.level, reliability: idleReliability(profile.reliability, idle) }, myPair, oppPair, !!result.won, matchShare(result));
   const tier = tierAt(r.level), bestTier = Math.max(profile.bestTier || 1, tier.index);
   const old = profile.bestTier || 1, tierUp = bestTier > old ? tier : null;
   let bonus = 0;
   for (let i = old + 1; i <= bestTier; i++) bonus += tierUpCredits * i;  // a jump over several tiers pays each of them
+  const next = { ...profile, level: r.level, reliability: r.reliability, bestTier, lastCareerMatch: now.toISOString(), credits: profile.credits + bonus };
   return {
-    profile: { ...profile, level: r.level, reliability: r.reliability, bestTier, lastCareerMatch: now.toISOString(), credits: profile.credits + bonus },
+    profile: tierUp ? addToBag(next, tierUpBag) : next,
     delta: r.delta, tierUp, bonus,
   };
 }
@@ -83,7 +112,7 @@ export function importProfile(text) {
   try { p = JSON.parse(text); } catch { throw new Error('invalid profile'); }
   if (valid(p, 1)) p = migrateProfile(p);  // exports saved before v2 (and the history.state backup)
   if (!valid(p)) throw new Error('invalid profile');
-  return p;
+  return normalizeProfile(p);
 }
 
 // result = { won, gamesWon, pointsWon, scoring: 'sets'|'rally', ai: rookie|club|pro|legend|online, style? }
@@ -134,9 +163,12 @@ export function settleMatch(profile, result, eco, startedAt, now = new Date()) {
   const reward = matchReward(result, eco, { firstWin, streak: Math.min(b.streakMax, round2(streak * b.streakStep)) });
   return {
     reward,
-    profile: { ...applyReward(profile, reward, result), streak, lastWinDay: firstWin ? today : (profile.lastWinDay ?? null), ...formUp(profile, eco, result.forfeit ? 0 : eco.form.match, now) },  // a forfeit pins the rust, no gain
+    profile: { ...applyReward(profile, reward, result), bag: settleBag(profile.bag, result.bag), streak, lastWinDay: firstWin ? today : (profile.lastWinDay ?? null), ...formUp(profile, eco, result.forfeit ? 0 : eco.form.match, now) },  // a forfeit pins the rust, no gain
   };
 }
+
+// result.bag = what is left of the bag after the match (counted from the match's consume events)
+const settleBag = (bag, left) => (isObj(left) ? { ...bag, ...Object.fromEntries(Object.entries(left).filter(([k]) => k in bag).map(([k, n]) => [k, Math.max(0, Math.floor(+n) || 0)])) } : bag);
 
 // ranking points from tournaments are logged with their date and drop out after eco.pointsDays (FIP's 52 weeks, shortened);
 // a profile from before the log starts it today with its whole total
@@ -168,33 +200,22 @@ export function buyTraining(profile, stat, eco, now = new Date()) {
 // shop: { tiers: {name: lowest level-tier index}, items }. Items unlock by the best tier reached (level.js TIERS);
 // rackets come from data/rackets.json with the same fields
 
-// energy products stack (a pack of item.pack per purchase) and the first one bought goes straight into the bag
+// bag items (type 'bag') stack up to the bag's limit: a pack that does not fit is filled up and charged in proportion;
+// the Pro bag (upgrade) is owned like gear
 export function buyItem(profile, item, shop) {
-  const fuel = item.type === 'fuel';
-  if (!fuel && profile.inventory.includes(item.id)) return { ok: false, reason: 'owned' };
+  const consumable = item.type === 'bag' && !item.upgrade;
+  if (!consumable && profile.inventory.includes(item.id)) return { ok: false, reason: 'owned' };
   if ((profile.bestTier || 1) < shop.tiers[item.tier]) return { ok: false, reason: 'tier' };
-  if (profile.credits < item.price) return { ok: false, reason: 'credits' };
-  const credits = profile.credits - item.price;
-  if (!fuel) return { ok: true, profile: { ...profile, credits, inventory: [...profile.inventory, item.id] } };
-  const supplies = { ...profile.supplies, [item.id]: (profile.supplies?.[item.id] || 0) + item.pack };
-  return { ok: true, profile: { ...profile, credits, supplies, equipped: { ...profile.equipped, fuel: profile.equipped.fuel || item.id } } };
+  const n = consumable ? Math.min(item.pack, bagRoom(profile, item)) : 1;
+  if (!n) return { ok: false, reason: 'bagfull' };
+  const price = consumable ? Math.ceil(item.price * n / item.pack) : item.price;
+  if (profile.credits < price) return { ok: false, reason: 'credits' };
+  const credits = profile.credits - price;
+  if (!consumable) return { ok: true, profile: { ...profile, credits, inventory: [...profile.inventory, item.id] } };
+  return { ok: true, profile: { ...profile, credits, bag: { ...profile.bag, [item.id]: (profile.bag?.[item.id] || 0) + n } } };
 }
 
-// slot 'fuel' takes a product with some left, or null to play without one
-const has = (profile, slot, id) => (slot === 'fuel' ? id === null || profile.supplies?.[id] > 0 : profile.inventory.includes(id));
-export const equip = (profile, slot, id) => has(profile, slot, id) ? { ...profile, equipped: { ...profile.equipped, [slot]: id } } : profile;
-
-// at the start of a career match: one of the bagged product is used up (no refund if the match is abandoned);
-// fuel = { boost, tire, name } for game.js, or null. The bag empties itself when the last one goes.
-export function useFuel(profile, shop) {
-  const id = profile.equipped?.fuel, item = shop.items.find(i => i.id === id && i.type === 'fuel');
-  if (!item || !(profile.supplies?.[id] > 0)) return { profile, fuel: null };
-  const left = profile.supplies[id] - 1;
-  return {
-    profile: { ...profile, supplies: { ...profile.supplies, [id]: left }, equipped: { ...profile.equipped, fuel: left > 0 ? id : null } },
-    fuel: { boost: item.boost, tire: item.tire, name: item.name },
-  };
-}
+export const equip = (profile, slot, id) => profile.inventory.includes(id) ? { ...profile, equipped: { ...profile.equipped, [slot]: id } } : profile;
 
 // circuit entry (data/tournaments.json): champion gets championPoints and 10x that in Credits; lower places get a share
 const SHARE = [[1, 1], [2, 0.6], [4, 0.36], [8, 0.18]];

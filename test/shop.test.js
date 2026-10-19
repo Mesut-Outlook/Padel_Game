@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { newProfile, buyItem, equip, useFuel } from '../src/career.js';
+import { newProfile, buyItem, equip, bagRoom, normalizeProfile } from '../src/career.js';
 
 const read = (f) => JSON.parse(fs.readFileSync(new URL(`../data/${f}`, import.meta.url)));
 const shop = read('shop.json'), chars = read('characters.json'), rackets = read('rackets.json');
@@ -61,25 +61,32 @@ test('every kit and roster character has allowed style and pattern', () => {
 });
 
 
-test('energy products: packs stack, go into the bag, one is used per match and the bag empties itself', () => {
-  const banana = shop.items.find(i => i.id === 'fuel_banana'), gel = shop.items.find(i => i.id === 'fuel_gel');
-  let p = { ...newProfile(chars[0], {}), credits: 1000 };
-  assert.equal(useFuel(p, shop).fuel, null);  // nothing bagged: water only
+test('bag: starter bag, packs fill up to the limit (charged in proportion), Pro bag doubles it', () => {
+  const water = item('bag_water'), banana = item('bag_banana'), gel = item('bag_gel'), pro = item('bag_pro');
+  let p = { ...newProfile(chars[0], {}), credits: 5000 };
+  assert.deepEqual(p.bag, { bag_water: 4, bag_banana: 3 });
+  assert.equal(bagRoom(p, water), 4);
+  p = buyItem(p, water, shop).profile;  // 6-pack, room for 4: four bottles at 4/6 of the price
+  assert.equal(p.bag.bag_water, 8);
+  assert.equal(p.credits, 5000 - Math.ceil(water.price * 4 / 6));
+  assert.equal(buyItem(p, water, shop).reason, 'bagfull');
+  assert.equal(buyItem(p, item('bag_isotonic'), { ...shop, tiers: { ...shop.tiers, club: 1 } }).reason, 'bagfull');  // isotonic is a drink too
   p = buyItem(p, banana, shop).profile;
-  p = buyItem(p, banana, shop).profile;  // a second pack stacks instead of 'owned'
-  assert.equal(p.supplies.fuel_banana, 10);
-  assert.equal(p.equipped.fuel, 'fuel_banana');
-  assert.equal(p.credits, 1000 - 2 * banana.price);
+  assert.equal(p.bag.bag_banana, 8);
   assert.equal(buyItem(p, gel, shop).reason, 'tier');
-  assert.equal(equip(p, 'fuel', 'fuel_gel').equipped.fuel, 'fuel_banana');  // none of it in the bag
-  assert.equal(equip(p, 'fuel', null).equipped.fuel, null);
-  const used = useFuel(p, shop);
-  assert.deepEqual(used.fuel, { boost: banana.boost, tire: banana.tire, name: 'Banana' });
-  assert.equal(used.profile.supplies.fuel_banana, 9);
-  const last = useFuel({ ...p, supplies: { fuel_banana: 1 } }, shop);
-  assert.equal(last.profile.supplies.fuel_banana, 0);
-  assert.equal(last.profile.equipped.fuel, null);
-  const old = { ...newProfile(chars[0], {}) }; delete old.supplies; delete old.equipped.fuel;  // profiles saved before energy products
-  assert.equal(useFuel(old, shop).fuel, null);
-  assert.equal(buyItem({ ...old, credits: 100 }, banana, shop).profile.supplies.fuel_banana, 5);
+  p = buyItem({ ...p, bestTier: 5 }, pro, shop).profile;
+  assert.ok(p.inventory.includes('bag_pro'));
+  assert.equal(bagRoom(p, water), 8);
+  assert.equal(buyItem(p, pro, shop).reason, 'owned');
+});
+
+test('bag: a profile from before the bag gets the starter bag plus its energy products', () => {
+  const old = { ...newProfile(chars[0], {}), supplies: { fuel_banana: 7, fuel_gel: 2 }, equipped: { ...newProfile(chars[0], {}).equipped, fuel: 'fuel_banana' } };
+  delete old.bag;
+  const p = normalizeProfile(old);
+  assert.deepEqual(p.bag, { bag_water: 4, bag_banana: 10, bag_gel: 2 });  // 10 bananas > 8: kept, just no buying more
+  assert.equal('supplies' in p, false);
+  assert.equal('fuel' in p.equipped, false);
+  assert.equal(normalizeProfile(p), p);  // nothing to do: same object
+  assert.equal(buyItem({ ...p, credits: 999 }, item('bag_banana'), shop).reason, 'bagfull');
 });

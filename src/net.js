@@ -1,5 +1,5 @@
 // Online client: joins a room on the authoritative server, sends inputs, buffers snapshots for smooth rendering.
-export function connect({ url, code, cfg, char, stats, racket, onLobby, onError, ...extra }) {  // extra: public, name, look, shoes, ball, fuel
+export function connect({ url, code, cfg, char, stats, racket, onLobby, onError, ...extra }) {  // extra: public, name, look, shoes, ball, bag
   const ws = new WebSocket(url);
   const net = { seat: null, lobby: null, snaps: [], events: [], score: null, winner: null, ws };
   ws.onopen = () => ws.send(JSON.stringify({ type: 'join', code, cfg, char, stats, racket, ...extra }));

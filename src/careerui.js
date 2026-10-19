@@ -19,7 +19,6 @@ import {
   buyTraining,
   buyItem,
   equip,
-  useFuel,
   applyRating,
   settleMatch,
   formNow,
@@ -1389,15 +1388,8 @@ const scaledAI = (c, ai) => ({ ...c, stats: scaleStats(c.stats, ai) });
 // rate the finished career match (spec §4.2): mates / opps = the other players' levels (null = unknown online player)
 function withRating(p, result, mates, opps) {
   const avg = (ls) => ls.reduce((a, b) => a + (b ?? 2.5), 0) / ls.length;
-  const r = applyRating(p, avg([p.level, ...mates]), avg(opps), result, new Date(), eco.tierUp);
+  const r = applyRating(p, avg([p.level, ...mates]), avg(opps), result, new Date(), eco.tierUp, eco.tierUpBag);
   return { ...r.profile, lastReward: { ...p.lastReward, level: { from: p.level, to: r.profile.level, delta: r.delta, tierUp: r.tierUp?.name || null, bonus: r.bonus } } };
-}
-
-// one bagged energy product per career match, used up as it starts (no refund when abandoned) -> { boost, tire, name } | null
-function takeFuel() {
-  const { profile: next, fuel } = useFuel(profile, shop);
-  if (fuel) persistProfile(next);
-  return fuel;
 }
 
 async function launchCareerMatch() {
@@ -1445,7 +1437,7 @@ async function launchCareerMatch() {
   const mates = players === 4 ? [lv(1)] : [], opps = players === 4 ? [lv(2), lv(3)] : [lv(2)];
 
   const venue = venues[playState.venueIdx] || venues[0];
-  const fuel = takeFuel(), startedAt = new Date();
+  const startedAt = new Date();
 
   await startMatchFn({
     players,
@@ -1456,7 +1448,7 @@ async function launchCareerMatch() {
     rackets: rk,
     shoes: { 0: { speed: shoeItem.speed, agility: shoeItem.agility } },
     ball: { speed: ballItem.speed, bounce: ballItem.bounce },
-    fuel: fuel ? { 0: fuel } : undefined,
+    bag: { 0: { ...profile.bag } },
     form: { 0: formNow(profile, eco) },
     venue,
     onEnd(result) {
@@ -2509,7 +2501,7 @@ async function launchTournamentMatch(m) {
   const rr = () => rackets[Math.floor(Math.random() * rackets.length)];
   const rally = T.format === 'americano' || T.format === 'mexicano';
   const quick = new URLSearchParams(location.search).has('quick');
-  const fuel = takeFuel(), startedAt = new Date();
+  const startedAt = new Date();
   const tRoster = { 0: me, 1: scaledAI(partner, entry.ai), 2: scaledAI(o1 || characters[0], entry.ai), 3: scaledAI(o2 || characters[1], entry.ai) };
   const tLv = (id) => aiLevel(tRoster[id].stats, entry.ai);
 
@@ -2520,7 +2512,7 @@ async function launchTournamentMatch(m) {
     rackets: { 0: myRacket, 1: rr(), 2: rr(), 3: rr() },
     shoes: { 0: { speed: shoeItem.speed, agility: shoeItem.agility } },
     ball: { speed: ballItem.speed, bounce: ballItem.bounce },
-    fuel: fuel ? { 0: fuel } : undefined,
+    bag: { 0: { ...profile.bag } },
     form: { 0: formNow(profile, eco) },
     venue: venues.find(v => v.id === entry.venue) || venues[0],
     onEnd(result) {
@@ -2663,7 +2655,7 @@ function joinOnlineRoom(code, create) {
   const lookWithRacket = { ...look, racket: myRacket.id, racketColor: myRacket.color, racketShape: myRacket.shape };
   const ballItem = shop.items.find(i => i.id === onlineState.ballId) || equippedBall(profile);
   const venue = venues[onlineState.venueIdx] || venues[0];
-  const fuel = takeFuel() || undefined, startedAt = new Date();  // ponytail: online counts from joining the room, not the first serve
+  const startedAt = new Date();  // ponytail: online counts from joining the room, not the first serve
   const net = startOnlineFn({
     url: onlineUrl() || undefined, code, players: onlineState.players,
     venue: venues.indexOf(venue), ai: 'club',
@@ -2672,7 +2664,7 @@ function joinOnlineRoom(code, create) {
     public: create && onlineState.isPublic, name: profile.player.name, look: lookWithRacket,
     shoes: { speed: shoeItem.speed, agility: shoeItem.agility },
     ball: create ? { speed: ballItem.speed, bounce: ballItem.bounce } : undefined,
-    fuel,
+    bag: { ...profile.bag },
     status: (t, l, err) => setOnlineStatus(t, l, err),
     onEnd(result) {
       const { reward, profile: updated } = settleMatch(profile, result, eco, startedAt);

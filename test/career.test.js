@@ -271,3 +271,13 @@ test('review fixes: forfeit keeps the rust, multi-tier jump pays every tier, exp
   assert.equal(expiringSoon(old, eco, at(1 + 95)), 0);  // already past expiry: not 'expiring soon'
   assert.equal(expirePoints({ ...old, pointsLog: {} }, eco, at(19)).rankingPoints, 100);  // a broken log does not crash
 });
+
+test('bag after a match: remaining counts come back; a tier up adds 2 bananas + 4 water within the limit', () => {
+  const p0 = newProfile(chars[0]);
+  const m = settleMatch(p0, { ...club(true, 6), bag: { bag_water: 1, bag_banana: 2 } }, eco, at(19, 9), at(19, 10));
+  assert.deepEqual(m.profile.bag, { bag_water: 1, bag_banana: 2 });
+  assert.deepEqual(settleMatch(p0, club(true, 6), eco, at(19, 9), at(19, 10)).profile.bag, p0.bag);  // no count: unchanged
+  const low = { ...newProfile(chars[0], {}, { level: 2.45, reliability: 0 }), bag: { bag_water: 6, bag_banana: 1 } };
+  const r = applyRating(low, 2.45, 4, { won: true, games: [6, 0] }, at(19), eco.tierUp, eco.tierUpBag);
+  assert.deepEqual(r.profile.bag, { bag_water: 8, bag_banana: 3 });
+});

@@ -122,7 +122,7 @@ addEventListener('resize', resize); resize();
 window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorld, inputs, tut, humans, fx });
 const rig = createCameraRig(camera, renderer.domElement);
 const replay = createReplay(15, 60);
-let onEnd = null, pointsWon = [0, 0], lastCfg = null, fuelName = null;  // fuelName: the career energy product named at changeovers
+let onEnd = null, pointsWon = [0, 0], lastCfg = null, bagLeft = null;  // bagLeft: the career player's bag, counted down from 'consume' events
 let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, msgTimer = 0, hypeTimer = 0, net = null, marker, loadingScene = false, control = 'auto', gameSpeed = 0.85;
 let styleStats = { pts: 0, streak: 0, maxRally: 0, smashes: 0, medals: [] };
 const MEDALS = {
@@ -209,7 +209,7 @@ async function setupScene(venue, ids, roster, rk) {
 
 // Online entry for the menu button and for Career. url defaults to serverUrl() (?server= / static build: none / :8080 / same host). look = remote-visible appearance (its stats are ignored).
 // status(text, lobby?) mirrors the #lobby line for callers that show their own panel; returns the net handle (or null if it did not connect).
-export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, fuel, onEnd: end, status } = {}) {
+export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, bag, onEnd: end, status } = {}) {
   unlockAudio();
   const settings = loadSettings();
   gameSpeed = $('speed') ? +$('speed').value : settings.speed;
@@ -221,10 +221,10 @@ export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', ma
   if (!url) { say(NO_SERVER, null, true); return null; }
   code = String(code || '').trim().toUpperCase();
   if (!code) { say('Enter a room code first.', null, true); return null; }
-  onEnd = end || null; pointsWon = [0, 0]; fuelName = fuel?.name || null;
+  onEnd = end || null; pointsWon = [0, 0]; bagLeft = bag ? { ...bag } : null;
   net = connect({
-    url, code, char, stats, racket, public: isPublic, name, look, shoes, ball, fuel,
-    cfg: { players, ...match, ai, venue },
+    url, code, char, stats, racket, public: isPublic, name, look, shoes, ball, bag,
+    cfg: { players, ...match, ai, venue, outdoor: venues[venue]?.type === 'outdoor' },
     onError: (e) => say(escapeText(e), null, true),
     onLobby: (l) => {
       say(`Room <b>${escapeText(l.code)}</b> · your seat: ${net.seat} · players: ${l.taken.length}/${l.seats.length} (empty = AI)` +
@@ -286,7 +286,7 @@ $('start').onclick = async () => {
   }
 };
 
-// One entry for every offline match. cfg = { players, humans, ai, match, roster: {id: Character}, rackets: {id: racket}, venue, shoes?: {id: {speed, agility}}, ball?: {speed, bounce}, fuel?: {id: {boost, tire, name}}, sameTeam?, onEnd? }.
+// One entry for every offline match. cfg = { players, humans, ai, match, roster: {id: Character}, rackets: {id: racket}, venue, shoes?: {id: {speed, agility}}, ball?: {speed, bounce}, bag?: {id: {bag_water: n, …}} (career; others get the unlimited default bag), sameTeam?, onEnd? }.
 // onEnd gets team 0's MatchResult (+ score text) once; the menu key then returns to #career instead of the plain menu.
 export async function startMatch(cfg) {
   lastCfg = cfg;
@@ -296,7 +296,7 @@ export async function startMatch(cfg) {
   gameSpeed = $('speed') ? +$('speed').value : settings.speed;
   control = $('control') ? $('control').value : settings.control;
   aiLevel = cfg.ai;
-  onEnd = cfg.onEnd || null; pointsWon = [0, 0]; fuelName = cfg.fuel?.[0]?.name || null;
+  onEnd = cfg.onEnd || null; pointsWon = [0, 0]; bagLeft = cfg.bag?.[0] ? { ...cfg.bag[0] } : null;
   const ids = cfg.players === 2 ? [0, 2] : [0, 2, 1, 3];
   humans = (cfg.sameTeam && cfg.humans === 2 ? [0, 1] : ids).slice(0, cfg.humans);  // P2 partners P1 instead of facing them
   world = newWorld({
@@ -304,7 +304,7 @@ export async function startMatch(cfg) {
     match: cfg.match,
     stats: Object.fromEntries(ids.map(id => [id, cfg.roster[id].stats])),
     rackets: Object.fromEntries(ids.map(id => [id, cfg.rackets[id].stats])),
-    shoes: cfg.shoes, ball: cfg.ball, fuel: cfg.fuel, form: cfg.form,
+    shoes: cfg.shoes, ball: cfg.ball, bag: cfg.bag, form: cfg.form, outdoor: cfg.venue?.type === 'outdoor',
   });
   await setupScene(cfg.venue, ids, cfg.roster, cfg.rackets);
 }
@@ -322,6 +322,7 @@ function toMenu() {
       const forfeitResult = {
         won: false,
         forfeit: true,
+        bag: bagLeft,  // what was eaten and drunk is gone even when quitting
         gamesWon: 0,
         pointsWon: 0,
         points: isRally ? [0, ptsTarget] : [0, 0],
@@ -564,10 +565,11 @@ function handleEvents(events, score, winner) {
       if (e.kind === 'floor') rallyFlags.bounced = true;
       else if (e.kind === 'glass' && rallyFlags.bounced) { rallyFlags.glass = true; rallyFlags.afterGlass = true; }
     }
+    else if (e.type === 'consume' && bagLeft && e.pid === (net ? net.seat : humans[0])) bagLeft[e.item] = Math.max(0, (bagLeft[e.item] || 0) - 1);
     else if (e.type === 'fault') { flash('SERVE FAULT', 1); sfxCrowdReact('murmur'); }
     else if (e.type === 'let') flash('LET', 1);
     else if (e.type === 'drink') {  // after the point call; then one tip, so they come every other game at most
-      setTimeout(() => showHype(fuelName ? `💧 CHANGEOVER — ${fuelName.toLowerCase()}, energy +` : '💧 CHANGEOVER — water break, energy back up', 0, 2.4), 1300);
+      setTimeout(() => showHype('💧 CHANGEOVER — water break, energy back up', 0, 2.4), 1300);
       if (humans.length && loadSettings().tips) setTimeout(() => showHype('💡 ' + (device === 'pad' ? padText(nextTip('pad')) : nextTip('kb')), 0, 5), 4000);
     }
     else if (e.type === 'point') {
@@ -641,11 +643,11 @@ function handleEvents(events, score, winner) {
           const lv = (id) => avatars[id].ch.level ?? null;  // career players share their level in the lobby look
           done({ won: winner === myTeam, gamesWon: sets.reduce((n, g) => n + g[myTeam], 0), pointsWon: pointsWon[myTeam], scoring: 'sets', ai: aiMode, style: styleStats.pts, score: net.score,
             games: [sets.reduce((n, g) => n + g[myTeam], 0), sets.reduce((n, g) => n + g[1 - myTeam], 0)],
-            mates: ids.filter(id => teamOf(id) === myTeam && id !== net.seat).map(lv), opps: ids.filter(id => teamOf(id) !== myTeam).map(lv) });
+            mates: ids.filter(id => teamOf(id) === myTeam && id !== net.seat).map(lv), opps: ids.filter(id => teamOf(id) !== myTeam).map(lv), bag: bagLeft });
           onEnd = () => {};
         } else if (onEnd && world) {
           const done = onEnd; onEnd = null;
-          done({ won: winner === 0, gamesWon: world.match.sets.reduce((n, g) => n + g[0], 0), pointsWon: pointsWon[0], points: [...pointsWon], style: styleStats.pts, games: world.match.sets.reduce((g, s) => [g[0] + s[0], g[1] + s[1]], [0, 0]), scoring: world.match.opts.pointsTo ? 'rally' : 'sets', ai: aiLevel, score: scoreText(world.match) });
+          done({ won: winner === 0, gamesWon: world.match.sets.reduce((n, g) => n + g[0], 0), pointsWon: pointsWon[0], points: [...pointsWon], style: styleStats.pts, games: world.match.sets.reduce((g, s) => [g[0] + s[0], g[1] + s[1]], [0, 0]), scoring: world.match.opts.pointsTo ? 'rally' : 'sets', ai: aiLevel, score: scoreText(world.match), bag: bagLeft });
           onEnd = () => {};  // keeps toMenu pointed at #career without paying twice
         }
         const winningTeam = winner === 0 ? $('t0').textContent : $('t1').textContent;
