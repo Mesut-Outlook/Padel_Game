@@ -1,6 +1,7 @@
 // Career profile and economy (pure: no DOM, shared with tests). Balance numbers come in as `eco` (data/economy.json).
 // The profile is one JSON object saved in the browser; storage is passed in so a blocked localStorage never crashes.
-import { tierAt, rateMatch, matchShare, idleReliability, startCredits } from './level.js';
+import { TIERS, tierAt, rateMatch, matchShare, idleReliability, startCredits } from './level.js';
+import { xpFromTally } from './matchstats.js';
 
 export const PROFILE_KEY = 'padel.career.v1';
 const VERSION = 2;  // 2: level / reliability / bestTier, stats start at 5 (v1 profiles migrate on load)
@@ -161,9 +162,10 @@ export function settleMatch(profile, result, eco, startedAt, now = new Date()) {
   const streak = !result.forfeit && gap <= b.streakMinutes ? (profile.streak || 0) + 1 : 0;
   const today = dayKey(now), firstWin = !!result.won && !result.forfeit && profile.lastWinDay !== today;
   const reward = matchReward(result, eco, { firstWin, streak: Math.min(b.streakMax, round2(streak * b.streakStep)) });
+  const grown = result.forfeit || !result.tally ? { profile, ups: [] } : growStats(profile, xpFromTally(result.tally, eco), eco);
   return {
-    reward,
-    profile: { ...applyReward(profile, reward, result), bag: settleBag(profile.bag, result.bag), streak, lastWinDay: firstWin ? today : (profile.lastWinDay ?? null), ...formUp(profile, eco, result.forfeit ? 0 : eco.form.match, now) },  // a forfeit pins the rust, no gain
+    reward, ups: grown.ups,  // ups = [[stat, from, to]] raised by match play
+    profile: { ...applyReward(grown.profile, reward, result), bag: settleBag(profile.bag, result.bag), streak, lastWinDay: firstWin ? today : (profile.lastWinDay ?? null), ...formUp(profile, eco, result.forfeit ? 0 : eco.form.match, now) },  // a forfeit pins the rust, no gain
   };
 }
 
@@ -185,6 +187,40 @@ export function expirePoints(p, eco, now = new Date()) {
 export const expiringSoon = (p, eco, now = new Date(), days = 7) =>
   pointsLog(p, now).filter(e => { const left = +new Date(e.at) + eco.pointsDays * DAY - now; return left > 0 && left <= days * DAY; }).reduce((n, e) => n + e.pts, 0);
 
+// stats grow to the best tier's cap (spec §9, §12.2); a stat already above it (migrated) is kept, never lowered
+export const statCap = (profile) => TIERS[(profile.bestTier || 1) - 1].cap;
+const STAT_NAME = { speed: 'Speed', power: 'Power', control: 'Control', volley: 'Volley', smash: 'Smash', stamina: 'Stamina' };
+
+// match XP: a stat goes up when its XP reaches eco.xp.per × the stat; nothing is gained at the cap
+function growStats(profile, gain, eco) {
+  const cap = statCap(profile), stats = { ...profile.stats }, xp = { ...profile.xp }, ups = [];
+  for (const k of STATS) {
+    if (stats[k] >= cap || !gain[k]) continue;
+    const from = stats[k];
+    xp[k] = (xp[k] || 0) + gain[k];
+    while (stats[k] < cap && xp[k] >= eco.xp.per * stats[k]) { xp[k] -= eco.xp.per * stats[k]; stats[k]++; }
+    if (stats[k] > from) ups.push([k, from, stats[k]]);
+  }
+  return { profile: { ...profile, stats, xp }, ups };
+}
+
+// one line after a match on the worst measured area + what to do: { text, action: { train: stat } | { restock: true } | null }
+export function coachTip(t, profile, eco) {
+  const cap = statCap(profile), next = TIERS.find(x => x.cap > cap);
+  const train = (k, lead, alt = '') => profile.stats[k] >= cap
+    ? { text: `${lead} — ${next ? `reach ${next.name} to train beyond ${cap}` : 'keep playing'}`, action: null }
+    : { text: `${lead} — Train ${STAT_NAME[k]} (${trainCost(profile.stats[k], eco)} Credits)${alt}`, action: { train: k } };
+  const food = (profile.bag?.bag_banana || 0) + (profile.bag?.bag_gel || 0);
+  if (t.drySec >= 30) return { text: `You were dehydrated for ${Math.round(t.drySec)} s — keep water in your bag`, action: { restock: true } };
+  if (t.tiredSec >= 30) return food ? train('stamina', `You were exhausted for ${Math.round(t.tiredSec)} s`, ' or eat at changeovers')
+    : { text: `You were exhausted for ${Math.round(t.tiredSec)} s — keep food in your bag and eat at changeovers`, action: { restock: true } };
+  const [vm, vx] = t.volley, [sm, sx] = t.smash;
+  if (vm + vx >= 5 && vx / (vm + vx) >= 0.4) return train('volley', `Your volleys missed ${vx} of ${vm + vx}`, ' or play at the net more');
+  if (sm + sx >= 4 && sx / (sm + sx) >= 0.4) return train('smash', `Your smashes missed ${sx} of ${sm + sx}`, ' or play a bandeja instead');
+  const weak = STATS.reduce((a, k) => (profile.stats[k] < profile.stats[a] ? k : a));
+  return train(weak, `Your weakest skill is ${STAT_NAME[weak]} (${profile.stats[weak]})`);
+}
+
 // Credits to raise a stat from `level` to level + 1
 export const trainCost = (level, eco) => Math.round(eco.training.base * eco.training.growth ** (level - eco.training.start));
 
@@ -192,6 +228,7 @@ export function buyTraining(profile, stat, eco, now = new Date()) {
   if (!STATS.includes(stat)) return { ok: false, reason: 'stat' };
   const level = profile.stats[stat];
   if (level >= eco.training.max) return { ok: false, reason: 'max' };
+  if (level >= statCap(profile)) return { ok: false, reason: 'cap' };
   const cost = trainCost(level, eco);
   if (profile.credits < cost) return { ok: false, reason: 'credits' };
   return { ok: true, profile: { ...profile, credits: profile.credits - cost, stats: { ...profile.stats, [stat]: level + 1 }, ...formUp(profile, eco, eco.form.training, now) } };

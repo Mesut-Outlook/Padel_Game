@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { newProfile, loadProfile, saveProfile, matchReward, applyReward, exportProfile, importProfile, trainCost, buyTraining, tournamentReward, canEnter, worldRanking, aiRankingTable, migrateProfile, applyRating, settleMatch, formNow, addPoints, expirePoints, expiringSoon, normalizeProfile } from '../src/career.js';
+import { newProfile, loadProfile, saveProfile, matchReward, applyReward, exportProfile, importProfile, trainCost, buyTraining, tournamentReward, canEnter, worldRanking, aiRankingTable, migrateProfile, applyRating, settleMatch, formNow, addPoints, expirePoints, expiringSoon, normalizeProfile, statCap, coachTip } from '../src/career.js';
 
 const eco = JSON.parse(fs.readFileSync(new URL('../data/economy.json', import.meta.url)));
 const chars = JSON.parse(fs.readFileSync(new URL('../data/characters.json', import.meta.url)));
@@ -287,4 +287,47 @@ test('bag review fixes: Infinity never reaches the profile, supplies: null loads
   assert.equal(settleMatch(p0, { ...club(true, 6), bag: { bag_water: Infinity } }, eco, at(19, 9), at(19, 10)).profile.bag.bag_water, 0);
   const old = { ...p0, supplies: null }; delete old.bag;
   assert.deepEqual(normalizeProfile(old).bag, { bag_water: 4, bag_banana: 3 });
+});
+
+// part D: stat growth, tier cap, coach tip (spec §9)
+import { newTally } from '../src/matchstats.js';
+const tally = (o) => ({ ...newTally(), ...o });
+
+test('statCap follows the best tier; training stops there with reason cap', () => {
+  const p = { ...newProfile(chars[0]), credits: 99999 };  // Club (3): cap 7
+  assert.equal(statCap(p), 7);
+  assert.equal(statCap({ ...p, bestTier: 5 }), 8);
+  assert.equal(buyTraining({ ...p, stats: { ...p.stats, volley: 7 } }, 'volley', eco).reason, 'cap');
+  assert.equal(buyTraining({ ...p, stats: { ...p.stats, volley: 6 } }, 'volley', eco).ok, true);
+});
+
+test('settleMatch: match XP raises a stat at per × stat, never past the cap, not on a forfeit', () => {
+  const p = { ...newProfile(chars[0]), xp: { volley: 195 } };  // volley 5: needs 200
+  const m = settleMatch(p, { ...club(true, 6), tally: tally({ volley: [4, 0] }) }, eco, at(19, 9), at(19, 10));
+  assert.equal(m.profile.stats.volley, 6);
+  assert.equal(m.profile.xp.volley, 195 + 10 - 200);
+  assert.deepEqual(m.ups, [['volley', 5, 6]]);
+  const capped = { ...p, stats: { ...p.stats, volley: 7 }, xp: { volley: 0 } };
+  assert.equal(settleMatch(capped, { ...club(true, 6), tally: tally({ volley: [99, 0] }) }, eco, at(19, 9), at(19, 10)).profile.stats.volley, 7);
+  const above = { ...p, stats: { ...p.stats, power: 9 } };  // migrated above the cap: kept
+  assert.equal(settleMatch(above, club(true, 6), eco, at(19, 9), at(19, 10)).profile.stats.power, 9);
+  const f = settleMatch(p, { ...club(false, 0), forfeit: true, tally: tally({ volley: [4, 0] }) }, eco, at(19, 9), at(19, 10));
+  assert.equal(f.profile.stats.volley, 5);
+  assert.deepEqual(f.ups, []);
+});
+
+test('coachTip: dry, exhausted, volley and smash misses, then the weakest stat; capped stats point to the next tier', () => {
+  const p = { ...newProfile(chars[0]), stats: { speed: 6, power: 6, control: 5, volley: 6, smash: 6, stamina: 6 } };
+  assert.deepEqual(coachTip(tally({ drySec: 40 }), p, eco).action, { restock: true });
+  assert.deepEqual(coachTip(tally({ tiredSec: 50 }), { ...p, bag: {} }, eco).action, { restock: true });
+  assert.deepEqual(coachTip(tally({ tiredSec: 50 }), p, eco).action, { train: 'stamina' });
+  const v = coachTip(tally({ volley: [5, 7] }), p, eco);
+  assert.match(v.text, /Your volleys missed 7 of 12 — Train Volley \(\d+ Credits\)/);
+  assert.deepEqual(v.action, { train: 'volley' });
+  assert.deepEqual(coachTip(tally({ smash: [2, 3] }), p, eco).action, { train: 'smash' });
+  assert.match(coachTip(tally({}), p, eco).text, /weakest skill is Control \(5\)/);
+  const capped = { ...p, stats: { ...p.stats, volley: 7 } };
+  const c = coachTip(tally({ volley: [1, 5] }), capped, eco);
+  assert.match(c.text, /reach Advanced to train beyond 7/);
+  assert.equal(c.action, null);
 });
