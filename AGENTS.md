@@ -30,5 +30,6 @@ Read `CLAUDE.md` — it is the shared guide for every agent (Claude, Antigravity
 | `agy-17` | Pause yalnızca Esc + tüm oyuncuların enerji çubukları | `agents/reports/agy-17-esc-pause-energy-hud.md` | Completed, Opus reviewed (energy rows = teams like the scoreboard, smash banner moved below the taller HUD) |
 | `agy-18` | Sayı bildiriminde tek oyuncunun adı | `agents/reports/agy-18-point-call-player-name.md` | Completed, Opus reviewed (`pointcall.js` table instead of six copied branches) |
 | `agy-19` | Career Polish & Fixes Package (forfeit on quit, template clone filter, clean 16-pair draw, online form recovery, remote racket, bot multiplier) | `agents/reports/agy-19-career-fixes.md` | Completed, Opus reviewed (a forfeit pays 0 Credits, otherwise quit-farming paid "Played") |
+| `agy-20` | Friendly karakter kartı: güçlü/zayıf yanlar + oyun ipucu (`src/charcard.js`) | `agents/reports/agy-20-friendly-character-card.md` | Assigned 2026-10-19 |
 
 

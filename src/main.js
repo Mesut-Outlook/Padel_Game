@@ -198,7 +198,7 @@ async function setupScene(venue, ids, roster, rk) {
   $('touchUi').hidden = !isTouch();
   $('msg').textContent = '';
   acc = 0; freeze = 0; slow = 0; shake = 0; approach = 0; bannerMode = ''; rallyFlags = {};
-  energyUi = null; tiredWarned = false;
+  energyUi = null; tiredWarned = false; emptyFoodWarned = false; clearOffers();
   resetStyleStats();
   updateSmashBanner();
   setMusicDuck('point');
@@ -488,9 +488,36 @@ function inputs() {
     if (h === 0) inp[pl.id] = assisted(pl, readLocal(pl.team, ctl, cp));
     else if (h > 0) { const pad = readGamepad(ctl === 'kb' ? h - 1 : h, pl.team, cp); inp[pl.id] = pad ? assisted(pl, pad) : aiInput(world, pl.id, aiLevel); }
     else inp[pl.id] = aiInput(world, pl.id, aiLevel);
+    if (eatReq.delete(pl.id) && h >= 0) inp[pl.id] = { ...inp[pl.id], eat: true };
   }
   return inp;
 }
+
+// eating: a tap or click on the offer box asks for the next input of that player (key E / LT go through input.js)
+const eatReq = new Set(), FOOD_NAME = { bag_banana: 'a banana', bag_gel: 'an energy gel' };
+let emptyFoodWarned = false, changeMsgs = [];
+const offers = new Map();  // pid -> { item, energy, timer }
+export const requestEat = (pid) => eatReq.add(pid);
+const localPid = () => net ? net.seat : humans[0];
+const isLocal = (pid) => net ? pid === net.seat : humans.includes(pid);
+const energyOf = (pid) => world ? (world.players[pid]?.energy ?? 1) : (net?.view()?.pl[pid]?.[7] ?? 1);
+function renderOffers() {
+  const box = $('eatOffers');
+  if (!box) return;
+  const two = humans.length > 1 && !net;
+  box.innerHTML = [...offers].map(([pid, o]) => {
+    const h = humans.indexOf(pid), pad = isTouch() ? 'tap' : (h > 0 || device === 'pad' || control === 'pad') ? padText('LT') : 'E';
+    return `<button type="button" class="eat-offer" data-pid="${pid}">${two ? `P${h + 1} ` : ''}⚡ ${Math.round(o.energy * 100)}% — eat ${FOOD_NAME[o.item]}? <kbd>${pad}</kbd></button>`;
+  }).join('');
+}
+function hideOffer(pid) { const o = offers.get(pid); if (o) { clearTimeout(o.timer); offers.delete(pid); renderOffers(); } }
+function clearOffers() { for (const o of offers.values()) clearTimeout(o.timer); offers.clear(); renderOffers(); }
+function showOffer(e) {
+  hideOffer(e.pid);
+  offers.set(e.pid, { item: e.item, energy: e.energy, timer: setTimeout(() => hideOffer(e.pid), 6000) });
+  renderOffers();
+}
+$('eatOffers')?.addEventListener('pointerdown', (e) => { const b = e.target.closest('[data-pid]'); if (b) { e.preventDefault(); requestEat(+b.dataset.pid); } });
 
 function handleEvents(events, score, winner) {
   const myTeam = humans.length ? teamOf(humans[0]) : 0;
@@ -565,12 +592,21 @@ function handleEvents(events, score, winner) {
       if (e.kind === 'floor') rallyFlags.bounced = true;
       else if (e.kind === 'glass' && rallyFlags.bounced) { rallyFlags.glass = true; rallyFlags.afterGlass = true; }
     }
-    else if (e.type === 'consume' && bagLeft && e.pid === (net ? net.seat : humans[0])) bagLeft[e.item] = Math.max(0, (bagLeft[e.item] || 0) - 1);
+    else if (e.type === 'consume') {
+      if (bagLeft && e.pid === localPid()) bagLeft[e.item] = Math.max(0, (bagLeft[e.item] || 0) - 1);
+      if (FOOD_NAME[e.item]) hideOffer(e.pid);
+    }
+    else if (e.type === 'offer') { if (isLocal(e.pid)) showOffer(e); }
+    else if (e.type === 'nowater') { if (bagLeft && e.pid === localPid()) changeMsgs.push('💧 Out of water — buy more in the Shop after the match'); }
     else if (e.type === 'fault') { flash('SERVE FAULT', 1); sfxCrowdReact('murmur'); }
     else if (e.type === 'let') flash('LET', 1);
     else if (e.type === 'drink') {  // after the point call; then one tip, so they come every other game at most
       setTimeout(() => showHype('💧 CHANGEOVER — water break, energy back up', 0, 2.4), 1300);
-      if (humans.length && loadSettings().tips) setTimeout(() => showHype('💡 ' + (device === 'pad' ? padText(nextTip('pad')) : nextTip('kb')), 0, 5), 4000);
+      const pid = localPid();
+      if (bagLeft && !emptyFoodWarned && energyOf(pid) < 0.5 && !bagLeft.bag_banana && !bagLeft.bag_gel) { emptyFoodWarned = true; changeMsgs.push('🍌 Your bag is empty — buy food in the Shop'); }
+      let at = 4000;  // bag messages queue after the changeover hype, the tip after them
+      for (const m of changeMsgs.splice(0)) { setTimeout(() => showHype(m, 0, 2.6), at); at += 2800; }
+      if (humans.length && loadSettings().tips) setTimeout(() => showHype('💡 ' + (device === 'pad' ? padText(nextTip('pad')) : nextTip('kb')), 0, 5), at);
     }
     else if (e.type === 'point') {
       pointsWon[e.team]++;
@@ -681,9 +717,9 @@ function renderEnergy(view) {
   if (energyUi?.key !== key) {
     box.innerHTML = activeIds.map((id, i) => {
       const isHuman = humans.includes(id);
-      return `<div class="he-row${isHuman ? ' human' : ''}"><span class="he-name">${escapeText(names[i])}</span><span class="he-bar"><i></i></span></div>`;
+      return `<div class="he-row${isHuman ? ' human' : ''}"><span class="he-name">${escapeText(names[i])}</span><span class="he-bar"><i></i></span><span class="he-d">💧</span><span class="he-bar he-hyd"><i></i></span></div>`;
     }).join('');
-    energyUi = { key, ids: activeIds, bars: [...box.querySelectorAll('i')] };
+    energyUi = { key, ids: activeIds, bars: [...box.querySelectorAll('.he-bar:not(.he-hyd) i')], hyd: [...box.querySelectorAll('.he-hyd i')] };
     box.hidden = false;
   }
   activeIds.forEach((id, k) => {
@@ -692,6 +728,8 @@ function renderEnergy(view) {
       bar.style.width = `${Math.round(e * 100)}%`;
       bar.className = e < 0.25 ? 'low' : e < 0.5 ? 'mid' : '';
     }
+    const hy = world ? (world.players[id]?.hyd ?? 1) : (view.pl[id]?.[8] ?? 1), hb = energyUi.hyd[k];
+    if (hb) { hb.style.width = `${Math.round(hy * 100)}%`; hb.className = hy < 0.3 ? 'low' : ''; }
     if (humans.length && id === humans[0]) {
       if (e < 0.25 && !tiredWarned) { tiredWarned = true; showHype('😮‍💨 TIRED — catch your breath between points', 0, 2.2); }
       if (e > 0.4) tiredWarned = false;
@@ -908,6 +946,7 @@ function loop(now) {
   } else if (net) {
     const pl = net.seat < 2 ? 0 : 1;
     const inp = readLocal(pl, control, getCamPlane());
+    if (eatReq.delete(net.seat)) inp.eat = true;
     net.send(inp);
     view = net.view();
     if (!view) { requestAnimationFrame(loop); return; }

@@ -355,3 +355,23 @@ test('career form: a rusty player (-0.10) runs about 5% slower', () => {
   const k = run(-0.1) / run(0);
   assert.ok(k < 0.97 && k > 0.93, `ratio ${k}`);
 });
+
+test('LT (edge) asks to eat, once', async () => {
+  const { readGamepad } = await import('../src/input.js');
+  let lt = false;
+  navigator.getGamepads = () => [{ index: 0, axes: [0, 0], buttons: Array.from({ length: 8 }, (_, i) => ({ pressed: i === 6 && lt })) }];
+  assert.equal(readGamepad(0, 0).eat, undefined);
+  lt = true;
+  assert.equal(readGamepad(0, 0).eat, true);
+  assert.equal(readGamepad(0, 0).eat, undefined);  // held
+  delete navigator.getGamepads;
+});
+
+test('key E (edge) asks to eat', async () => {  // fresh module with a fake window, as the browser would feed it
+  let down; globalThis.addEventListener = (t, f) => { if (t === 'keydown') down = f; };
+  const { readKeyboard } = await import('../src/input.js?kbd');
+  delete globalThis.addEventListener;
+  down({ code: 'KeyE' });
+  assert.equal(readKeyboard(0).eat, true);
+  assert.equal(readKeyboard(0).eat, undefined);
+});

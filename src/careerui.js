@@ -18,6 +18,8 @@ import {
   trainCost,
   buyTraining,
   buyItem,
+  bagLimit,
+  bagRoom,
   equip,
   applyRating,
   settleMatch,
@@ -118,7 +120,7 @@ const SHOP_TABS = [
   { id: 'ball', label: 'Balls' },
   { id: 'kit', label: 'Kit' },
   { id: 'headwear', label: 'Headwear' },
-  { id: 'fuel', label: 'Energy' },
+  { id: 'bag', label: 'Bag' },
 ];
 
 function buildCountriesList() {
@@ -1096,7 +1098,8 @@ function renderLevelStartScreen() {
 function hubHintsHtml() {
   const f = formNow(profile, eco), soon = expiringSoon(profile, eco);
   return (f < 0 ? `<div class="cr-banner" role="status"><span>🏃 Form: ${formText(profile)} — play a match to shake off the rust.</span></div>` : '')
-    + (soon > 0 ? `<div class="cr-banner" role="status"><span>⏳ Points expiring in 7 days: ${soon} — play a tournament to keep your rank.</span></div>` : '');
+    + (soon > 0 ? `<div class="cr-banner" role="status"><span>⏳ Points expiring in 7 days: ${soon} — play a tournament to keep your rank.</span></div>` : '')
+    + (needsRestock(profile) ? `<div class="cr-banner" role="status"><span>🎒 Your bag is running low.</span>${restockBtn()}</div>` : '');
 }
 
 function renderHubScreen() {
@@ -1230,6 +1233,7 @@ function renderHubScreen() {
   careerPanel.querySelector('#cr-hub-ranking').onclick = () => { flashMsg = null; showScreen('ranking'); };
   careerPanel.querySelector('#cr-hub-online').onclick = () => { track('online-click'); flashMsg = null; onlineState.status = ''; onlineState.lobby = null; showScreen('online'); };
   careerPanel.querySelector('#cr-hub-training').onclick = () => { flashMsg = null; showScreen('training'); };
+  wireRestock();
   careerPanel.querySelector('#cr-hub-shop').onclick = () => { flashMsg = null; shopErrors = {}; showScreen('shop'); };
   careerPanel.querySelector('#cr-hub-locker').onclick = () => { flashMsg = null; showScreen('locker'); };
   careerPanel.querySelector('#cr-hub-profile').onclick = () => { flashMsg = null; showScreen('profile'); };
@@ -1555,14 +1559,25 @@ function renderTrainingScreen() {
 }
 
 // 6. Shop Screen
-// energy products: what one does per match (boost at every changeover, fatigue factor), e.g. "+12% energy · tire 5% slower"
-function fuelSpecHtml(item) {
-  const tire = Math.round((1 - item.tire) * 100);
+// bag: drinks (water, isotonic) and food (banana, gel) each have their own limit
+const DRINK_IDS = ['bag_water', 'bag_isotonic'], FOOD_IDS = ['bag_banana', 'bag_gel'];
+const bagKind = (id) => DRINK_IDS.includes(id) ? 'drinks' : 'food';
+const bagFill = (p, id) => {
+  const ids = DRINK_IDS.includes(id) ? DRINK_IDS : FOOD_IDS;
+  return `${ids.reduce((n, k) => n + (p.bag?.[k] || 0), 0)}/${bagLimit(p)}`;
+};
+const needsRestock = (p) => DRINK_IDS.reduce((n, k) => n + (p.bag?.[k] || 0), 0) <= 2 || FOOD_IDS.every(k => !p.bag?.[k]);
+function bagSpecHtml(item) {
   return `
-      <div class="cr-shop-spec">Pack of ${item.pack} · one per career match · +${Math.round(item.boost * 100)}% energy at every changeover${tire ? ` · tire ${tire}% slower` : ''}</div>
+      <div class="cr-shop-spec">${item.upgrade ? 'Upgrade' : `Pack of ${item.pack} · ${bagKind(item.id) === 'drinks' ? 'Drinks' : 'Food'} ${bagFill(profile, item.id)}`}</div>
       <div class="pl-card-sub">${escapeHtml(item.desc || '')}</div>
     `;
 }
+const restockBtn = () => needsRestock(profile) ? '<button type="button" class="cr-btn cr-btn-acc" id="cr-restock">🎒 Restock</button>' : '';
+const wireRestock = () => {
+  const b = careerPanel.querySelector('#cr-restock');
+  if (b) b.onclick = () => { shopTab = 'bag'; flashMsg = null; shopErrors = {}; showScreen('shop'); };
+};
 
 function renderShopItemSpecHtml(item, tabId) {
   if (tabId === 'racket') {
@@ -1608,7 +1623,7 @@ function renderShopItemSpecHtml(item, tabId) {
       <div class="cr-shop-spec">${escapeHtml(label)}</div>
     `;
   }
-  if (tabId === 'fuel') return fuelSpecHtml(item);
+  if (tabId === 'bag') return bagSpecHtml(item);
   if (tabId === 'headwear') {
     const hw = item.headwear || { type: 'headband', color: '#ffffff' };
     return `
@@ -1681,13 +1696,15 @@ function renderShopScreen() {
 
   const grid = careerPanel.querySelector('#cr-shop-grid');
   items.forEach((item, idx) => {
-    const fuel = item.type === 'fuel', left = fuel ? (profile.supplies?.[item.id] || 0) : 0;  // energy products stack
-    const isOwned = fuel ? left > 0 : profile.inventory.includes(item.id);
+    const stack = item.type === 'bag' && !item.upgrade, left = stack ? (profile.bag?.[item.id] || 0) : 0;  // bag consumables stack
+    const isOwned = stack ? left > 0 : profile.inventory.includes(item.id);
+    const room = stack ? Math.min(item.pack, bagRoom(profile, item)) : 0;
+    const price = stack && room ? Math.ceil(item.price * room / item.pack) : item.price;
     const isEquipped = profile.equipped?.[shopTab] === item.id;
     const minTier = shop.tiers[item.tier] ?? 0;
     const tierName = tierByIndex(minTier).name;
     const isTierLocked = (profile.bestTier || 1) < minTier;
-    const canAfford = profile.credits >= item.price;
+    const canAfford = profile.credits >= price;
     const errText = shopErrors[item.id] || '';
 
     const card = document.createElement('div');
@@ -1705,12 +1722,12 @@ function renderShopScreen() {
           <div class="cr-shop-title-row">
             <div class="pl-card-title" lang="en">${escapeHtml(item.name)}</div>
             <div class="cr-badges">
-              ${isOwned ? `<span class="cr-badge is-owned">${fuel ? `In bag ×${left}` : 'Owned'}</span>` : ''}
-              ${isEquipped ? `<span class="cr-badge is-equipped">${fuel ? 'In use' : 'Equipped'}</span>` : ''}
+              ${isOwned ? `<span class="cr-badge is-owned">${stack ? `In bag ×${left}` : 'Owned'}</span>` : ''}
+              ${isEquipped ? '<span class="cr-badge is-equipped">Equipped</span>' : ''}
             </div>
           </div>
           <div class="cr-shop-meta-row">
-            <span class="cr-shop-price tabular">${item.price} Credits</span>
+            <span class="cr-shop-price tabular">${item.price} Credits${stack ? ` / ${item.pack}` : ''}</span>
             <span class="cr-tier-pill ${isTierLocked ? 'is-locked' : ''}">
               ${minTier > 1 ? `Unlocks at ${escapeHtml(tierName)}` : 'Available to everyone'}
             </span>
@@ -1723,10 +1740,10 @@ function renderShopScreen() {
       ${errText ? `<div class="cr-card-error" role="alert">${escapeHtml(errText)}</div>` : ''}
 
       <div class="cr-shop-foot">
-        <button type="button" class="cr-btn ${(fuel || !isOwned) && !isTierLocked && canAfford ? 'cr-btn-acc' : 'cr-btn-muted'} cr-shop-buy" data-buy="${item.id}">
-          ${fuel ? `Buy ${item.pack}` : 'Buy'}
+        <button type="button" class="cr-btn ${(stack ? room : !isOwned) && !isTierLocked && canAfford ? 'cr-btn-acc' : 'cr-btn-muted'} cr-shop-buy" data-buy="${item.id}">
+          ${stack ? (!room ? 'Bag full' : room < item.pack ? `Buy ${room} · ${price} Credits` : `Buy ${item.pack}`) : isOwned && item.upgrade ? 'Owned' : 'Buy'}
         </button>
-        ${isOwned && !isEquipped ? `<button type="button" class="cr-btn cr-shop-equip" data-equip-shop="${item.id}">${fuel ? 'Use in matches' : 'Equip'}</button>` : ''}
+        ${isOwned && !isEquipped && !item.type?.startsWith('bag') ? `<button type="button" class="cr-btn cr-shop-equip" data-equip-shop="${item.id}">Equip</button>` : ''}
       </div>
     `;
 
@@ -1755,7 +1772,9 @@ function renderShopScreen() {
         } else if (res.reason === 'tier') {
           msg = `Locked: Unlocks at ${tierName}`;
         } else if (res.reason === 'credits') {
-          msg = `Not enough Credits: Need ${Math.max(1, item.price - profile.credits)} more Credits`;
+          msg = `Not enough Credits: Need ${Math.max(1, price - profile.credits)} more Credits`;
+        } else if (res.reason === 'bagfull') {
+          msg = `Bag full: ${bagFill(profile, item.id)} ${bagKind(item.id)}`;
         }
         shopErrors[item.id] = msg;
         renderShopScreen();
@@ -1788,7 +1807,7 @@ function renderLockerScreen() {
   const ownedBalls = shop.items.filter(i => i.type === 'ball' && profile.inventory.includes(i.id));
   const ownedKits = shop.items.filter(i => i.type === 'kit' && profile.inventory.includes(i.id));
   const ownedHeadwear = shop.items.filter(i => i.type === 'headwear' && profile.inventory.includes(i.id));
-  const bagged = shop.items.filter(i => i.type === 'fuel' && profile.supplies?.[i.id] > 0);
+  const bagItems = shop.items.filter(i => i.type === 'bag' && !i.upgrade);
 
   careerPanel.innerHTML = `
     ${renderBannersHtml()}
@@ -1910,34 +1929,11 @@ function renderLockerScreen() {
         </div>
       `}
 
-      <div class="pl-section-label">BAG · ENERGY (ONE USED PER CAREER MATCH)</div>
-      ${bagged.length > 0 ? `
-        <div class="cr-locker-grid" id="cr-locker-fuel">
-          <button type="button" class="pl-card cr-locker-card ${profile.equipped?.fuel ? '' : 'is-selected'}" data-slot="fuel" data-id="">
-            <div class="cr-locker-card-head"><div class="pl-card-title">Water only</div></div>
-            <div class="cr-shop-spec">Save your products for later</div>
-            <span class="pl-check">✓</span>
-          </button>
-          ${bagged.map(f => {
-            const isEq = profile.equipped?.fuel === f.id;
-            return `
-              <button type="button" class="pl-card cr-locker-card ${isEq ? 'is-selected' : ''}" data-slot="fuel" data-id="${f.id}">
-                <div class="cr-locker-card-head">
-                  <div class="pl-card-title" lang="en">${escapeHtml(f.name)}</div>
-                  <span class="cr-badge ${isEq ? 'is-equipped' : 'is-owned'}">×${profile.supplies[f.id]}</span>
-                </div>
-                ${fuelSpecHtml(f)}
-                <span class="pl-check">✓</span>
-              </button>
-            `;
-          }).join('')}
-        </div>
-      ` : `
-        <div class="cr-empty-slot">
-          <span>Your bag is empty. Bananas, isotonic drinks and gels give extra energy at every changeover.</span>
-          <button type="button" class="cr-btn" id="cr-locker-buy-fuel">Shop Energy →</button>
-        </div>
-      `}
+      <div class="pl-section-label">BAG · DRINKS ${bagFill(profile, 'bag_water')} · FOOD ${bagFill(profile, 'bag_banana')}</div>
+      <div class="cr-empty-slot">
+        <span>${bagItems.map(i => `${escapeHtml(i.name)} ×${profile.bag?.[i.id] || 0}`).join(' · ')}</span>
+        <button type="button" class="cr-btn" id="cr-restock">Restock →</button>
+      </div>
     </div>
   `;
 
@@ -1959,13 +1955,12 @@ function renderLockerScreen() {
     };
   }
 
-  const buyFuelBtn = careerPanel.querySelector('#cr-locker-buy-fuel');
-  if (buyFuelBtn) buyFuelBtn.onclick = () => { shopTab = 'fuel'; flashMsg = null; showScreen('shop'); };
+  wireRestock();
 
   careerPanel.querySelectorAll('[data-slot][data-id]').forEach(btn => {
     btn.onclick = () => {
       const slot = btn.dataset.slot;
-      const id = btn.dataset.id || null;  // '' = the bag's "Water only" card
+      const id = btn.dataset.id;
       const next = equip(profile, slot, id);
       persistProfile(next);
       renderLockerScreen();
@@ -2036,12 +2031,14 @@ function renderRewardScreen() {
           <b class="tabular">${profile.credits} Credits</b>
         </div>
 
+        ${needsRestock(profile) ? '<div class="cr-reward-balance"><span>Bag running low</span>' + restockBtn() + '</div>' : ''}
         <button type="button" class="pl-start-btn" id="cr-reward-continue" style="width:100%;margin-top:4px">Continue</button>
       </div>
     </div>
   `;
 
   wireBannerButtons();
+  wireRestock();
   const contBtn = careerPanel.querySelector('#cr-reward-continue');
   contBtn.onclick = () => {
     const { lastReward: _removed, ...clean } = profile;

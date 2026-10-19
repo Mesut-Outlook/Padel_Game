@@ -22,7 +22,7 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError,
   net.send = (inp) => {
     if (ws.readyState !== 1) return;
     const s = JSON.stringify({ type: 'input', ...inp });
-    if (s !== lastSent || inp.swing) { ws.send(s); lastSent = s; }
+    if (s !== lastSent || inp.swing || inp.eat) { ws.send(s); lastSent = s; }
   };
   net.start = () => ws.readyState === 1 && ws.send(JSON.stringify({ type: 'start' }));
   // render ~70ms in the past, interpolating between buffered server snapshots

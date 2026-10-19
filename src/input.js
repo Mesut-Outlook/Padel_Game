@@ -67,7 +67,7 @@ export function readKeyboard(team, camPlane) {
   let swing = null;
   for (const k in SWING_KEYS) if (consumePressed(k)) swing = SWING_KEYS[k];
   const move = toWorld(sx, sy, team, camPlane);
-  return { move, swing, aim: move[0] }; // aim: hold left/right while swinging to place the ball
+  return { move, swing, aim: move[0], ...(consumePressed('KeyE') && { eat: true }) }; // aim: hold left/right while swinging to place the ball
 }
 
 export function readGamepad(index, team, camPlane) {  // index = the n-th connected pad (browser slots can have gaps after a reconnect)
@@ -78,9 +78,10 @@ export function readGamepad(index, team, camPlane) {  // index = the n-th connec
   let swing = null;
   const prev = padPrev[index] || [];
   for (const b in PAD_BTN) if (gp.buttons[b]?.pressed && !prev[b]) swing = PAD_BTN[b];
+  const eat = gp.buttons[6]?.pressed && !prev[6];  // LT (Y is smash)
   padPrev[index] = gp.buttons.map(b => b.pressed);
   const move = toWorld(sx, sy, team, camPlane);
-  return { move, swing, aim: move[0] };
+  return { move, swing, aim: move[0], ...(eat && { eat: true }) };
 }
 
 export const gamepadCount = () => [...(navigator.getGamepads?.() || [])].filter(Boolean).length;
@@ -97,5 +98,5 @@ export function readLocal(team, mode = 'auto', camPlane) {
   const kb = readKeyboard(team, camPlane), pad = mode === 'auto' && readGamepad(0, team, camPlane);
   if (!pad) return kb;
   const move = kb.move[0] || kb.move[1] ? kb.move : pad.move;
-  return { move, swing: kb.swing || pad.swing, aim: move[0] };
+  return { move, swing: kb.swing || pad.swing, aim: move[0], ...((kb.eat || pad.eat) && { eat: true }) };
 }
