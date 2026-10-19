@@ -66,7 +66,7 @@ export function mountKeyHelp(el) {
         <div class="hk-arrows">${cap('ArrowUp', 'up')}${cap('ArrowLeft', 'lf')}${cap('ArrowDown', 'dn')}${cap('ArrowRight', 'rt')}</div>
       </div>
       <div class="hk-main pad-only">${padSvg('xbox')}${padLegend('xbox')}</div>
-      <div class="hk-foot"><span class="kb-only">Hold <b>A</b>/<b>D</b> or <b>←</b>/<b>→</b> while hitting = aim · <b>Esc</b>: pause · ⛶ / <b>F11</b>: fullscreen · </span><span class="pad-only">2 players: keyboard + a pad, or a pad each · </span><a href="kontroller.html" target="_blank" rel="noopener">all controls →</a></div>
+      <div class="hk-foot"><span class="kb-only">Hold <b>A</b>/<b>D</b> or <b>←</b>/<b>→</b> while hitting = aim · <b>Esc</b>: pause · ⛶ / <b>F11</b>: fullscreen · </span><span class="pad-only">Phone or tablet: pair an Xbox or PlayStation controller over Bluetooth, then press any button · 2 players: keyboard + a pad, or a pad each · </span><a href="kontroller.html" target="_blank" rel="noopener">all controls →</a></div>
     </div>`;
   let hidden = false, pos = 'bl';
   try { hidden = localStorage.getItem(STORE) === '1'; pos = localStorage.getItem(POS_STORE) || 'bl'; } catch { /* storage blocked: defaults */ }

@@ -3,7 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1520">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Padel Legends">
 <title>Padel Legends</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
 <!-- GoatCounter: cookie-free visit counts (no consent banner needed); localhost is not counted. Events: src/track.js -->
 <script>/* GoatCounter sends location.search: take a ?room= invite code out of the URL before it loads (main.js reads window.__padelRoom) */
 try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) { window.__padelRoom = r; u.searchParams.delete('room'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } } catch { /* keep the URL as is */ }</script>
@@ -707,7 +713,10 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   #touchUi .tc-top { position: absolute; top: max(12px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); display: flex; gap: 8px; pointer-events: auto; }
   #touchUi .tc-small { width: 44px; height: 44px; font-size: 18px; }
   body.touch { overscroll-behavior: none; touch-action: manipulation; }
-  body.touch #help, body.touch #fsBtn, body.touch #cam kbd, body.touch #shotHint kbd { display: none !important; }  /* fullscreen stays in the pause menu */
+  body.touch #fsBtn { display: none !important; }  /* fullscreen stays in the pause menu */
+  body.touch:not(.pad) #help, body.touch:not(.pad) #cam kbd, body.touch:not(.pad) #shotHint kbd { display: none !important; }
+  #unmuteBadge { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(10,18,28,.92); border: 1px solid var(--acc); color: #fff; font: 700 13px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: .8px; text-transform: uppercase; cursor: pointer; z-index: 10; pointer-events: auto; box-shadow: 0 4px 16px rgba(0,0,0,.5); }
+  #unmuteBadge[hidden] { display: none !important; }
   @media (max-height: 500px) { #hud { transform: translateX(-50%) scale(.78); transform-origin: top center; } }
   #rotate { display: none; }
   @media (orientation: portrait) {
@@ -2184,6 +2193,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
 <div id="eatOffers"></div>
 <div id="hypeToast" hidden><span class="ht-text" id="htText"></span><span class="ht-pts" id="htPts"></span></div>
 <div id="msg"></div>
+<button type="button" id="unmuteBadge" hidden>🔇 Tap for sound</button>
 <button type="button" id="fsBtn" class="fs-btn-sync" data-icon-only="1" hidden title="Fullscreen">⛶</button>
 <div id="cam" hidden></div>
 <div id="shotHint" hidden></div>

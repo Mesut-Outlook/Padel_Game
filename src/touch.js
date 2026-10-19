@@ -2,8 +2,15 @@
 // a floating stick where the left thumb lands, shot buttons on the right, pause/camera at the top.
 // They feed input.js like a keyboard, so the {move, swing, aim} input stays the same everywhere.
 import { setTouchMove } from './input.js';
+import { padText } from './padstyle.js';
 
-export const isTouch = () => matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).has('touch');
+export const isTouch = () => (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches) || (typeof location !== 'undefined' && new URLSearchParams(location.search).has('touch'));
+
+export function offerKeyLabel({ pid = 0, humans = [0], device = 'kb', control = 'auto', touch = isTouch() } = {}) {
+  const h = humans.indexOf(pid);
+  const hasPad = (h > 0 || device === 'pad' || control === 'pad');
+  return hasPad ? padText('LT') : (touch ? 'tap' : 'E');
+}
 
 const STICK_R = 56;  // px from the centre to full speed
 const BUTTONS = [['Space', 'SHOT', 'tc-shot'], ['KeyK', 'LOB', 'tc-lob'], ['KeyL', 'SMASH', 'tc-smash']];

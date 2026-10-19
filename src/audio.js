@@ -5,8 +5,10 @@ let musicTimer = null, musicStep = 0, musicNextT = 0;
 
 // must be called from a user gesture (start button / menu click) so the browser lets audio play
 export function unlockAudio() {
-  if (!ctx) {
+  if (!ctx && typeof AudioContext !== 'undefined') {
     ctx = new AudioContext();
+    // the 'Tap for sound' badge (main.js) goes once the browser lets audio play
+    ctx.onstatechange = () => { if (ctx.state === 'running') document.getElementById('unmuteBadge')?.setAttribute('hidden', ''); };
     // compressor keeps the loud racket hits punchy without clipping
     const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.connect(ctx.destination);
     out = ctx.createGain(); out.gain.value = 0.75; out.connect(comp);
@@ -16,7 +18,11 @@ export function unlockAudio() {
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     startMusic();
   }
-  if (ctx.state === 'suspended') ctx.resume();
+  if (ctx?.state === 'suspended') ctx.resume().catch(() => {});
+}
+
+export function isAudioSuspended() {
+  return !ctx || ctx.state === 'suspended';
 }
 
 export function toggleMute() {

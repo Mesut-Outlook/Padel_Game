@@ -15,7 +15,7 @@ import { serverUrl, NO_SERVER } from './serverurl.js';
 import { track, trackOnce } from './track.js';
 import { predict } from './physics.js';
 import { createFx } from './fx.js';
-import { unlockAudio, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxReward, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
+import { unlockAudio, isAudioSuspended, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxReward, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
 import { initMenu, setWizardWhere, disposeMenu } from './menu.js';
 import { initCareer, openCareer } from './careerui.js';
 import { createTutorial } from './tutorial.js';
@@ -31,7 +31,8 @@ import { padDir } from './padnav.js';
 import { pointCall } from './pointcall.js';
 import { tipCycle } from './tips.js';
 import { newTally, tallyEvents, tallyFrame } from './matchstats.js';
-import { isTouch, mountTouch } from './touch.js';
+import { isTouch, mountTouch, offerKeyLabel } from './touch.js';
+import { keepAwake } from './wakelock.js';
 
 const $ = (id) => document.getElementById(id);
 const matchOpts = () => ({ sets: parseInt($('sets').value), superTiebreak: $('sets').value === '3s', goldenPoint: $('golden').value === '1', starPoint: $('golden').value === 'star' });
@@ -45,7 +46,29 @@ mountKeyHelp($('help'));
 mountTouch($('touchUi'));
 if (isTouch()) document.body.classList.add('touch');  // CSS: no key help, rotate-to-landscape overlay
 addEventListener('pointerdown', unlockAudio, { once: true });
+addEventListener('touchend', unlockAudio, { once: true });
 addEventListener('keydown', unlockAudio, { once: true });
+addEventListener('pointerdown', () => {
+  if (isTouch() && document.body.classList.contains('pad')) {
+    document.body.classList.remove('pad');
+    if ((world || net) && !loadingScene) {
+      const t = $('touchUi');
+      if (t) t.hidden = false;
+    }
+    if (offers.size) renderOffers();
+  }
+}, { passive: true });
+$('unmuteBadge')?.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  unlockAudio();
+  const b = $('unmuteBadge');
+  if (b) b.hidden = true;
+});
+function updateUnmuteBadge() {
+  const b = $('unmuteBadge');
+  if (!b) return;
+  b.hidden = !isAudioSuspended();
+}
 // which input devices visitors use (once per session each)
 addEventListener('keydown', () => trackOnce('input/keyboard'), { once: true });
 addEventListener('touchstart', () => trackOnce('input/touch'), { once: true, passive: true });
@@ -196,7 +219,9 @@ async function setupScene(venue, ids, roster, rk) {
   const name = (t) => ids.filter(id => (id < 2 ? 0 : 1) === t).map(id => roster[id].name.split(' ').pop()).join(' / ');
   $('t0').textContent = name(0); $('t1').textContent = name(1);
   for (const id of ['hud', 'cam', 'help', 'fsBtn']) $(id).hidden = false;
-  $('touchUi').hidden = !isTouch();
+  $('touchUi').hidden = !isTouch() || document.body.classList.contains('pad');
+  updateUnmuteBadge();
+  keepAwake(true);
   $('msg').textContent = '';
   acc = 0; freeze = 0; slow = 0; shake = 0; approach = 0; bannerMode = ''; rallyFlags = {};
   energyUi = null; tiredWarned = false; emptyFoodWarned = false; clearOffers();
@@ -212,6 +237,8 @@ async function setupScene(venue, ids, roster, rk) {
 // status(text, lobby?) mirrors the #lobby line for callers that show their own panel; returns the net handle (or null if it did not connect).
 export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, bag, onEnd: end, status } = {}) {
   unlockAudio();
+  updateUnmuteBadge();
+  keepAwake(true);
   const settings = loadSettings();
   gameSpeed = $('speed') ? +$('speed').value : settings.speed;
   control = $('control') ? $('control').value : settings.control;
@@ -312,6 +339,8 @@ export async function startMatch(cfg) {
 
 // back to the menu after a match; career matches return to the career hub
 function toMenu() {
+  keepAwake(false);
+  const ub = $('unmuteBadge'); if (ub) ub.hidden = true;
   const isCareer = !!onEnd;
   if (!tut && world?.match.winner == null && net?.winner == null && (world || net)) {
     track('match-quit');  // left before the end (pause → Main menu)
@@ -379,7 +408,7 @@ const nextTip = tipCycle();
 const CAM_NAME = { tv: 'TV view', behind: 'Behind player', side: 'Side view', top: 'Top-down', ball: 'Follow ball', drone: 'Drone', free: 'Free camera' };
 let camShown = '';
 let device = 'kb', approach = 0, armed = true, hintKey = '';  // armed: the next overhead chance may start a slow approach
-addEventListener('keydown', () => { device = 'kb'; });
+addEventListener('keydown', () => { device = 'kb'; if (offers.size) renderOffers(); });
 function showHint(list, title = '') {
   const key = device + title + list.join();
   if (key === hintKey) return;
@@ -507,7 +536,7 @@ function renderOffers() {
   if (!box) return;
   const two = humans.length > 1 && !net;
   box.innerHTML = [...offers].map(([pid, o]) => {
-    const h = humans.indexOf(pid), pad = isTouch() ? 'tap' : (h > 0 || device === 'pad' || control === 'pad') ? padText('LT') : 'E';
+    const h = humans.indexOf(pid), pad = offerKeyLabel({ pid, humans, device, control, touch: isTouch() });
     return `<button type="button" class="eat-offer" data-pid="${pid}">${two ? `P${h + 1} ` : ''}⚡ ${Math.round(o.energy * 100)}% — eat ${FOOD_NAME[o.item]}? <kbd>${pad}</kbd></button>`;
   }).join('');
 }
@@ -674,6 +703,8 @@ function handleEvents(events, score, winner) {
       if (!tut && (rallyLen >= 8 || rallyFlags.smash || rallyFlags.glass)) setTimeout(() => startReplay(true), 900);
       rallyFlags = {};
       if (!tut && winner != null) {
+        keepAwake(false);
+        const ub = $('unmuteBadge'); if (ub) ub.hidden = true;
         track(`match-end/${!humans.length ? 'watch' : winner === myTeam ? 'win' : 'loss'}`);
         if (onEnd && net) {  // online: no local world, the server's score decides
           const done = onEnd; onEnd = null;
@@ -913,7 +944,18 @@ function padButtonDown() {
   const down = pads.some(gp => gp?.buttons.some(b => b.pressed));
   // hints follow P1's own controller: when P1 is on the keyboard, P2's pad must not switch them to pad buttons
   const mine = localControl(control, humans.length) === 'kb' ? [] : pads.filter(Boolean).slice(0, 1);
-  if (mine.some(gp => gp.buttons.some(b => b.pressed) || gp.axes.some(a => Math.abs(a) > 0.5))) device = 'pad';
+  if (mine.some(gp => gp.buttons.some(b => b.pressed) || gp.axes.some(a => Math.abs(a) > 0.5))) {
+    const padActive = isTouch() && !document.body.classList.contains('pad');
+    if (device !== 'pad' || padActive) {
+      device = 'pad';
+      if (isTouch()) {
+        document.body.classList.add('pad');
+        const t = $('touchUi');
+        if (t) t.hidden = true;
+      }
+      if (offers.size) renderOffers();
+    }
+  }
   const edge = down && !padWasDown; padWasDown = down; return edge;
 }
 
