@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { newWorld, stepWorld, snapshot, SHOTS } from '../src/game.js';
+import { newWorld, stepWorld, snapshot, SHOTS, BAG } from '../src/game.js';
 import { scoreText } from '../src/rules.js';
 import { aiInput } from '../src/ai.js';
 
@@ -77,7 +77,7 @@ export function startServer(port) {
     const players = cfg.players === 2 ? 2 : 4;
     const room = {
       code, cfg, seats: players === 2 ? [0, 2] : [0, 2, 1, 3], clients: new Map(), inputs: {}, started: false,
-      world: newWorld({ players, match: { sets: cfg.sets || 3, goldenPoint: cfg.goldenPoint !== false, starPoint: !!cfg.starPoint, superTiebreak: !!cfg.superTiebreak }, stats: {}, rackets: {} }),
+      world: newWorld({ players, match: { sets: cfg.sets || 3, goldenPoint: cfg.goldenPoint !== false, starPoint: !!cfg.starPoint, superTiebreak: !!cfg.superTiebreak }, stats: {}, rackets: {}, outdoor: !!cfg.outdoor }),
       chars: {}, looks: {}, names: {}, timer: null,
     };
     room.timer = setInterval(() => tick(room), 1000 / 60);
@@ -92,7 +92,7 @@ export function startServer(port) {
     const inp = {};
     for (const pl of w.players) if (pl.active) inp[pl.id] = taken.has(pl.id) ? room.inputs[pl.id] || {} : aiInput(w, pl.id, room.cfg.ai || 'club');
     stepWorld(w, inp, 1 / 60);
-    for (const id in room.inputs) if (room.inputs[id]) room.inputs[id].swing = null; // swing is an edge event
+    for (const id in room.inputs) if (room.inputs[id]) { room.inputs[id].swing = null; room.inputs[id].eat = false; } // edge events
     const events = w.events.splice(0);
     if (++frame % 2 && !events.some(e => e.type !== 'contact')) return; // 30 Hz unless something happened
     const msg = JSON.stringify({ type: 'state', snap: snapshot(w), score: scoreText(w.match), events, winner: w.match.winner });
@@ -114,7 +114,7 @@ export function startServer(port) {
       } else if (m.type === 'join') {
         const code = String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
         if (!code) return;
-        room = rooms.get(code) || makeRoom(code, { players: m.cfg?.players, sets: m.cfg?.sets, goldenPoint: m.cfg?.goldenPoint, starPoint: m.cfg?.starPoint, superTiebreak: m.cfg?.superTiebreak, ai: m.cfg?.ai, venue: m.cfg?.venue | 0, public: !!m.public, host: text(m.name || '', 16) });
+        room = rooms.get(code) || makeRoom(code, { players: m.cfg?.players, sets: m.cfg?.sets, goldenPoint: m.cfg?.goldenPoint, starPoint: m.cfg?.starPoint, superTiebreak: m.cfg?.superTiebreak, ai: m.cfg?.ai, venue: m.cfg?.venue | 0, outdoor: m.cfg?.outdoor === true, public: !!m.public, host: text(m.name || '', 16) });
         const fresh = !room.clients.size && !room.started;
         const taken = new Set(room.clients.values());
         const seat = room.seats.find(s => !taken.has(s));
@@ -125,7 +125,7 @@ export function startServer(port) {
         clampKeys(pl.stats, m.stats);
         clampKeys(pl.racket, m.racket);
         if (m.shoes) pl.shoes = { speed: clamp(m.shoes.speed, 0, 0.12), agility: clamp(m.shoes.agility, 0, 0.3) };
-        if (m.fuel) pl.fuel = { boost: clamp(+m.fuel.boost || 0, 0, 0.2), tire: clamp(+m.fuel.tire || 1, 0.9, 1) };  // career energy product
+        if (m.bag && typeof m.bag === 'object') pl.bag = Object.fromEntries(Object.keys(BAG).map(k => [k, clamp(Math.floor(+m.bag[k] || 0), 0, 16)]));  // career bag: counts only
         if (fresh && m.ball) {  // the host's match ball
           room.world.ballSpec = { speed: clamp(m.ball.speed, 1, 1.12), bounce: clamp(m.ball.bounce, 1, 1.07) };
           room.world.ball.bounce = room.world.ballSpec.bounce;
@@ -141,7 +141,7 @@ export function startServer(port) {
         const seat = room.clients.get(ws);
         const prev = room.inputs[seat];
         const mv = Array.isArray(m.move) ? m.move.slice(0, 2).map(v => Math.max(-1, Math.min(1, +v || 0))) : [0, 0];
-        room.inputs[seat] = { move: mv, swing: (m.swing === 'auto' || (m.swing in SHOTS && m.swing !== 'serve') ? m.swing : null) || prev?.swing || null, aim: Math.max(-1, Math.min(1, +m.aim || 0)) };
+        room.inputs[seat] = { move: mv, swing: (m.swing === 'auto' || (m.swing in SHOTS && m.swing !== 'serve') ? m.swing : null) || prev?.swing || null, aim: Math.max(-1, Math.min(1, +m.aim || 0)), eat: m.eat === true || !!prev?.eat };
       }
     });
     ws.on('close', () => {

@@ -168,8 +168,8 @@ function moveTo(pl, x, z) {
 }
 
 export function aiInput(w, pid, level = 'club') {
-  const out = { move: [0, 0], swing: null, aim: 0 };
   const pl = w.players[pid];
+  const out = { move: [0, 0], swing: null, aim: 0, eat: !!pl?.offer };  // AI always takes the food it is offered
   if (!pl?.active) return out;
   const L = LV[level] || LV.club, s = wstate(w), st = pstate(s, pid), T = pl.team, tm = s.team[T];
   const zs = T === 0 ? 1 : -1, m = w.match, r = m.rally;

@@ -10,9 +10,25 @@ export const REACH = 1.35, MAX_HIT_H = 2.9, SPEED = 5.2;
 // miss = extra error, soft = slower shots, reach = racket reach lost (all scale linearly with 1 - energy).
 export const ENERGY = { run: 0.012, stroke: 0.006, smash: 0.012, rallyFrom: 6, rallyStep: 0.08, rallyMax: 1.5, rest: 0.025, drink: 0.3,
   slow: 0.4, miss: 1.0, soft: 0.15, reach: 0.2 };
+// Hydration 0..1 drains while a point is played (faster when running, ×outdoor outside); below `dry` the player
+// is slower and gets less back between points. Tuned with AI play: no water -> under 0.30 around game 5 of a set.
+export const HYDRATION = { play: 0.0028, run: 0.0028, outdoor: 1.25, dry: 0.3, drySlow: 0.1, dryRest: 0.5 };
+// The bag: one drink at every changeover (water first), food offered there when energy < 0.5 (input `eat` takes it).
+// Effects live here, so a client only ever sends counts (the server clamps them).
+export const BAG = { bag_water: { hyd: 0.5 }, bag_isotonic: { hyd: 0.35, energy: 0.12 }, bag_banana: { energy: 0.12, tire: 0.95 }, bag_gel: { energy: 0.22 } };
+const DRINKS = ['bag_water', 'bag_isotonic'], FOODS = ['bag_banana', 'bag_gel'];
+const DEFAULT_BAG = { bag_water: Infinity, bag_banana: Infinity };  // Friendly, tutorial and AI players
+function consume(w, pl, item) {
+  const e = BAG[item];
+  pl.bag[item]--;
+  pl.hyd = Math.min(1, pl.hyd + (e.hyd || 0));
+  pl.energy = Math.min(1, pl.energy + (e.energy || 0));
+  pl.tireK *= e.tire || 1;
+  w.events.push({ type: 'consume', pid: pl.id, item, t: w.t });
+}
 const tire = (w, pl, amount) => {
   const k = (16 - pl.stats.stamina) / 10 * Math.min(ENERGY.rallyMax, 1 + Math.max(0, w.rally - ENERGY.rallyFrom) * ENERGY.rallyStep);
-  pl.energy = Math.max(0, pl.energy - amount * k * pl.fuel.tire);
+  pl.energy = Math.max(0, pl.energy - amount * k * pl.tireK);
 };
 
 // depth = metres from net on opponent side, t = flight time to first bounce, spin = topspin(+)/slice(-) rad/s
@@ -38,7 +54,7 @@ export function newWorld(opts = {}) {
     stats: { speed: 6, power: 6, control: 6, volley: 6, smash: 6, stamina: 6, ...(opts.stats?.[id] || {}) },
     racket: { power: 6, control: 6, spin: 6, sweetSpot: 6, ...(opts.rackets?.[id] || {}) },
     shoes: { speed: 0, agility: 0, ...(opts.shoes?.[id] || {}) },
-    fuel: { boost: 0, tire: 1, ...(opts.fuel?.[id] || {}) },  // career energy product: extra per changeover, fatigue factor
+    hyd: 1, tireK: 1, bag: { ...(opts.bag?.[id] || DEFAULT_BAG) }, offer: null,  // tireK: fatigue factor (a banana lowers it)
     form: Math.max(-0.1, Math.min(0, +opts.form?.[id] || 0)),  // career form (0 sharp .. -0.10 rusty): slower and more errors
   }));
   const w = { t: 0, ballSpec: { speed: 1, bounce: 1, ...opts.ball }, ball: newBall(), match: newMatch({ players: opts.players || 4, ...opts.match }), players,
@@ -173,8 +189,17 @@ function strike(w, pl, kind, aimX = 0) {
 function endPoint(w, r) {
   w.events.push({ type: 'point', team: r.point, why: r.why, rally: w.rally, t: w.t });
   const m = w.match, total = m.points[0] + m.points[1];
-  if (m.winner == null && (r.changeEnds || (m.opts.pointsTo && total % 8 === 0))) {  // changeover: water and a banana
-    for (const pl of w.players) pl.energy = Math.min(1, pl.energy + ENERGY.drink + pl.fuel.boost);
+  if (m.winner == null && (r.changeEnds || (m.opts.pointsTo && total % 8 === 0))) {  // changeover: a rest, a drink, maybe food
+    for (const pl of w.players) {
+      if (!pl.active) continue;
+      pl.energy = Math.min(1, pl.energy + ENERGY.drink);
+      const drink = DRINKS.find(k => pl.bag[k] > 0), food = FOODS.find(k => pl.bag[k] > 0);
+      if (drink) consume(w, pl, drink); else w.events.push({ type: 'nowater', pid: pl.id, t: w.t });
+      if (food && pl.energy < 0.5) {
+        pl.offer = { item: food, until: w.t + 6 };
+        w.events.push({ type: 'offer', pid: pl.id, item: food, energy: pl.energy, t: w.t });
+      }
+    }
     w.events.push({ type: 'drink', t: w.t });
   }
   w.state = w.match.winner != null ? 'over' : 'dead';
@@ -187,13 +212,19 @@ export function stepWorld(w, inputs, dt) {
   for (const pl of w.players) {
     if (!pl.active) continue;
     const inp = inputs[pl.id] || {};
+    if (pl.offer) {  // one food per changeover, taken within the offer's seconds
+      if (inp.eat && pl.bag[pl.offer.item] > 0) consume(w, pl, pl.offer.item);
+      if (inp.eat || w.t > pl.offer.until) pl.offer = null;
+    }
     if (pl.swing) { pl.swing.t += dt; if (pl.swing.t > 0.55) pl.swing = null; }
     // movement (server may shuffle within the serving zone before serving)
     const mv = inp.move || [0, 0];
     const len = Math.min(1, Math.hypot(mv[0], mv[1]));
+    const dry = pl.hyd < HYDRATION.dry;
+    if (w.state === 'play') pl.hyd = Math.max(0, pl.hyd - (HYDRATION.play + HYDRATION.run * len) * dt * (w.opts.outdoor ? HYDRATION.outdoor : 1));
     // feet planted while a stroke is pending or under way: aiming with the move keys must not walk you off the ball
     // (agile shoes keep a little more footwork during the stroke)
-    const spd = SPEED * (0.75 + pl.stats.speed / 24) * (1 + pl.shoes.speed) * (1 - ENERGY.slow * (1 - pl.energy)) * (1 + pl.form / 2) * (pl.swing || pl.want ? 0.35 + pl.shoes.agility : 1);
+    const spd = SPEED * (0.75 + pl.stats.speed / 24) * (1 + pl.shoes.speed) * (1 - ENERGY.slow * (1 - pl.energy)) * (1 + pl.form / 2) * (dry ? 1 - HYDRATION.drySlow : 1) * (pl.swing || pl.want ? 0.35 + pl.shoes.agility : 1);
     const tossing = w.state === 'toss' && pl.id === serverId(w.match);
     if (len > 0.05 && !tossing) {
       pl.p[0] += mv[0] / Math.hypot(...mv) * len * spd * dt;
@@ -201,7 +232,7 @@ export function stepWorld(w, inputs, dt) {
       pl.anim = len > 0.6 ? 'run' : 'walk';
       if (w.state === 'play') tire(w, pl, ENERGY.run * len * dt);
     } else pl.anim = 'idle';
-    if (w.state !== 'play') pl.energy = Math.min(1, pl.energy + ENERGY.rest * dt * pl.stats.stamina / 6);  // breathe between points
+    if (w.state !== 'play') pl.energy = Math.min(1, pl.energy + ENERGY.rest * dt * pl.stats.stamina / 6 * (dry ? HYDRATION.dryRest : 1));  // breathe between points
     const zs = pl.team === 0 ? 1 : -1;
     pl.p[0] = Math.max(-4.8, Math.min(4.8, pl.p[0]));
     pl.p[1] = zs * Math.max(0.4, Math.min(9.8, pl.p[1] * zs));
@@ -285,7 +316,7 @@ export function snapshot(w) {
   return {
     t: w.t, s: w.state,
     b: [...w.ball.p],
-    pl: w.players.map(p => [p.p[0], p.p[1], p.f, p.anim, p.swing ? p.swing.anim : 0, p.swing ? p.swing.t : 0, p.swing?.backhand ? 1 : 0, Math.round(p.energy * 100) / 100]),
+    pl: w.players.map(p => [p.p[0], p.p[1], p.f, p.anim, p.swing ? p.swing.anim : 0, p.swing ? p.swing.t : 0, p.swing?.backhand ? 1 : 0, Math.round(p.energy * 100) / 100, Math.round(p.hyd * 100) / 100]),
   };
 }
 

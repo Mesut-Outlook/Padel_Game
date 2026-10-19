@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newWorld, stepWorld } from '../src/game.js';
+import { newWorld, stepWorld, snapshot } from '../src/game.js';
 import { toWorld } from '../src/input.js';
 
 // naive bots: chase ball x, swing always -> match must progress and score points without throwing
@@ -245,26 +245,67 @@ test('aiming updates pl.aim while swing is armed and during hit', () => {
 });
 
 
-test('energy product: extra refill at the changeover and slower tiring', () => {
-  const changeover = (fuel) => {
-    const w = newWorld({ fuel: { 0: fuel } });
-    for (const p of w.players) p.energy = 0.3;
-    Object.assign(w.match, { sets: [[0, 0]], points: [3, 0] });
-    w.state = 'play'; Object.assign(w.match.rally, { phase: 'rally', lastHitTeam: 0, bouncesSinceHit: 1 });
-    Object.assign(w.ball, { p: [0, 0.5, -5], v: [0, -3, 0], w: [0, 0, 0], live: true });
-    for (let i = 0; i < 60 && !w.events.some(e => e.type === 'drink'); i++) stepWorld(w, {}, 1 / 60);
-    return w.players;
+// play the first game's last point so the next step is a changeover (odd games -> change ends)
+function toChangeover(opts, energy = 0.3) {
+  const w = newWorld(opts);
+  for (const p of w.players) p.energy = energy;
+  Object.assign(w.match, { sets: [[0, 0]], points: [3, 0] });
+  w.state = 'play'; Object.assign(w.match.rally, { phase: 'rally', lastHitTeam: 0, bouncesSinceHit: 1 });
+  Object.assign(w.ball, { p: [0, 0.5, -5], v: [0, -3, 0], w: [0, 0, 0], live: true });
+  for (let i = 0; i < 60 && !w.events.some(e => e.type === 'drink'); i++) stepWorld(w, {}, 1 / 60);
+  return w;
+}
+
+test('hydration: drains in play, faster when running; a dry player is slower', () => {
+  const w = newWorld(); w.state = 'play';
+  Object.assign(w.ball, { p: [0, -5, 0], v: [0, 0, 0], live: false });
+  for (let i = 0; i < 600; i++) stepWorld(w, { 0: { move: [Math.sin(i / 40) > 0 ? 1 : -1, 0] } }, 1 / 60);
+  assert.equal(newWorld().players[0].hyd, 1);
+  assert.ok(w.players[0].hyd < w.players[1].hyd && w.players[1].hyd < 1, `${w.players[0].hyd} ${w.players[1].hyd}`);
+  const dist = (hyd) => {
+    const v = newWorld(); v.state = 'play';
+    Object.assign(v.ball, { p: [0, -5, 0], v: [0, 0, 0], live: false });
+    const p = v.players[0]; p.p = [-4, 8]; p.hyd = hyd;
+    for (let i = 0; i < 30; i++) stepWorld(v, { 0: { move: [1, 0] } }, 1 / 60);
+    return p.p[0] + 4;
   };
-  const [gel, , noFuel] = changeover({ boost: 0.2, tire: 1 });
-  assert.ok(Math.abs(gel.energy - noFuel.energy - 0.2) < 1e-9, `${gel.energy} vs ${noFuel.energy}`);
-  const run = (fuel) => {
-    const w = newWorld({ fuel: { 0: fuel } }); w.state = 'play';
-    Object.assign(w.ball, { p: [0, -5, 0], v: [0, 0, 0], live: false });
-    w.players[0].p = [-4, 8];
-    for (let i = 0; i < 60; i++) stepWorld(w, { 0: { move: [1, 0] } }, 1 / 60);
-    return 1 - w.players[0].energy;
-  };
-  assert.ok(run({ tire: 0.9 }) < run({}) * 0.95, `${run({ tire: 0.9 })} vs ${run({})}`);
+  assert.ok(dist(0.2) < dist(1) * 0.95, `${dist(0.2)} vs ${dist(1)}`);
+  assert.ok(newWorld({ outdoor: true }).opts.outdoor);
+});
+
+test('bag: a changeover drinks water from the bag, isotonic when the water is gone, nowater when empty', () => {
+  const w = toChangeover({ bag: { 0: { bag_water: 2 }, 2: { bag_isotonic: 1 }, 1: {} } });
+  for (const p of w.players) p.hyd = 0.2;
+  const ev = (type, pid) => w.events.filter(e => e.type === type && e.pid === pid);
+  assert.equal(w.players[0].bag.bag_water, 1);
+  assert.equal(ev('consume', 0)[0].item, 'bag_water');
+  assert.equal(w.players[2].bag.bag_isotonic, 0);
+  assert.equal(ev('nowater', 1).length, 1);
+  assert.equal(ev('consume', 3)[0].item, 'bag_water');  // no bag given: unlimited default (Friendly, AI)
+  assert.equal(w.players[3].bag.bag_water, Infinity);
+});
+
+test('bag: low energy at a changeover offers food; eat takes it within 6 s, a banana slows tiring', () => {
+  const w = toChangeover({ bag: { 0: { bag_banana: 1, bag_gel: 1 }, 2: { bag_gel: 1 } } }, 0.1);  // 0.1 + changeover rest stays below 0.5
+  const offer = w.events.find(e => e.type === 'offer' && e.pid === 0);
+  assert.equal(offer.item, 'bag_banana');  // the cheapest food first
+  const e0 = w.players[0].energy;
+  stepWorld(w, { 0: { eat: true } }, 1 / 60);
+  assert.equal(w.players[0].bag.bag_banana, 0);
+  assert.ok(Math.abs(w.players[0].energy - e0 - 0.12) < 0.01, `${w.players[0].energy} vs ${e0}`);
+  assert.equal(w.players[0].tireK, 0.95);
+  assert.equal(w.players[0].offer, null);
+  stepWorld(w, { 0: { eat: true } }, 1 / 60);
+  assert.equal(w.players[0].bag.bag_gel, 1);  // one food per changeover
+  for (let i = 0; i < 6.1 * 60; i++) stepWorld(w, {}, 1 / 60);
+  stepWorld(w, { 2: { eat: true } }, 1 / 60);
+  assert.equal(w.players[2].bag.bag_gel, 1);  // offer expired
+  assert.equal(toChangeover({}, 0.9).events.some(e => e.type === 'offer'), false);  // not tired: no offer
+});
+
+test('snapshot carries hydration at index 8', () => {
+  const w = newWorld(); w.players[0].hyd = 0.456;
+  assert.equal(snapshot(w).pl[0][8], 0.46);
 });
 
 test('touch stick moves like the keyboard', async () => {

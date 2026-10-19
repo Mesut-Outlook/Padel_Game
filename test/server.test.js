@@ -52,18 +52,19 @@ test('join keeps a small look, drops an oversized one, and works without one', a
   } finally { await srv.close(); }
 });
 
-test('host ball spec, player shoes and energy product are clamped into the room world', async () => {
+test('host ball spec, player shoes and bag are clamped into the room world', async () => {
   const srv = await startServer(0);
   try {
     const a = client(srv.port);
     const lob = a.next('lobby');
-    await a.send({ type: 'join', code: 'BALL', cfg: { players: 2 }, ball: { speed: 9, bounce: 1.04 }, shoes: { speed: 5, agility: 0.1 }, fuel: { boost: 0.9, tire: 0.2, name: 'x' } });
+    await a.send({ type: 'join', code: 'BALL', cfg: { players: 2 }, ball: { speed: 9, bounce: 1.04 }, shoes: { speed: 5, agility: 0.1 }, bag: { bag_water: 99, bag_gel: -3, bag_banana: 2.7, steak: 5 } });
     await lob;
     const w = srv.rooms.get('BALL').world;
     assert.deepEqual(w.ballSpec, { speed: 1.12, bounce: 1.04 });
     assert.equal(w.ball.bounce, 1.04);
     assert.deepEqual(w.players[0].shoes, { speed: 0.12, agility: 0.1 });
-    assert.deepEqual(w.players[0].fuel, { boost: 0.2, tire: 0.9 });  // energy product clamped to the shop's range
+    assert.deepEqual(w.players[0].bag, { bag_water: 16, bag_isotonic: 0, bag_banana: 2, bag_gel: 0 });  // counts only: effects live in game.js
+    assert.equal(w.players[2].bag.bag_water, Infinity);  // AI seat: the default bag
     a.ws.close();
   } finally { await srv.close(); }
 });
@@ -204,3 +205,19 @@ test('join: look preserves valid racket, racketColor, and racketShape', async ()
   } finally { await srv.close(); }
 });
 
+
+test('online: eat input waits for the server step; cfg.outdoor reaches the world', async () => {
+  const srv = await startServer(0);
+  try {
+    const a = client(srv.port);
+    const lob = a.next('lobby');
+    await a.send({ type: 'join', code: 'EAT', cfg: { players: 2, outdoor: true } });
+    await lob;
+    const room = srv.rooms.get('EAT');
+    assert.equal(room.world.opts.outdoor, true);
+    await a.send({ type: 'input', move: [0, 0], eat: true });
+    await new Promise(r => setTimeout(r, 50));
+    assert.equal(room.inputs[0].eat, true);  // not started: kept until a step uses it
+    a.ws.close();
+  } finally { await srv.close(); }
+});
