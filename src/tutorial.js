@@ -4,11 +4,13 @@ import * as THREE from 'three';
 import { aimVelocity } from './physics.js';
 import { newMatch, servePosition } from './rules.js';
 import { padText } from './padstyle.js';
+import { isTouch } from './touch.js';
 
 // key names per device; the instructions follow whichever device was used last
 const KEYS = {
   kb: { move: 'WASD / arrow keys', hit: 'Space', lob: 'K', smash: 'L', chiquita: 'U', slice: 'F', contra: 'O', left: 'A', right: 'D', cam: 'C', replay: 'R', next: 'Enter' },
   pad: { move: 'left stick', hit: 'A', lob: 'B', smash: 'Y', chiquita: 'X', slice: 'LB', contra: 'RT', left: 'stick ←', right: 'stick →', cam: 'View', replay: 'R3', next: 'Start → menu' },
+  touch: { move: 'the stick (thumb down on the left half, then drag)', hit: 'SHOT', lob: 'LOB', smash: 'SMASH', chiquita: 'CHIQUITA', slice: 'SLICE', contra: 'CONTRA', left: 'the stick ←', right: 'the stick →', cam: '🎥', replay: '🔁', next: 'Next ›' },
 };
 const OVERHEAD = ['smash', 'bandeja', 'vibora', 'bajada', 'rulo'];
 const landed = (a) => a.land && a.land[1] < 0;  // first bounce after your hit was on the opponent's side
@@ -79,9 +81,10 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
   const R = hand === 'left' ? -1 : 1;
   const done = loadDone();
   let li = LESSONS.findIndex(l => !done.has(l.id)); if (li < 0) li = 0;
-  let count = 0, att = null, wait = 0, msg = '', msgT = 0, device = 'kb', camSeen = null, camChanges = 0, sawReplay = false;
+  let count = 0, att = null, wait = 0, msg = '', msgT = 0, device = isTouch() ? 'touch' : navigator.getGamepads?.().some(Boolean) ? 'pad' : 'kb',  // touch first: its buttons are on screen until a pad is pressed
+    camSeen = null, camChanges = 0, sawReplay = false;
   // pad labels follow the connected pad (✕ ○ □ △ on a PlayStation pad)
-  const keys = () => (device === 'pad' ? Object.fromEntries(Object.entries(KEYS.pad).map(([k, v]) => [k, padText(v)])) : KEYS.kb);
+  const keys = () => (device === 'pad' ? Object.fromEntries(Object.entries(KEYS.pad).map(([k, v]) => [k, padText(v)])) : KEYS[device]);
 
   // --- DOM panel
   const el = document.createElement('div');
@@ -89,7 +92,15 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
   el.innerHTML = '<div class="tut-step"></div><div class="tut-title"></div><div class="tut-text"></div><div class="tut-dots"></div><div class="tut-msg"></div><div class="tut-foot"></div>';
   document.body.appendChild(el);
   const $ = (c) => el.querySelector(c);
-  addEventListener('keydown', () => { device = 'kb'; });
+  // the touch buttons send untrusted key events, so only a real key switches to keyboard names
+  addEventListener('keydown', (e) => { if (e.isTrusted) device = 'kb'; });
+  addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') device = 'touch'; });
+  // the footer's key name is also a button (touch has no Enter): skip lesson / main menu
+  el.addEventListener('pointerdown', (e) => {
+    if (!e.target.closest('.tut-next')) return;
+    e.preventDefault();
+    dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter' })); dispatchEvent(new KeyboardEvent('keyup', { code: 'Enter' }));
+  });
 
   // --- floor markers: rings for the movement lesson, translucent target zones on the opponent court
   const marks = new THREE.Group(); scene.add(marks);
@@ -113,7 +124,7 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
     $('.tut-text').innerHTML = l.text(k, count);
     $('.tut-dots').innerHTML = Array.from({ length: l.need }, (_, i) => `<i class="${i < count ? 'on' : ''}"></i>`).join('');
     $('.tut-msg').textContent = msgT > 0 ? msg : '';
-    $('.tut-foot').innerHTML = `<b>${k.next}</b>: skip lesson · ${LESSONS.map((x, i) => `<span class="${done.has(x.id) ? 'ok' : ''}${i === li ? ' cur' : ''}">${i + 1}</span>`).join('')}`;
+    $('.tut-foot').innerHTML = `<b class="tut-next">${k.next}</b>: skip lesson · ${LESSONS.map((x, i) => `<span class="${done.has(x.id) ? 'ok' : ''}${i === li ? ' cur' : ''}">${i + 1}</span>`).join('')}`;
   }
   const say = (t, s = 1.4) => { msg = t; msgT = s; };
 
@@ -142,7 +153,7 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
     el.classList.add('final');
     const k = keys();
     const all = LESSONS.every(l => done.has(l.id));
-    el.innerHTML = `<div class="tut-title">${all ? '🏆 Training Complete!' : 'Training Finished'}</div>${all ? '' : '<div class="tut-step">You can retry any ○ lessons from TRAINING in the main menu</div>'}<div class="tut-text">${LESSONS.map(l => `${done.has(l.id) ? '✓' : '○'} ${l.title}`).join('<br>')}</div><div class="tut-foot"><b>${k.next}</b>: main menu</div>`;
+    el.innerHTML = `<div class="tut-title">${all ? '🏆 Training Complete!' : 'Training Finished'}</div>${all ? '' : '<div class="tut-step">You can retry any ○ lessons from TRAINING in the main menu</div>'}<div class="tut-text">${LESSONS.map(l => `${done.has(l.id) ? '✓' : '○'} ${l.title}`).join('<br>')}</div><div class="tut-foot"><b class="tut-next">${k.next}</b>: main menu</div>`;
     li = -1;
   }
   function verdict(ok) {

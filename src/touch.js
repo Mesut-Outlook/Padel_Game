@@ -14,18 +14,28 @@ export function offerKeyLabel({ pid = 0, humans = [0], device = 'kb', control = 
 
 const TIPS_SEEN = 'padel.touchTipsSeen';
 const STICK_R = 56;  // px from the centre to full speed
-const BUTTONS = [['Space', 'SHOT', 'tc-shot'], ['KeyK', 'LOB', 'tc-lob'], ['KeyL', 'SMASH', 'tc-smash'],
-  ['KeyU', 'CHIQUITA', 'tc-mini'], ['KeyI', 'VÍBORA', 'tc-mini'], ['KeyO', 'CONTRA', 'tc-mini'], ['KeyF', 'SLICE', 'tc-mini']];  // minis: special shots, slice = serve
+// shot buttons ring the big SHOT button (bottom right): [key, label, class, radius px, angle° (180 = left, 90 = up)].
+// Inner ring = rally shots by height (lob left, víbora diagonal, smash up); outer ring = special shots.
+const BUTTONS = [
+  ['Space', 'SHOT', 'tc-shot', 0, 0],
+  ['KeyK', 'LOB', 'tc-ring', 100, 180], ['KeyI', 'VÍBORA', 'tc-ring', 100, 135], ['KeyL', 'SMASH', 'tc-ring', 100, 90],
+  ['KeyU', 'CHIQUITA', 'tc-mini', 172, 172], ['KeyO', 'CONTRA', 'tc-mini', 172, 135], ['KeyF', 'SLICE', 'tc-mini', 172, 98],
+];
+const SHOT_C = 50;  // px from the box's right/bottom edge to the SHOT button's centre
+const TOP = [['KeyC', '🎥', 'Camera'], ['Escape', '⏸', 'Pause'], ['KeyR', '🔁', 'Replay'], ['KeyM', '🔈', 'Sound on / off']];
 
 export function mountTouch(el) {
   el.innerHTML = `
     <div class="tc-zone"><div class="tc-base" hidden><i class="tc-knob"></i></div></div>
-    <div class="tc-btns">${BUTTONS.map(([code, label, cls]) => `<button type="button" class="tc-btn ${cls}" data-key="${code}">${label}</button>`).join('')}</div>
-    <div class="tc-top"><button type="button" class="tc-btn tc-small" data-key="KeyC" aria-label="Camera">🎥</button><button type="button" class="tc-btn tc-small" data-key="Escape" aria-label="Pause">⏸</button><button type="button" class="tc-btn tc-small tc-q" aria-label="How to play">❔</button></div>
+    <div class="tc-btns">${BUTTONS.map(([code, label, cls, r, deg]) => {
+      const a = deg * Math.PI / 180, x = SHOT_C - r * Math.cos(a), y = SHOT_C + r * Math.sin(a);
+      return `<button type="button" class="tc-btn ${cls}" data-key="${code}" style="right:${x.toFixed(0)}px;bottom:${y.toFixed(0)}px">${label}</button>`;
+    }).join('')}</div>
+    <div class="tc-top">${TOP.map(([code, icon, name]) => `<button type="button" class="tc-btn tc-small" data-key="${code}" aria-label="${name}">${icon}</button>`).join('')}<button type="button" class="tc-btn tc-small tc-q" aria-label="How to play">❔</button></div>
     <div class="tc-tips" hidden>
       <div class="tc-tip tt-move">👆 Put your thumb down anywhere here<br>and drag to run</div>
-      <div class="tc-tip tt-btns">SHOT: smart shot · serve<br>stick left / right while tapping = aim<br>LOB · SMASH · small buttons: special shots<br>(CONTRA = off your own glass, SLICE = serve)</div>
-      <div class="tc-tip tt-top">camera · pause · these tips</div>
+      <div class="tc-tip tt-btns">SHOT: smart shot · serve<br>stick left / right while tapping = aim<br>inner ring: LOB · VÍBORA · SMASH<br>outer ring: CHIQUITA · CONTRA (off your glass) · SLICE serve</div>
+      <div class="tc-tip tt-top">camera · pause · replay · sound · these tips</div>
       <button type="button" class="tc-tip tt-ok">Got it ✓</button>
     </div>`;
   const zone = el.querySelector('.tc-zone'), base = el.querySelector('.tc-base'), knob = el.querySelector('.tc-knob');

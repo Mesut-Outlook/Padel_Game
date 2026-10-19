@@ -708,21 +708,21 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   #touchUi .tc-zone { position: absolute; left: 0; bottom: 0; width: 45%; height: 75%; pointer-events: auto; touch-action: none; }
   #touchUi .tc-base { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); background: rgba(10,18,28,.35); }
   #touchUi .tc-knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(216,245,58,.85); }
-  #touchUi .tc-btns { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); display: grid; gap: 12px; align-items: center; pointer-events: auto; }
-  #touchUi .tc-btn { touch-action: none; user-select: none; -webkit-user-select: none; width: 62px; height: 62px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); background: rgba(10,18,28,.6); color: #fff; font: 800 13px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 1px; padding: 0; }
+  #touchUi .tc-btns { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); width: 260px; height: 260px; pointer-events: none; transform-origin: bottom right; }
+  #touchUi .tc-btn { touch-action: none; user-select: none; -webkit-user-select: none; width: 62px; height: 62px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); background: rgba(10,18,28,.6); color: #fff; font: 800 13px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 1px; padding: 0; pointer-events: auto; }
+  #touchUi .tc-btns .tc-btn { position: absolute; transform: translate(50%, 50%); }  /* right/bottom = the button's centre (src/touch.js) */
   #touchUi .tc-btn:active { border-color: var(--acc); background: rgba(216,245,58,.3); }
-  #touchUi .tc-btns { grid-template-columns: 62px 88px; }
-  #touchUi .tc-shot { grid-column: 2; grid-row: 3 / span 2; width: 88px; height: 88px; background: rgba(216,245,58,.85); color: #0b1520; font-size: 16px; }
-  #touchUi .tc-lob { grid-column: 1; grid-row: 3; }
-  #touchUi .tc-smash { grid-column: 1; grid-row: 4; }
-  #touchUi .tc-mini { width: 100%; height: 34px; border-radius: 17px; font-size: 11px; letter-spacing: .5px; background: rgba(255,159,67,.35); border-color: rgba(255,159,67,.75); }  /* special shots, coloured like kontroller.html */
+  #touchUi .tc-shot { width: 92px; height: 92px; background: rgba(216,245,58,.85); color: #0b1520; font-size: 17px; }
+  #touchUi .tc-ring { width: 60px; height: 60px; font-size: 12px; letter-spacing: .5px; }
+  #touchUi .tc-mini { width: 58px; height: 58px; font-size: 10.5px; letter-spacing: .3px; background: rgba(255,159,67,.3); border-color: rgba(255,159,67,.8); }  /* special shots, orange like kontroller.html */
+  @media (max-height: 420px) { #touchUi .tc-btns { transform: scale(.82); } }  /* small phones: the ring stays clear of the scoreboard */
   #touchUi .tc-top { position: absolute; top: max(12px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); display: flex; gap: 8px; pointer-events: auto; }
   #touchUi .tc-small { width: 44px; height: 44px; font-size: 18px; }
   #touchUi .tc-tips { position: absolute; inset: 0; pointer-events: none; }  /* play goes on under the tips */
   #touchUi .tc-tip { position: absolute; padding: 8px 12px; border-radius: 10px; background: rgba(10,18,28,.85); border: 1px dashed var(--acc); color: #fff; font: 700 14px/1.35 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: .5px; text-align: center; }
   #touchUi .tt-move { left: 22.5%; top: 62%; transform: translate(-50%, -50%); }
-  #touchUi .tt-btns { right: max(190px, calc(env(safe-area-inset-right) + 190px)); bottom: max(28px, env(safe-area-inset-bottom)); }
-  #touchUi .tt-top { left: max(176px, calc(env(safe-area-inset-left) + 176px)); top: max(18px, env(safe-area-inset-top)); }
+  #touchUi .tt-btns { right: max(290px, calc(env(safe-area-inset-right) + 290px)); bottom: max(28px, env(safe-area-inset-bottom)); }
+  #touchUi .tt-top { left: max(280px, calc(env(safe-area-inset-left) + 280px)); top: max(18px, env(safe-area-inset-top)); }
   #touchUi .tt-ok { left: 50%; top: 40%; transform: translateX(-50%); pointer-events: auto; border-style: solid; background: var(--acc); color: #0b1520; font-size: 16px; padding: 10px 22px; }
   body.touch { overscroll-behavior: none; touch-action: manipulation; }
   body.touch #fsBtn { display: none !important; }  /* fullscreen stays in the pause menu */
@@ -798,6 +798,9 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   #tutorial .tut-foot { margin-top: 8px; font-size: 12px; color: #9fb3c8; } #tutorial .tut-foot b { color: #fff; }
   #tutorial .tut-foot span { display: inline-block; min-width: 16px; text-align: center; margin-left: 2px; border-radius: 4px; } #tutorial .tut-foot span.ok { color: #111; background: #d8f53a; } #tutorial .tut-foot span.cur { outline: 1px solid #fff; }
   #tutorial.final { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+  #tutorial .tut-next { cursor: pointer; }
+  body.touch #tutorial { pointer-events: none; }  /* the stick still works under the lesson panel */
+  body.touch #tutorial .tut-next { pointer-events: auto; display: inline-block; padding: 6px 12px; border-radius: 8px; background: #d8f53a; color: #0b1520; }
   /* shot coach (main.js): suggested keys for overheads, glass rebounds and lobs */
   #shotHint { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; background: rgba(10,18,28,.85); border: 1px solid #ffffff1a; border-radius: 12px; padding: 8px 12px; z-index: 3; backdrop-filter: blur(6px); }
   #shotHint .sh-t { font: 800 12px system-ui; letter-spacing: 1.5px; color: #9fb3c8; text-transform: uppercase; margin-right: 4px; }
