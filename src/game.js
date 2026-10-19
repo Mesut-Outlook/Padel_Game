@@ -5,9 +5,13 @@ import { newMatch, onHit, onContact, servePosition, serviceBox, serverId } from 
 export const REACH = 1.35, MAX_HIT_H = 2.9, SPEED = 5.2;
 // Energy 0..1: running and strokes drain it (long rallies ever faster, low stamina faster), points and changeover
 // drink breaks give it back. Tired players run slower and miss more. ponytail: tuning knobs, calibrate in play.
-export const ENERGY = { run: 0.012, stroke: 0.006, smash: 0.012, rallyFrom: 6, rallyStep: 0.08, rest: 0.008, drink: 0.3 };
+// drain: run (per second at full stick), stroke / smash (per hit), long rallies multiply it (capped at rallyMax);
+// refill: rest (per second between points), drink (changeover). Effects at energy 0: slow = speed lost,
+// miss = extra error, soft = slower shots, reach = racket reach lost (all scale linearly with 1 - energy).
+export const ENERGY = { run: 0.012, stroke: 0.006, smash: 0.012, rallyFrom: 6, rallyStep: 0.08, rallyMax: 1.5, rest: 0.025, drink: 0.3,
+  slow: 0.4, miss: 1.0, soft: 0.15, reach: 0.2 };
 const tire = (w, pl, amount) => {
-  const k = (16 - pl.stats.stamina) / 10 * (1 + Math.max(0, w.rally - ENERGY.rallyFrom) * ENERGY.rallyStep);
+  const k = (16 - pl.stats.stamina) / 10 * Math.min(ENERGY.rallyMax, 1 + Math.max(0, w.rally - ENERGY.rallyFrom) * ENERGY.rallyStep);
   pl.energy = Math.max(0, pl.energy - amount * k * pl.fuel.tire);
 };
 
@@ -67,7 +71,8 @@ function resetPositions(w) {
 // 0.6 m in front so the dropped ball clears the front foot of the side-on stance
 const serveBall = (s) => [s.p[0] - Math.sign(s.p[0]) * 0.35, 1.2, s.p[1] - Math.sign(s.p[1]) * 0.6];
 
-const reachable = (pl, b) => b.live && b.p[1] > 0.22 && b.p[1] < MAX_HIT_H && Math.hypot(b.p[0] - pl.p[0], b.p[2] - pl.p[1]) < REACH;
+const reachable = (pl, b) => b.live && b.p[1] > 0.22 && b.p[1] < MAX_HIT_H
+  && Math.hypot(b.p[0] - pl.p[0], b.p[2] - pl.p[1]) < REACH * (1 - ENERGY.reach * (1 - pl.energy));  // tired arms reach less
 
 function autoShot(w, pl) {
   const b = w.ball, nearNet = Math.abs(pl.p[1]) < 4.5, r = w.match.rally;
@@ -104,7 +109,7 @@ function strike(w, pl, kind, aimX = 0) {
   if (w.match.rally.bouncesSinceHit === 0 && kind !== 'serve') statK *= 1 + (6 - pl.stats.volley) * 0.08;
   if (overhead) statK *= 1 + (6 - pl.stats.smash) * 0.08;
   statK *= Math.max(0.5, 1 + Math.max(0, w.rally - 8) * 0.02 * (6 - pl.stats.stamina));
-  statK *= 1 + (1 - pl.energy) * 0.5;  // a tired player misses more
+  statK *= 1 + (1 - pl.energy) * ENERGY.miss;  // a tired player misses more
   tire(w, pl, overhead ? ENERGY.smash : ENERGY.stroke);
 
   let depth = s.depth, t = s.t;
@@ -113,7 +118,7 @@ function strike(w, pl, kind, aimX = 0) {
   if (kind === 'drive') t *= 1.15 - pow * 0.3;
   if (quality === 'perfect') t *= 0.92;
   t /= w.ballSpec.speed;
-  t *= 1 + (1 - pl.energy) * 0.08;  // and hits a little softer
+  t *= 1 + (1 - pl.energy) * ENERGY.soft;  // and hits softer
 
   let err = (1 - ctl) * 1.4 * statK;
   if (quality === 'perfect') err *= 0.6;
@@ -186,7 +191,7 @@ export function stepWorld(w, inputs, dt) {
     const len = Math.min(1, Math.hypot(mv[0], mv[1]));
     // feet planted while a stroke is pending or under way: aiming with the move keys must not walk you off the ball
     // (agile shoes keep a little more footwork during the stroke)
-    const spd = SPEED * (0.75 + pl.stats.speed / 24) * (1 + pl.shoes.speed) * (0.75 + 0.25 * pl.energy) * (pl.swing || pl.want ? 0.35 + pl.shoes.agility : 1);
+    const spd = SPEED * (0.75 + pl.stats.speed / 24) * (1 + pl.shoes.speed) * (1 - ENERGY.slow * (1 - pl.energy)) * (pl.swing || pl.want ? 0.35 + pl.shoes.agility : 1);
     const tossing = w.state === 'toss' && pl.id === serverId(w.match);
     if (len > 0.05 && !tossing) {
       pl.p[0] += mv[0] / Math.hypot(...mv) * len * spd * dt;

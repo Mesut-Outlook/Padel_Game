@@ -282,3 +282,23 @@ test('local control: two humans with two pads both play on pads, otherwise P1 ke
   assert.equal(localControl('auto', 1, 2), 'auto'); // one human: keyboard and 1st pad together
   assert.equal(localControl('kb', 2, 2), 'kb');     // an explicit setting wins
 });
+
+test('fatigue is felt: at energy 0 a player runs at 60% speed, reaches less, and long rallies drain at most rallyMax', async () => {
+  const { ENERGY } = await import('../src/game.js');
+  const run = (energy) => {
+    const w = newWorld(); w.state = 'play';
+    Object.assign(w.ball, { p: [0, -5, 0], v: [0, 0, 0], live: false });
+    const p = w.players[0]; p.p = [-4, 8]; p.energy = energy;
+    for (let i = 0; i < 30; i++) stepWorld(w, { 0: { move: [1, 0] } }, 1 / 60);
+    return p.p[0] + 4;
+  };
+  const r = run(0) / run(1);
+  assert.ok(Math.abs(r - (1 - ENERGY.slow)) < 0.05, `speed ratio ${r}`);
+  const drain = (rally) => {
+    const w = newWorld(); w.state = 'play'; w.rally = rally;
+    Object.assign(w.ball, { p: [0, -5, 0], v: [0, 0, 0], live: false });
+    for (let i = 0; i < 60; i++) stepWorld(w, { 0: { move: [1, 0] } }, 1 / 60);
+    return 1 - w.players[0].energy;
+  };
+  assert.ok(Math.abs(drain(60) / drain(0) - ENERGY.rallyMax) < 0.01, `${drain(60)} vs ${drain(0)}`);
+});
