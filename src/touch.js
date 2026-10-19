@@ -58,12 +58,15 @@ export function mountTouch(el) {
   const end = (e) => { if (e.pointerId !== id) return; id = null; base.hidden = true; setTouchMove(0, 0); };
   zone.addEventListener('pointerup', end);
   zone.addEventListener('pointercancel', end);
+  // the tips go away on 'Got it', on the first use of the stick or a button (it is learned), or after 10 s
   const tips = el.querySelector('.tc-tips');
-  el.querySelector('.tc-q').addEventListener('pointerdown', (e) => { e.preventDefault(); tips.hidden = !tips.hidden; });
-  el.querySelector('.tt-ok').addEventListener('pointerdown', (e) => {
-    e.preventDefault(); tips.hidden = true;
+  const seen = () => {
+    tips.hidden = true; clearTimeout(tipsTimer);
     try { localStorage.setItem(TIPS_SEEN, '1'); } catch { /* storage blocked: tips come back next match */ }
-  });
+  };
+  el.querySelector('.tc-q').addEventListener('pointerdown', (e) => { e.preventDefault(); tips.hidden = !tips.hidden; armTips(); });
+  el.querySelector('.tt-ok').addEventListener('pointerdown', (e) => { e.preventDefault(); seen(); });
+  el.addEventListener('pointerdown', (e) => { if (!tips.hidden && !e.target.closest('.tc-q, .tc-tips')) seen(); }, true);
   for (const b of el.querySelectorAll('[data-key]')) {
     b.addEventListener('pointerdown', (e) => {
       e.preventDefault();  // a button is a key press: input.js queues it, and a tap skips a replay like a key does
@@ -73,8 +76,15 @@ export function mountTouch(el) {
   }
 }
 
-// the touch tips show at match start on a touch screen until 'Got it' is tapped; ❔ brings them back
+// the touch tips show at a match start on a touch screen until they are seen; ❔ brings them back
+let tipsTimer = 0;
+function armTips() {
+  clearTimeout(tipsTimer);
+  const tips = document.querySelector('#touchUi .tc-tips');
+  if (tips && !tips.hidden) tipsTimer = setTimeout(() => { tips.hidden = true; }, 10000);
+}
 export function showTouchTips(el) {
   try { if (localStorage.getItem(TIPS_SEEN)) return; } catch { /* storage blocked: show them */ }
   el.querySelector('.tc-tips').hidden = false;
+  armTips();
 }

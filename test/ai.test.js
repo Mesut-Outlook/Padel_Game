@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newWorld, stepWorld } from '../src/game.js';
-import { aiInput } from '../src/ai.js';
+
+// Seeded Math.random: a whole AI match is random, and pro beat club in only ~97% of runs, so CI failed now and then.
+// Set before the game modules load (ai.js keeps its own reference to Math.random).
+let seed = 20261020;
+Math.random = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+const { newWorld, stepWorld } = await import('../src/game.js');
+const { aiInput } = await import('../src/ai.js');
 
 // Plays a full AI-vs-AI match; levels = [team0 level, team1 level].
 function play(opts, levels, minutes = 20) {
