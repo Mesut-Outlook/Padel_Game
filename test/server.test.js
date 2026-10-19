@@ -96,6 +96,20 @@ test('join: look is whitelisted (bad markup/colours/keys dropped), stats and rac
   } finally { await srv.close(); }
 });
 
+test('join: look level is clamped to 0.5-7', async () => {
+  const srv = await startServer(0);
+  try {
+    const a = client(srv.port), b = client(srv.port);
+    let lob = a.next('lobby');
+    await a.send({ type: 'join', code: 'LVL1', cfg: { players: 2 }, look: { level: 12 } });
+    assert.equal((await lob).looks[0].level, 7);
+    lob = b.next('lobby');
+    await b.send({ type: 'join', code: 'LVL2', cfg: { players: 2 }, look: { level: 'x' } });
+    assert.equal((await lob).looks[0].level, undefined);
+    a.ws.close(); b.ws.close();
+  } finally { await srv.close(); }
+});
+
 test('join: look outfit sanitizes style, pattern, accent and chest text (drops invalid values)', async () => {
   const srv = await startServer(0);
   try {

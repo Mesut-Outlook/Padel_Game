@@ -1,17 +1,21 @@
 // Career profile and economy (pure: no DOM, shared with tests). Balance numbers come in as `eco` (data/economy.json).
 // The profile is one JSON object saved in the browser; storage is passed in so a blocked localStorage never crashes.
+import { tierAt, rateMatch, matchShare, idleReliability, startCredits } from './level.js';
+
 export const PROFILE_KEY = 'padel.career.v1';
-const VERSION = 1;
+const VERSION = 2;  // 2: level / reliability / bestTier, stats start at 5 (v1 profiles migrate on load)
 const STATS = ['speed', 'power', 'control', 'volley', 'smash', 'stamina'];
 
-// template = a roster character (data/characters.json) whose look is the starting point; look = the player's edits
-export function newProfile(template, look = {}) {
+// template = a roster character (data/characters.json) whose look is the starting point; look = the player's edits;
+// start = the level from the questionnaire / Playtomic entry (level.js), a high start comes with some Credits
+export function newProfile(template, look = {}, start = { level: 1.5, reliability: 0.2 }) {
   const { stats: _s, aiLevel: _a, ...appearance } = template;
   return {
     version: VERSION,
     player: { ...appearance, ...look, id: 'me', templateId: template.id },
-    stats: Object.fromEntries(STATS.map(k => [k, 4])),
-    credits: 0, rankingPoints: 0,
+    stats: Object.fromEntries(STATS.map(k => [k, 5])),
+    level: start.level, reliability: start.reliability, bestTier: tierAt(start.level).index, lastCareerMatch: null,
+    credits: startCredits(start.level), rankingPoints: 0,
     inventory: ['r01', 'shoe_starter', 'kit_starter', 'ball_standard'],
     equipped: { racket: 'r01', shoes: 'shoe_starter', kit: 'kit_starter', ball: 'ball_standard', fuel: null },
     supplies: {},  // energy products (type 'fuel'): id -> count left; older profiles have no field = {}
@@ -22,15 +26,44 @@ export function newProfile(template, look = {}) {
 
 const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x);
 const isNum = (x) => typeof x === 'number' && Number.isFinite(x);
-const valid = (p) => isObj(p) && p.version === VERSION && isObj(p.player) && isObj(p.stats) && Array.isArray(p.inventory)
+const valid = (p, version = VERSION) => isObj(p) && p.version === version && isObj(p.player) && isObj(p.stats) && Array.isArray(p.inventory)
   && isNum(p.credits) && isNum(p.rankingPoints) && isObj(p.equipped) && isObj(p.history) && Object.values(p.stats).every(isNum);
 
 export function loadProfile(storage) {
   let raw;
   try { raw = storage.getItem(PROFILE_KEY); } catch { return { profile: null, status: 'unavailable' }; }
   if (raw == null) return { profile: null, status: 'none' };
-  try { const p = JSON.parse(raw); return valid(p) ? { profile: p, status: 'ok' } : { profile: null, status: 'corrupt' }; }
-  catch { return { profile: null, status: 'corrupt' }; }
+  let p;
+  try { p = JSON.parse(raw); } catch { return { profile: null, status: 'corrupt' }; }
+  if (valid(p, 1)) {  // one-time v1 -> v2 migration; the v1 JSON stays next to it as a backup
+    p = migrateProfile(p);
+    try { storage.setItem(PROFILE_KEY + '.bak', raw); storage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch { /* best effort: migrates again next load */ }
+  }
+  return valid(p) ? { profile: p, status: 'ok' } : { profile: null, status: 'corrupt' };
+}
+
+// v1 had no level: estimate it from the old ranking-point tier; stats below the new average start (5) come up to 5
+const V1_LEVELS = [[10, 1], [60, 2], [200, 3], [600, 4], [1500, 5]];
+const V1_ENTRY_TIERS = [[1300, 7], [180, 5]];  // FIP Gold / Premier P1 were open at these ranking points: keep them open
+export function migrateProfile(p) {
+  const level = (V1_LEVELS.find(([below]) => p.rankingPoints < below) || [0, 6])[1];
+  const entryTier = (V1_ENTRY_TIERS.find(([from]) => p.rankingPoints >= from) || [0, 1])[1];
+  return {
+    ...p, version: VERSION, level, reliability: 0.5, bestTier: Math.max(tierAt(level).index, entryTier), lastCareerMatch: null,
+    stats: Object.fromEntries(Object.entries(p.stats).map(([k, v]) => [k, Math.max(5, v)])),
+  };
+}
+
+// after a career match: myPair / oppPair = the two sides' average levels (level.js aiLevel for AI players)
+export function applyRating(profile, myPair, oppPair, result, now = new Date()) {
+  const idle = profile.lastCareerMatch ? (now - new Date(profile.lastCareerMatch)) / 864e5 : 0;
+  const r = rateMatch({ level: profile.level, reliability: idleReliability(profile.reliability, idle) }, myPair, oppPair, !!result.won, matchShare(result));
+  const tier = tierAt(r.level), bestTier = Math.max(profile.bestTier || 1, tier.index);
+  return {
+    profile: { ...profile, level: r.level, reliability: r.reliability, bestTier, lastCareerMatch: now.toISOString() },
+    delta: r.delta,
+    tierUp: bestTier > (profile.bestTier || 1) ? tier : null,
+  };
 }
 
 export function saveProfile(storage, profile) {
@@ -41,6 +74,7 @@ export const exportProfile = (profile) => JSON.stringify(profile, null, 2);
 export function importProfile(text) {
   let p;
   try { p = JSON.parse(text); } catch { throw new Error('invalid profile'); }
+  if (valid(p, 1)) p = migrateProfile(p);  // exports saved before v2 (and the history.state backup)
   if (!valid(p)) throw new Error('invalid profile');
   return p;
 }
@@ -78,16 +112,14 @@ export function buyTraining(profile, stat, eco) {
   return { ok: true, profile: { ...profile, credits: profile.credits - cost, stats: { ...profile.stats, [stat]: level + 1 } } };
 }
 
-// shop: { tiers: {name: rankingPoints}, items }. Items unlock by tier; rackets come from data/rackets.json with the same fields.
-export function tierOf(rankingPoints, shop) {
-  return Object.entries(shop.tiers).filter(([, min]) => rankingPoints >= min).sort((a, b) => b[1] - a[1])[0][0];
-}
+// shop: { tiers: {name: lowest level-tier index}, items }. Items unlock by the best tier reached (level.js TIERS);
+// rackets come from data/rackets.json with the same fields
 
 // energy products stack (a pack of item.pack per purchase) and the first one bought goes straight into the bag
 export function buyItem(profile, item, shop) {
   const fuel = item.type === 'fuel';
   if (!fuel && profile.inventory.includes(item.id)) return { ok: false, reason: 'owned' };
-  if (profile.rankingPoints < shop.tiers[item.tier]) return { ok: false, reason: 'tier' };
+  if ((profile.bestTier || 1) < shop.tiers[item.tier]) return { ok: false, reason: 'tier' };
   if (profile.credits < item.price) return { ok: false, reason: 'credits' };
   const credits = profile.credits - item.price;
   if (!fuel) return { ok: true, profile: { ...profile, credits, inventory: [...profile.inventory, item.id] } };
@@ -120,6 +152,7 @@ export function tournamentReward(entry, placement) {
 
 // rank = the player's current world rank (1 = top)
 export function canEnter(profile, entry, rank) {
+  if ((profile.bestTier || 1) < (entry.minTier || 1)) return { ok: false, reason: 'tier' };
   if (entry.inviteTop && rank > entry.inviteTop) return { ok: false, reason: 'invite' };
   if (profile.rankingPoints < entry.minRankingPoints) return { ok: false, reason: 'ranking' };
   if (profile.credits < entry.entryFee) return { ok: false, reason: 'credits' };

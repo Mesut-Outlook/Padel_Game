@@ -1,5 +1,5 @@
 {
-  "tiers": { "amateur": 0, "club": 10, "regional": 60, "national": 200, "pro": 600, "elite": 1500 },
+  "tiers": { "amateur": 1, "club": 3, "regional": 4, "national": 5, "pro": 6, "elite": 7 },
   "items": [
     { "id": "shoe_starter", "type": "shoes", "name": "Starter Court", "tier": "amateur", "price": 0, "speed": 0, "agility": 0, "color": "#1B1B1E" },
     { "id": "shoe_grip", "type": "shoes", "name": "Clay Grip", "tier": "amateur", "price": 300, "speed": 0.02, "agility": 0.06, "color": "#E8E8E8" },

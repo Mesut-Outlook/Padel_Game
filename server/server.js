@@ -52,6 +52,7 @@ function sanitizeLook(l) {
   if (num(l.hairOpacity, 0, 1) != null) out.hairOpacity = num(l.hairOpacity, 0, 1);
   for (const k of ['ponytail', 'topknot', 'makeup', 'hairGel']) if (l[k] === true) out[k] = true;
   if (l.glasses === true || col(l.glasses)) out.glasses = l.glasses;
+  if (typeof l.level === 'number' && Number.isFinite(l.level)) out.level = clamp(l.level, 0.5, 7);  // career level, for the rating
   if (l.headwear && ['headband', 'visor'].includes(l.headwear.type) && col(l.headwear.color)) out.headwear = { type: l.headwear.type, color: l.headwear.color };
   if (typeof l.racket === 'string' && /^[a-z0-9_]{1,16}$/i.test(l.racket)) out.racket = l.racket;
   if (col(l.racketColor)) out.racketColor = l.racketColor;
