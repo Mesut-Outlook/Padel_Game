@@ -1,4 +1,5 @@
 // Match sounds synthesized with WebAudio (no asset files) + short player call-outs via speechSynthesis.
+import { pickVoice, voiceTone } from './voice.js';
 let ctx, out, musicBus, noise, muted = false;
 let musicTimer = null, musicStep = 0, musicNextT = 0;
 
@@ -415,12 +416,21 @@ const LINES = {
 };
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
+// voices load async in Chrome: prime the list and keep it fresh
+let voices = [];
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  voices = speechSynthesis.getVoices();
+  speechSynthesis.addEventListener?.('voiceschanged', () => { voices = speechSynthesis.getVoices(); });
+}
+
 // returns the line so the caller can show it as a speech bubble
 export function callout(ch, good) {
   const L = LINES.en, text = pick(good ? L.win : L.miss);
   if (!muted && 'speechSynthesis' in window && !speechSynthesis.speaking) {
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = L.lang; u.rate = 1.12; u.pitch = ch.gender === 'f' ? 1.32 : 0.88; u.volume = 0.8;
+    const v = pickVoice(voices.length ? voices : speechSynthesis.getVoices(), ch), t = voiceTone(ch, !!v);
+    if (v) u.voice = v;
+    u.lang = v ? v.lang : L.lang; u.rate = t.rate; u.pitch = t.pitch; u.volume = 0.8;
     speechSynthesis.speak(u);
   }
   return text;

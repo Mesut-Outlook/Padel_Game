@@ -140,7 +140,7 @@ docs/     re-findings.md (rea tersine mühendislik notları)
 - [ ] Enerji değerlerinin oynayarak ince ayarı (simülasyonda kulüp AI'ı nadiren yoruluyor, efsane AI'ı uzun rallilerde ortalama ~0.5'e iniyor)
 - [x] Tüm oyuncuların enerji çubukları skor tablosunda; klavyede pause yalnızca Esc (P vuruş tuşlarına çok yakın) — `agy-17`
 - [x] Sayı bildiriminde yalnızca hatayı yapan / sayıyı kazandıran oyuncunun adı (oyun/set bildirimlerinde iki isim) — `agy-18`
-- [ ] Oyuncu tepki sesleri: erkeklerde erkek, kadınlarda kadın sesi (bugün tarayıcının varsayılan sesi, yalnızca perde değişiyor — `callout()` `src/audio.js`); `speechSynthesis.getVoices()` içinden cinsiyete göre ses seçimi ve her oyuncuya kendi perde/hız tonu — acil değil
+- [x] Oyuncu tepki sesleri: erkeklerde erkek, kadınlarda kadın sesi (`speechSynthesis` sesleri adından seçilir, `src/voice.js`), her oyuncuya kendi perde/hız tonu; uygun ses yoksa varsayılan ses + belirgin perde farkı
 - [x] Forma çeşitleri: polo, V yaka, kolsuz, desenli (bazı karakterlerde ve markette) — `agy-14`
 - [x] Açılış animasyonu + ana ekran (Friendly Match / Career / Friends Cup), Friendly'de Where? (bu bilgisayar / online, oda linki `?room=`), ortak Settings (kariyer maçları da okur), `#home` / `#friendly` / `#career` rotaları — `agy-15`
 - [x] Tam ekran: ⛶ düğmesi (ana ekran, menü, maç), duraklatma menüsü, menülerde F (maçta F = slice) — `agy-16`
