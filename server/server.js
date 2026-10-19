@@ -53,6 +53,9 @@ function sanitizeLook(l) {
   for (const k of ['ponytail', 'topknot', 'makeup', 'hairGel']) if (l[k] === true) out[k] = true;
   if (l.glasses === true || col(l.glasses)) out.glasses = l.glasses;
   if (l.headwear && ['headband', 'visor'].includes(l.headwear.type) && col(l.headwear.color)) out.headwear = { type: l.headwear.type, color: l.headwear.color };
+  if (typeof l.racket === 'string' && /^[a-z0-9_]{1,16}$/i.test(l.racket)) out.racket = l.racket;
+  if (col(l.racketColor)) out.racketColor = l.racketColor;
+  if (['round', 'teardrop', 'diamond'].includes(l.racketShape)) out.racketShape = l.racketShape;
   return out;
 }
 // stats/racket from the client: known keys only, 1..10 (a huge stat would make a player error-free)

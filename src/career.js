@@ -9,7 +9,7 @@ export function newProfile(template, look = {}) {
   const { stats: _s, aiLevel: _a, ...appearance } = template;
   return {
     version: VERSION,
-    player: { ...appearance, ...look, id: 'me' },
+    player: { ...appearance, ...look, id: 'me', templateId: template.id },
     stats: Object.fromEntries(STATS.map(k => [k, 4])),
     credits: 0, rankingPoints: 0,
     inventory: ['r01', 'shoe_starter', 'kit_starter', 'ball_standard'],
@@ -47,12 +47,13 @@ export function importProfile(text) {
 
 // result = { won, gamesWon, pointsWon, scoring: 'sets'|'rally', ai: rookie|club|pro|legend|online, style? }
 export function matchReward(result, eco) {
+  const mult = eco.mult[result.ai] ?? 1;
+  if (result.forfeit) return { lines: [{ label: 'Forfeit', credits: 0 }], mult, credits: 0 };  // quitting must not farm the 'Played' Credits
   const m = eco.match, lines = [{ label: 'Played', credits: m.base }];
   if (result.scoring === 'rally') lines.push({ label: `${result.pointsWon} points × ${m.perPointWon}`, credits: result.pointsWon * m.perPointWon });
   else lines.push({ label: `${result.gamesWon} games × ${m.perGameWon}`, credits: result.gamesWon * m.perGameWon });
   if (result.won) lines.push({ label: 'Win', credits: m.winBonus });
   if (result.style > 0) lines.push({ label: `Style ${result.style} pts`, credits: Math.floor(result.style / m.stylePerCredit) });
-  const mult = eco.mult[result.ai] ?? 1;
   return { lines, mult, credits: Math.round(lines.reduce((n, l) => n + l.credits, 0) * mult) };
 }
 
@@ -132,5 +133,9 @@ export function aiRankingTable(characters) {
   return sorted.map((c, i) => ({ id: c.id, name: c.name, points: Math.round(6000 * ((n - 1 - i) / (n - 1)) ** 2) }));
 }
 
-export const worldRanking = (profile, aiTable) =>
-  [...aiTable, { id: 'me', name: profile.player.name, points: profile.rankingPoints }].sort((a, b) => b.points - a.points);
+export const worldRanking = (profile, aiTable) => {
+  const tid = profile?.player?.templateId;
+  const pname = profile?.player?.name;
+  const filtered = (aiTable || []).filter(r => r.id !== 'me' && (!tid || r.id !== tid) && (!pname || r.name !== pname));
+  return [...filtered, { id: 'me', name: profile.player.name, points: profile.rankingPoints }].sort((a, b) => b.points - a.points);
+};

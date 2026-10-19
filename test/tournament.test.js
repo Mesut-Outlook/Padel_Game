@@ -98,3 +98,49 @@ test('simulateUntilMine stops at the human\'s next match (league of 5 opens with
   const out = simulateUntilMine(reportResult(T, myMatch(T), { a: 6, b: 2 }), seeded(14));
   assert.ok(myMatch(out) || isFinished(out));
 });
+
+test('16-pair knockout draw has no duplicate AI members in any round 1 match', () => {
+  const chars = Array.from({ length: 24 }, (_, i) => ({ id: `c${i}`, name: `Player ${i}`, rating: 5 + (i % 5) }));
+  const partnerId = 'c0';
+  const pool = chars.filter(c => c.id !== partnerId);
+  for (let seed = 1; seed <= 20; seed++) {
+    const rng = seeded(seed);
+    let bestT = null, bestEntrants = null;
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const p = pool.slice().sort(() => rng() - 0.5);
+      const candEntrants = [{ id: 'me', name: 'Me / Partner', rating: 7.0, members: [partnerId] }];
+      for (let i = 0; i < 15; i++) {
+        let a, b;
+        if (i < 12 && 2 * i + 1 < p.length) {
+          a = p[2 * i];
+          b = p[2 * i + 1];
+        } else {
+          const offset = (i - 12) * 2;
+          a = p[(offset + 5) % p.length];
+          b = p[(offset + 17) % p.length];
+        }
+        candEntrants.push({ id: `p${i}`, name: `${a.name} / ${b.name}`, rating: (a.rating + b.rating) / 2, members: [a.id, b.id] });
+      }
+      const testT = createTournament({ format: 'knockout', entrants: candEntrants });
+      const hasClash = testT.rounds[0]?.some(m => {
+        const e1 = candEntrants.find(e => e.id === m.a);
+        const e2 = candEntrants.find(e => e.id === m.b);
+        return (e1?.members || []).some(id => (e2?.members || []).includes(id));
+      });
+      if (!hasClash) {
+        bestT = testT;
+        bestEntrants = candEntrants;
+        break;
+      }
+    }
+    assert.ok(bestT, `Failed to find clash-free draw for seed ${seed}`);
+    for (const m of bestT.rounds[0]) {
+      const e1 = bestEntrants.find(e => e.id === m.a);
+      const e2 = bestEntrants.find(e => e.id === m.b);
+      const mem1 = e1.members || [];
+      const mem2 = e2.members || [];
+      const clash = mem1.some(id => mem2.includes(id));
+      assert.equal(clash, false, `Clash found in round 1 match ${m.id}`);
+    }
+  }
+});

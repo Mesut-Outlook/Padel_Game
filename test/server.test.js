@@ -153,3 +153,40 @@ test('join: look outfit sanitizes style, pattern, accent and chest text (drops i
   } finally { await srv.close(); }
 });
 
+test('join: look preserves valid racket, racketColor, and racketShape', async () => {
+  const srv = await startServer(0);
+  try {
+    const a = client(srv.port);
+    const lob = a.next('lobby');
+    await a.send({
+      type: 'join', code: 'RK1', cfg: { players: 2 },
+      look: {
+        racket: 'r05',
+        racketColor: '#9B59B6',
+        racketShape: 'teardrop',
+      },
+    });
+    const l = await lob;
+    assert.equal(l.looks[0].racket, 'r05');
+    assert.equal(l.looks[0].racketColor, '#9B59B6');
+    assert.equal(l.looks[0].racketShape, 'teardrop');
+    a.ws.close();
+
+    const b = client(srv.port);
+    const lob2 = b.next('lobby');
+    await b.send({
+      type: 'join', code: 'RK2', cfg: { players: 2 },
+      look: {
+        racket: 'racket<script>',
+        racketColor: 'blue',
+        racketShape: 'oval',
+      },
+    });
+    const l2 = await lob2;
+    assert.equal(l2.looks[0].racket, undefined);
+    assert.equal(l2.looks[0].racketColor, undefined);
+    assert.equal(l2.looks[0].racketShape, undefined);
+    b.ws.close();
+  } finally { await srv.close(); }
+});
+

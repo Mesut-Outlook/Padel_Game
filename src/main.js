@@ -212,29 +212,34 @@ async function setupScene(venue, ids, roster, rk) {
 export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, fuel, onEnd: end, status } = {}) {
   unlockAudio();
   const settings = loadSettings();
-  gameSpeed = settings.speed;
-  control = settings.control;
-  const say = (t, l) => {  // the legacy #lobby line is hidden behind the menu: mirror it into the menu's visible status lines
-    $('lobby').innerHTML = t; document.querySelectorAll('.pl-lobby-status').forEach(e => { e.innerHTML = t; }); status?.(t, l);
+  gameSpeed = $('speed') ? +$('speed').value : settings.speed;
+  control = $('control') ? $('control').value : settings.control;
+  const say = (t, l, err = false) => {  // the legacy #lobby line is hidden behind the menu: mirror it into the menu's visible status lines
+    $('lobby').innerHTML = t; document.querySelectorAll('.pl-lobby-status').forEach(e => { e.innerHTML = t; }); status?.(t, l, err);
   };
   url ||= serverUrl(location);  // null on the static web build unless ?server= points at one
-  if (!url) { say(NO_SERVER); return null; }
+  if (!url) { say(NO_SERVER, null, true); return null; }
   code = String(code || '').trim().toUpperCase();
-  if (!code) { say('Enter a room code first.'); return null; }
+  if (!code) { say('Enter a room code first.', null, true); return null; }
   onEnd = end || null; pointsWon = [0, 0]; fuelName = fuel?.name || null;
   net = connect({
     url, code, char, stats, racket, public: isPublic, name, look, shoes, ball, fuel,
     cfg: { players, ...match, ai, venue },
-    onError: (e) => say(escapeText(e)),
+    onError: (e) => say(escapeText(e), null, true),
     onLobby: (l) => {
-      say(`Room <b>${l.code}</b> · your seat: ${net.seat} · players: ${l.taken.length}/${l.seats.length} (empty = AI)` +
+      say(`Room <b>${escapeText(l.code)}</b> · your seat: ${net.seat} · players: ${l.taken.length}/${l.seats.length} (empty = AI)` +
         (l.started ? '' : ' — <b>click “START MATCH” when everyone is ready</b>'), l);
       if (l.started && !avatars.length) {
         const ids = l.seats, roster = {}, rk = {};
         for (const id of ids) {
           const base = characters[l.chars[id] ?? (id * 3 + 1) % characters.length], { stats: _ignored, ...lk } = l.looks?.[id] || {};
           roster[id] = { ...base, ...lk, ...(l.names?.[id] ? { name: l.names[id] } : {}) };
-          rk[id] = rackets[id % rackets.length];
+          const foundRk = (lk.racket && rackets.find(r => r.id === lk.racket)) || rackets[id % rackets.length];
+          rk[id] = {
+            ...foundRk,
+            color: lk.racketColor || foundRk.color,
+            shape: lk.racketShape || foundRk.shape,
+          };
         }
         humans = [net.seat];
         setupScene(venues[l.cfg.venue] || venues[0], ids, roster, rk);
@@ -248,8 +253,10 @@ const escapeText = (t) => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<':
 $('online').onclick = () => {
   track('online-click');
   const me = +$('char').value;
+  const myRk = rackets[+$('racket').value];
   startOnline({
-    code: $('room').value, char: me, stats: characters[me].stats, racket: rackets[+$('racket').value].stats,
+    code: $('room').value, char: me, stats: characters[me].stats, racket: myRk.stats,
+    look: { racket: myRk.id, racketColor: myRk.color, racketShape: myRk.shape },
     players: +$('mode').value, match: matchOpts(), ai: $('ai').value, venue: +$('venue').value,
   });
 };
@@ -286,8 +293,8 @@ export async function startMatch(cfg) {
   track($('start').dataset.tutorial === '1' ? 'tutorial-start' : `match-start/${cfg.players === 2 ? 'singles' : 'doubles'}/${cfg.ai}/${cfg.venue?.id || 'unknown'}`);
   unlockAudio();
   const settings = loadSettings();
-  gameSpeed = settings.speed;
-  control = settings.control;
+  gameSpeed = $('speed') ? +$('speed').value : settings.speed;
+  control = $('control') ? $('control').value : settings.control;
   aiLevel = cfg.ai;
   onEnd = cfg.onEnd || null; pointsWon = [0, 0]; fuelName = cfg.fuel?.[0]?.name || null;
   const ids = cfg.players === 2 ? [0, 2] : [0, 2, 1, 3];
@@ -304,8 +311,30 @@ export async function startMatch(cfg) {
 
 // back to the menu after a match; career matches return to the career hub
 function toMenu() {
-  if (!tut && world?.match.winner == null && net?.winner == null && (world || net)) track('match-quit');  // left before the end (pause → Main menu)
-  if (onEnd) history.replaceState(history.state, '', '#career');  // replace, not push: history.state carries the career backup when storage is blocked
+  const isCareer = !!onEnd;
+  if (!tut && world?.match.winner == null && net?.winner == null && (world || net)) {
+    track('match-quit');  // left before the end (pause → Main menu)
+    if (onEnd) {
+      const done = onEnd;
+      onEnd = null;
+      const isRally = !!world?.match?.opts?.pointsTo;
+      const ptsTarget = world?.match?.opts?.pointsTo || 16;
+      const forfeitResult = {
+        won: false,
+        forfeit: true,
+        gamesWon: 0,
+        pointsWon: 0,
+        points: isRally ? [0, ptsTarget] : [0, 0],
+        games: [0, 6],
+        scoring: isRally ? 'rally' : 'sets',
+        ai: aiLevel,
+        style: 0,
+        score: { sets: isRally ? `0-${ptsTarget} (forfeit)` : '0-6 0-6 (forfeit)', pts: '', board: null },
+      };
+      try { done(forfeitResult); } catch (err) { console.error('Forfeit onEnd failed', err); }
+    }
+  }
+  if (isCareer) history.replaceState(history.state, '', '#career');  // replace, not push: history.state carries the career backup when storage is blocked
   else history.replaceState(history.state, '', '#friendly');
   location.reload();
 }
@@ -609,7 +638,8 @@ function handleEvents(events, score, winner) {
         if (onEnd && net) {  // online: no local world, the server's score decides
           const done = onEnd; onEnd = null;
           const sets = net.score?.board?.sets || [];
-          done({ won: winner === myTeam, gamesWon: sets.reduce((n, g) => n + g[myTeam], 0), pointsWon: pointsWon[myTeam], scoring: 'sets', ai: 'online', style: styleStats.pts, score: net.score });
+          const aiMode = (net.lobby?.taken?.length || 0) > 1 ? 'online' : (net.lobby?.cfg?.ai || 'club');
+          done({ won: winner === myTeam, gamesWon: sets.reduce((n, g) => n + g[myTeam], 0), pointsWon: pointsWon[myTeam], scoring: 'sets', ai: aiMode, style: styleStats.pts, score: net.score });
           onEnd = () => {};
         } else if (onEnd && world) {
           const done = onEnd; onEnd = null;
@@ -683,7 +713,7 @@ function renderHud(s) {
       + c(b.pts[t], 'pt');
   }
   const grid = $('hudGrid');
-  grid.style.gridTemplateColumns = `14px auto repeat(${n}, 34px) 48px`;
+  grid.style.gridTemplateColumns = `14px auto ${n > 0 ? `repeat(${n}, 34px) ` : ''}48px`;
   grid.innerHTML = h;
   $('hudLabel').textContent = n ? `SET ${b.setNo}` + (b.label ? ' · ' + b.label : '') : b.label;  // rally scoring has no sets
 }

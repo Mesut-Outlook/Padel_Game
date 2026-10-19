@@ -1124,6 +1124,13 @@ function renderHubScreen() {
   careerPanel.querySelector('#cr-hub-back').onclick = () => closeCareer();
 }
 
+// Filter out the player's template character and any AI with the same name so the player never partners or plays against a clone of themselves
+function availablePartners(prof = profile) {
+  const tid = prof?.player?.templateId;
+  const pname = prof?.player?.name;
+  return characters.filter(c => (!tid || c.id !== tid) && (!pname || c.name !== pname));
+}
+
 // 4. Career Play Screen
 function renderPlayScreen() {
   if (!profile) { showScreen('templates'); return; }
@@ -1135,7 +1142,9 @@ function renderPlayScreen() {
   setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'CAREER MATCH');
 
   const curVenue = venues[playState.venueIdx] || venues[0];
-  const curPartner = characters[playState.partnerIdx] || characters[0];
+  const partnerList = availablePartners(profile);
+  if (playState.partnerIdx >= partnerList.length) playState.partnerIdx = 0;
+  const curPartner = partnerList[playState.partnerIdx] || partnerList[0] || characters[0];
   const mult = eco.mult[playState.ai] ?? 1;
 
   careerPanel.innerHTML = `
@@ -1171,7 +1180,7 @@ function renderPlayScreen() {
       ${playState.players === 4 ? `
         <div class="pl-section-label">CHOOSE PARTNER (${countryFlag(curPartner.countryCode)} ${escapeHtml(curPartner.name)})</div>
         <div class="cr-partner-grid" id="cr-partner-grid">
-          ${characters.map((c, idx) => `
+          ${partnerList.map((c, idx) => `
             <button type="button" class="pl-card cr-partner-card ${idx === playState.partnerIdx ? 'is-selected' : ''}" data-pidx="${idx}">
               <span>${countryFlag(c.countryCode)}</span>
               <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(c.name)}</span>
@@ -1285,8 +1294,9 @@ async function launchCareerMatch() {
     headwear: hwItem ? hwItem.headwear : profile.player.headwear,
   };
 
-  const partner = characters[playState.partnerIdx] || characters[0];
-  const oppPool = characters.filter(c => (players === 4 ? c !== partner : true)).slice().sort(() => Math.random() - 0.5);
+  const partnerList = availablePartners(profile);
+  const partner = partnerList[playState.partnerIdx] || partnerList[0] || characters[0];
+  const oppPool = partnerList.filter(c => (players === 4 ? c !== partner : true)).slice().sort(() => Math.random() - 0.5);
 
   const roster = {};
   const rk = {};
@@ -1621,11 +1631,11 @@ function renderShopScreen() {
       } else {
         let msg = 'Cannot purchase item.';
         if (res.reason === 'owned') {
-          msg = 'Already owned (owned)';
+          msg = 'Already owned.';
         } else if (res.reason === 'tier') {
-          msg = `Locked (tier): Unlocks at ${tierName} — ${minRp} ranking pts`;
+          msg = `Locked: Unlocks at ${tierName} — ${minRp} ranking pts`;
         } else if (res.reason === 'credits') {
-          msg = `Not enough Credits (credits): Need ${Math.max(1, item.price - profile.credits)} more Credits`;
+          msg = `Not enough Credits: Need ${Math.max(1, item.price - profile.credits)} more Credits`;
         }
         shopErrors[item.id] = msg;
         renderShopScreen();
@@ -2173,20 +2183,47 @@ function renderTournamentsScreen() {
 function startTournament() {
   const { entry, partnerId } = tState;
   if (!entry || !canEnter(profile, entry, myWorldRank()).ok) { showScreen('tournaments'); return; }
-  const pool = characters.filter(c => c.id !== partnerId).sort(() => Math.random() - 0.5);
-  let entrants;
+  const pool = availablePartners(profile).filter(c => c.id !== partnerId);
+  let entrants, T;
   if (!isPairFormat(entry.format)) {
+    const sortedPool = pool.slice().sort(() => Math.random() - 0.5);
     entrants = [{ id: 'me', name: profile.player.name, rating: myRating() },
-      ...pool.slice(0, entry.drawSize - 1).map(c => ({ id: c.id, name: c.name, rating: aiRating(c, entry) }))];
+      ...sortedPool.slice(0, entry.drawSize - 1).map(c => ({ id: c.id, name: c.name, rating: aiRating(c, entry) }))];
+    T = createTournament({ format: entry.format, entrants });
   } else {
     const partner = charById(partnerId);
-    entrants = [{ id: 'me', name: `${profile.player.name} / ${partner.name}`, rating: (myRating() + aiRating(partner, entry)) / 2, members: [partnerId] }];
-    for (let i = 0; i < entry.drawSize - 1; i++) {  // ponytail: roster has 26 characters, a 16-pair draw reuses some AIs in several pairs
-      const a = pool[(2 * i) % pool.length], b = pool[(2 * i + 1) % pool.length];
-      entrants.push({ id: `p${i}`, name: `${a.name} / ${b.name}`, rating: (aiRating(a, entry) + aiRating(b, entry)) / 2, members: [a.id, b.id] });
+    let bestT = null, bestEntrants = null;
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const p = pool.slice().sort(() => Math.random() - 0.5);
+      const candEntrants = [{ id: 'me', name: `${profile.player.name} / ${partner.name}`, rating: (myRating() + aiRating(partner, entry)) / 2, members: [partnerId] }];
+      for (let i = 0; i < entry.drawSize - 1; i++) {
+        let a, b;
+        if (i < 12 && 2 * i + 1 < p.length) {
+          a = p[2 * i];
+          b = p[2 * i + 1];
+        } else {
+          const offset = (i - 12) * 2;
+          a = p[(offset + 5) % p.length];
+          b = p[(offset + 17) % p.length];
+        }
+        candEntrants.push({ id: `p${i}`, name: `${a.name} / ${b.name}`, rating: (aiRating(a, entry) + aiRating(b, entry)) / 2, members: [a.id, b.id] });
+      }
+      const testT = createTournament({ format: entry.format, entrants: candEntrants });
+      const hasClash = testT.rounds[0]?.some(m => {
+        const e1 = candEntrants.find(e => e.id === m.a);
+        const e2 = candEntrants.find(e => e.id === m.b);
+        return (e1?.members || []).some(id => (e2?.members || []).includes(id));
+      });
+      if (!hasClash) {
+        bestT = testT;
+        bestEntrants = candEntrants;
+        break;
+      }
+      if (!bestT) { bestT = testT; bestEntrants = candEntrants; }
     }
+    entrants = bestEntrants;
+    T = bestT;
   }
-  const T = createTournament({ format: entry.format, entrants });
   track(`career-tournament/${entry.id}`);
   persistProfile({ ...profile, credits: profile.credits - entry.entryFee, tournament: { entryId: entry.id, T, partner: partnerId } });
   showScreen('tournament');
@@ -2197,7 +2234,11 @@ function renderTournamentPartnerScreen() {
   const entry = tState.entry;
   const pl = buildEquippedPlayer(profile);
   setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), 'CHOOSE PARTNER');
-  const cur = charById(tState.partnerId) || characters[0];
+  const partnerList = availablePartners(profile);
+  if (!partnerList.some(c => c.id === tState.partnerId)) {
+    tState.partnerId = partnerList[0]?.id || characters[0].id;
+  }
+  const cur = charById(tState.partnerId) || partnerList[0] || characters[0];
   careerPanel.innerHTML = `
     ${renderBannersHtml()}
     <div class="cr-head">
@@ -2213,7 +2254,7 @@ function renderTournamentPartnerScreen() {
     <div class="cr-body">
       <div class="pl-section-label">CHOOSE PARTNER (${countryFlag(cur.countryCode)} ${escapeHtml(cur.name)} · rating ${avgStats(cur.stats).toFixed(1)})</div>
       <div class="cr-partner-grid" id="cr-tp-grid">
-        ${characters.map(c => `
+        ${partnerList.map(c => `
           <button type="button" class="pl-card cr-partner-card ${c.id === tState.partnerId ? 'is-selected' : ''}" data-pid="${c.id}">
             <span>${countryFlag(c.countryCode)}</span>
             <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(c.name)}</span>
@@ -2433,9 +2474,17 @@ const onlineState = { rooms: null, busy: false, players: 4, isPublic: true, venu
 
 const onlineUrl = () => serverUrl(location);
 
-function setOnlineStatus(text, lobby) {
+function setOnlineStatus(text, lobby, err = false) {
   onlineState.status = text;
   if (lobby) onlineState.lobby = lobby;
+  if (err) {
+    onlineState.net = null;
+    onlineState.lobby = null;
+    if (curScreen === 'online') {
+      renderOnlineScreen();
+      return;
+    }
+  }
   const el = careerPanel?.querySelector('#cr-on-status');
   if (el) { el.innerHTML = text; el.style.display = text ? '' : 'none'; }
   const go = careerPanel?.querySelector('#cr-on-start');
@@ -2455,7 +2504,7 @@ function leaveOnline() {
 
 async function refreshRooms() {
   const url = onlineUrl();
-  if (!url) { onlineState.rooms = []; setOnlineStatus(NO_SERVER); return; }
+  if (!url) { onlineState.rooms = []; setOnlineStatus(NO_SERVER, null, true); return; }
   onlineState.busy = true;
   setOnlineStatus('Looking for rooms…');
   try { onlineState.rooms = await listRooms(url); onlineState.status = ''; }
@@ -2466,12 +2515,13 @@ async function refreshRooms() {
 
 function joinOnlineRoom(code, create) {
   code = String(code || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-  if (!code) { setOnlineStatus('Enter a room code first.'); return; }
+  if (!code) { setOnlineStatus('Enter a room code first.', null, true); return; }
   if (!profile || onlineState.net) return;
   track(create ? 'online-create' : 'online-join');
   const { stats: _s, ...look } = buildEquippedPlayer(profile);
   const shoeItem = equippedShoes(profile);
   const myRacket = rackets.find(r => r.id === profile.equipped?.racket) || rackets[0];
+  const lookWithRacket = { ...look, racket: myRacket.id, racketColor: myRacket.color, racketShape: myRacket.shape };
   const ballItem = shop.items.find(i => i.id === onlineState.ballId) || equippedBall(profile);
   const venue = venues[onlineState.venueIdx] || venues[0];
   const fuel = takeFuel() || undefined;
@@ -2480,21 +2530,25 @@ function joinOnlineRoom(code, create) {
     venue: venues.indexOf(venue), ai: 'club',
     match: { sets: 1, goldenPoint: true, superTiebreak: false, starPoint: false },
     char: 0, stats: { ...profile.stats }, racket: { ...myRacket.stats },
-    public: create && onlineState.isPublic, name: profile.player.name, look,
+    public: create && onlineState.isPublic, name: profile.player.name, look: lookWithRacket,
     shoes: { speed: shoeItem.speed, agility: shoeItem.agility },
     ball: create ? { speed: ballItem.speed, bounce: ballItem.bounce } : undefined,
     fuel,
-    status: (t, l) => setOnlineStatus(t, l),
+    status: (t, l, err) => setOnlineStatus(t, l, err),
     onEnd(result) {
       const reward = matchReward(result, eco);
       const updated = applyReward(profile, reward, result);
       updated.lastReward = {
-        lines: reward.lines, mult: reward.mult, credits: reward.credits, won: result.won, ai: 'online',
+        lines: reward.lines, mult: reward.mult, credits: reward.credits, won: result.won, ai: result.ai || 'online',
         score: result.score?.sets || '',
       };
       persistProfile(updated);
     },
   });
+  if (!net) {
+    onlineState.net = null;
+    return;
+  }
   onlineState.net = net;
 }
 

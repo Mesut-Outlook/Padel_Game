@@ -100,6 +100,9 @@ test('world ranking: AI players hold fixed points 0-6000 and the profile slots i
   const table = worldRanking(p, ai);
   assert.equal(table.findIndex(r => r.id === 'me'), 2);
   assert.equal(table[2].name, 'Mesut');
+  // template AI clone is filtered out
+  assert.equal(table.some(r => r.id === chars[0].id), false);
+  assert.equal(table.filter(r => r.name === 'Mesut').length, 1);
 });
 
 test('match reward: style points pay 1 Credit per 10, before the AI multiplier', () => {
@@ -115,4 +118,9 @@ test('a v1 profile missing credits/equipped/history counts as corrupt and cannot
   assert.throws(() => importProfile(partial), /invalid profile/);
   const p = newProfile(chars[0], {});
   assert.throws(() => importProfile(JSON.stringify({ ...p, credits: '<b>9</b>' })), /invalid profile/);
+});
+
+test('match reward: quitting mid-match (forfeit) pays nothing', () => {
+  const r = matchReward({ won: false, gamesWon: 0, scoring: 'sets', ai: 'legend', forfeit: true }, eco);
+  assert.equal(r.credits, 0);
 });
