@@ -29,7 +29,7 @@ const isNum = (x) => typeof x === 'number' && Number.isFinite(x);
 const valid = (p, version = VERSION) => isObj(p) && p.version === version && isObj(p.player) && isObj(p.stats) && Array.isArray(p.inventory)
   && isNum(p.credits) && isNum(p.rankingPoints) && isObj(p.equipped) && isObj(p.history) && Object.values(p.stats).every(isNum);
 
-export function loadProfile(storage) {
+export function loadProfile(storage, now = new Date(), eco = null) {  // eco: expire old ranking points (data/economy.json)
   let raw;
   try { raw = storage.getItem(PROFILE_KEY); } catch { return { profile: null, status: 'unavailable' }; }
   if (raw == null) return { profile: null, status: 'none' };
@@ -38,6 +38,10 @@ export function loadProfile(storage) {
   if (valid(p, 1)) {  // one-time v1 -> v2 migration; the v1 JSON stays next to it as a backup
     p = migrateProfile(p);
     try { storage.setItem(PROFILE_KEY + '.bak', raw); storage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch { /* best effort: migrates again next load */ }
+  }
+  if (valid(p) && eco) {
+    const q = expirePoints(p, eco, now);
+    if (q !== p) { p = q; saveProfile(storage, p); }
   }
   return valid(p) ? { profile: p, status: 'ok' } : { profile: null, status: 'corrupt' };
 }
@@ -55,14 +59,15 @@ export function migrateProfile(p) {
 }
 
 // after a career match: myPair / oppPair = the two sides' average levels (level.js aiLevel for AI players)
-export function applyRating(profile, myPair, oppPair, result, now = new Date()) {
+// a new best tier pays tierUpCredits × its number (economy.json tierUp), once
+export function applyRating(profile, myPair, oppPair, result, now = new Date(), tierUpCredits = 0) {
   const idle = profile.lastCareerMatch ? (now - new Date(profile.lastCareerMatch)) / 864e5 : 0;
   const r = rateMatch({ level: profile.level, reliability: idleReliability(profile.reliability, idle) }, myPair, oppPair, !!result.won, matchShare(result));
   const tier = tierAt(r.level), bestTier = Math.max(profile.bestTier || 1, tier.index);
+  const tierUp = bestTier > (profile.bestTier || 1) ? tier : null, bonus = tierUp ? tierUpCredits * tier.index : 0;
   return {
-    profile: { ...profile, level: r.level, reliability: r.reliability, bestTier, lastCareerMatch: now.toISOString() },
-    delta: r.delta,
-    tierUp: bestTier > (profile.bestTier || 1) ? tier : null,
+    profile: { ...profile, level: r.level, reliability: r.reliability, bestTier, lastCareerMatch: now.toISOString(), credits: profile.credits + bonus },
+    delta: r.delta, tierUp, bonus,
   };
 }
 
@@ -80,7 +85,8 @@ export function importProfile(text) {
 }
 
 // result = { won, gamesWon, pointsWon, scoring: 'sets'|'rally', ai: rookie|club|pro|legend|online, style? }
-export function matchReward(result, eco) {
+// bonus = { firstWin, streak: 0..streakMax } from settleMatch; both are added before the AI multiplier
+export function matchReward(result, eco, bonus = {}) {
   const mult = eco.mult[result.ai] ?? 1;
   if (result.forfeit) return { lines: [{ label: 'Forfeit', credits: 0 }], mult, credits: 0 };  // quitting must not farm the 'Played' Credits
   const m = eco.match, lines = [{ label: 'Played', credits: m.base }];
@@ -88,6 +94,9 @@ export function matchReward(result, eco) {
   else lines.push({ label: `${result.gamesWon} games × ${m.perGameWon}`, credits: result.gamesWon * m.perGameWon });
   if (result.won) lines.push({ label: 'Win', credits: m.winBonus });
   if (result.style > 0) lines.push({ label: `Style ${result.style} pts`, credits: Math.floor(result.style / m.stylePerCredit) });
+  const sub = lines.reduce((n, l) => n + l.credits, 0);
+  if (bonus.firstWin) lines.push({ label: `First win of the day ×${eco.bonus.firstWin}`, credits: sub * (eco.bonus.firstWin - 1) });
+  if (bonus.streak > 0) lines.push({ label: `Streak +${Math.round(bonus.streak * 100)}%`, credits: Math.round(sub * bonus.streak) });
   return { lines, mult, credits: Math.round(lines.reduce((n, l) => n + l.credits, 0) * mult) };
 }
 
@@ -100,16 +109,58 @@ export function applyReward(profile, reward, result) {
   };
 }
 
+const round2 = (v) => Math.round(v * 100) / 100;
+const DAY = 864e5;
+const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// form (0 .. eco.form.min) rusts a little each day once the grace days after the last career match are over;
+// formAt = when form was last set (a match or training), so idle days are never counted twice
+export function formNow(profile, eco, now = new Date()) {
+  const f = eco.form, form = profile.form || 0;
+  if (!profile.lastCareerMatch) return form;
+  const from = Math.max(profile.formAt ? +new Date(profile.formAt) : 0, +new Date(profile.lastCareerMatch) + f.graceDays * DAY);
+  return round2(Math.max(f.min, form - f.perDay * Math.max(0, Math.floor((now - from) / DAY))));
+}
+const formUp = (profile, eco, gain, now) => ({ form: round2(Math.min(0, formNow(profile, eco, now) + gain)), formAt: now.toISOString() });
+
+// one career match end (quick match, tournament, online): Credits with the day's first win and the session streak,
+// streak = matches started within streakMinutes of the previous one's end (a forfeit breaks it)
+export function settleMatch(profile, result, eco, startedAt, now = new Date()) {
+  const b = eco.bonus, gap = profile.lastCareerMatch ? (startedAt - new Date(profile.lastCareerMatch)) / 6e4 : Infinity;
+  const streak = !result.forfeit && gap <= b.streakMinutes ? (profile.streak || 0) + 1 : 0;
+  const today = dayKey(now), firstWin = !!result.won && !result.forfeit && profile.lastWinDay !== today;
+  const reward = matchReward(result, eco, { firstWin, streak: Math.min(b.streakMax, round2(streak * b.streakStep)) });
+  return {
+    reward,
+    profile: { ...applyReward(profile, reward, result), streak, lastWinDay: firstWin ? today : (profile.lastWinDay ?? null), ...formUp(profile, eco, eco.form.match, now) },
+  };
+}
+
+// ranking points from tournaments are logged with their date and drop out after eco.pointsDays (FIP's 52 weeks, shortened);
+// a profile from before the log starts it today with its whole total
+const pointsLog = (p, now) => p.pointsLog ?? (p.rankingPoints > 0 ? [{ at: now.toISOString(), pts: p.rankingPoints }] : []);
+export const addPoints = (p, pts, now = new Date()) =>
+  ({ ...p, rankingPoints: p.rankingPoints + pts, pointsLog: [...pointsLog(p, now), { at: now.toISOString(), pts }] });
+
+export function expirePoints(p, eco, now = new Date()) {
+  const log = pointsLog(p, now), live = log.filter(e => now - new Date(e.at) < eco.pointsDays * DAY);
+  if (p.pointsLog && live.length === log.length) return p;
+  return { ...p, rankingPoints: Math.max(0, p.rankingPoints - log.reduce((n, e) => n + e.pts, 0) + live.reduce((n, e) => n + e.pts, 0)), pointsLog: live };
+}
+
+export const expiringSoon = (p, eco, now = new Date(), days = 7) =>
+  pointsLog(p, now).filter(e => +new Date(e.at) + eco.pointsDays * DAY - now <= days * DAY).reduce((n, e) => n + e.pts, 0);
+
 // Credits to raise a stat from `level` to level + 1
 export const trainCost = (level, eco) => Math.round(eco.training.base * eco.training.growth ** (level - eco.training.start));
 
-export function buyTraining(profile, stat, eco) {
+export function buyTraining(profile, stat, eco, now = new Date()) {
   if (!STATS.includes(stat)) return { ok: false, reason: 'stat' };
   const level = profile.stats[stat];
   if (level >= eco.training.max) return { ok: false, reason: 'max' };
   const cost = trainCost(level, eco);
   if (profile.credits < cost) return { ok: false, reason: 'credits' };
-  return { ok: true, profile: { ...profile, credits: profile.credits - cost, stats: { ...profile.stats, [stat]: level + 1 } } };
+  return { ok: true, profile: { ...profile, credits: profile.credits - cost, stats: { ...profile.stats, [stat]: level + 1 }, ...formUp(profile, eco, eco.form.training, now) } };
 }
 
 // shop: { tiers: {name: lowest level-tier index}, items }. Items unlock by the best tier reached (level.js TIERS);

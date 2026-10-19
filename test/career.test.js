@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { newProfile, loadProfile, saveProfile, matchReward, applyReward, exportProfile, importProfile, trainCost, buyTraining, tournamentReward, canEnter, worldRanking, aiRankingTable, migrateProfile, applyRating } from '../src/career.js';
+import { newProfile, loadProfile, saveProfile, matchReward, applyReward, exportProfile, importProfile, trainCost, buyTraining, tournamentReward, canEnter, worldRanking, aiRankingTable, migrateProfile, applyRating, settleMatch, formNow, addPoints, expirePoints, expiringSoon } from '../src/career.js';
 
 const eco = JSON.parse(fs.readFileSync(new URL('../data/economy.json', import.meta.url)));
 const chars = JSON.parse(fs.readFileSync(new URL('../data/characters.json', import.meta.url)));
@@ -180,4 +180,80 @@ test('migration keeps every tournament a v1 player could enter', () => {
     for (const e of circuit.filter(x => !x.inviteTop && rp >= x.minRankingPoints))
       assert.ok(p.bestTier >= e.minTier, `${rp} pts lost ${e.id} (bestTier ${p.bestTier} < ${e.minTier})`);
   }
+});
+
+// part B: economy (spec §6, §7)
+const at = (d, h = 10, m = 0) => new Date(2026, 9, d, h, m);
+const club = (won, gamesWon) => ({ won, gamesWon, scoring: 'sets', ai: 'club' });
+
+test('settleMatch: first win of the day pays ×2, once per day', () => {
+  const p0 = newProfile(chars[0]);
+  const a = settleMatch(p0, club(true, 6), eco, at(19, 9), at(19, 10));
+  assert.equal(a.reward.credits, 2 * (20 + 24 + 40));
+  assert.ok(a.reward.lines.some(l => /First win/.test(l.label)));
+  const b = settleMatch({ ...a.profile, lastCareerMatch: at(19, 10).toISOString() }, club(true, 6), eco, at(19, 12), at(19, 13));
+  assert.equal(b.reward.credits, 84);
+  const c = settleMatch(b.profile, club(true, 6), eco, at(20, 9), at(20, 10));
+  assert.equal(c.reward.credits, 168);
+});
+
+test('settleMatch: streak +10% per match started within 20 min, max +50%, forfeit resets', () => {
+  let p = { ...newProfile(chars[0]), lastWinDay: '2026-10-19', lastCareerMatch: at(19, 10).toISOString() };
+  const s1 = settleMatch(p, club(false, 3), eco, at(19, 10, 15), at(19, 10, 30));
+  assert.equal(s1.profile.streak, 1);
+  assert.equal(s1.reward.credits, Math.round(32 * 1.1));
+  assert.ok(s1.reward.lines.some(l => l.label === 'Streak +10%'));
+  p = { ...s1.profile, streak: 7, lastCareerMatch: at(19, 10, 30).toISOString() };
+  assert.equal(settleMatch(p, club(false, 3), eco, at(19, 10, 40), at(19, 11)).reward.credits, Math.round(32 * 1.5));
+  assert.equal(settleMatch(p, club(false, 3), eco, at(19, 11, 0), at(19, 11, 20)).profile.streak, 0);  // 30 min gap
+  const f = settleMatch(p, { ...club(false, 0), forfeit: true }, eco, at(19, 10, 40), at(19, 10, 41));
+  assert.equal(f.profile.streak, 0);
+  assert.equal(f.reward.credits, 0);
+});
+
+test('form: rusts 0.01/day after 7 idle days down to -0.10; a match gives +0.03, training +0.02', () => {
+  const p = { ...newProfile(chars[0]), lastCareerMatch: at(1).toISOString() };
+  assert.equal(formNow(p, eco, at(8)), 0);
+  assert.equal(formNow(p, eco, at(14)), -0.06);
+  assert.equal(formNow(p, eco, at(30)), -0.1);
+  assert.equal(formNow(newProfile(chars[0]), eco, at(30)), 0);  // never played: no rust
+  const m = settleMatch(p, club(false, 3), eco, at(14, 9), at(14));
+  assert.equal(m.profile.form, -0.03);
+  const t = buyTraining({ ...p, credits: 1000 }, 'speed', eco, at(14)).profile;
+  assert.equal(t.form, -0.04);
+  assert.equal(formNow(t, eco, at(16)), -0.06);  // rust goes on from the training day, idle days not counted twice
+});
+
+test('ranking points expire after 90 days; old profiles start their log today', () => {
+  let p = addPoints(newProfile(chars[0]), 100, at(1));
+  p = addPoints(p, 50, at(19));
+  assert.equal(p.rankingPoints, 150);
+  assert.equal(expiringSoon(p, eco, at(1 + 85)), 100);
+  const e = expirePoints(p, eco, at(1 + 91));
+  assert.equal(e.rankingPoints, 50);
+  assert.equal(e.pointsLog.length, 1);
+  assert.equal(expirePoints(e, eco, at(1 + 91)), e);  // nothing to do: same object (no save)
+  const old = { ...newProfile(chars[0]), rankingPoints: 70 };
+  delete old.pointsLog;
+  const b = expirePoints(old, eco, at(19));
+  assert.equal(b.rankingPoints, 70);
+  assert.deepEqual(b.pointsLog, [{ at: at(19).toISOString(), pts: 70 }]);
+});
+
+test('loadProfile expires old points and saves the result', () => {
+  const store = new Map(), storage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
+  saveProfile(storage, addPoints(newProfile(chars[0]), 100, at(1)));
+  const { profile } = loadProfile(storage, at(1 + 91), eco);
+  assert.equal(profile.rankingPoints, 0);
+  assert.equal(JSON.parse(store.get('padel.career.v1')).rankingPoints, 0);
+});
+
+test('applyRating: a new best tier pays tierUpCredits × tier number, once', () => {
+  const p = { ...newProfile(chars[0], {}, { level: 2.45, reliability: 0 }), credits: 0 };
+  const r = applyRating(p, 2.45, 4, { won: true, games: [6, 0] }, at(19), eco.tierUp);
+  assert.equal(r.tierUp.name, 'Intermediate');
+  assert.equal(r.bonus, 150 * 4);
+  assert.equal(r.profile.credits, 600);
+  const again = applyRating({ ...r.profile, level: 2.45 }, 2.45, 4, { won: true, games: [6, 0] }, at(19), eco.tierUp);
+  assert.equal(again.bonus, 0);
 });
