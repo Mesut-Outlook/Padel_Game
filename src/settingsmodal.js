@@ -2,9 +2,11 @@
 // Controls: Keyboard + Controller / Keyboard only / Controller only (Xbox / PlayStation)
 // Speed: Slow (0.7) / Normal (0.85) / Fast (1.0)
 // Tips: On / Off (changeover tips in matches)
+// Language: Auto (browser) or one of LANGS; a change reloads the page (src/boot.js loads the table)
 
 import { loadSettings, saveSettings, VALID_CONTROLS, VALID_SPEEDS } from './settings.js';
 import { padText } from './padstyle.js';
+import { LANGS, t } from './i18n.js';
 import { padDir, spatialFocus } from './padnav.js';
 
 let modalEl = null;
@@ -33,7 +35,7 @@ export function initSettingsModal({ onSaved } = {}) {
 function refreshModalHints() {
   if (!modalEl) return;
   const hintEl = modalEl.querySelector('#sm-pad-hint');
-  if (hintEl) hintEl.textContent = padText('A Save · B Close');
+  if (hintEl) hintEl.textContent = padText(t('A Save · B Close'));
 }
 
 export function openSettingsModal() {
@@ -42,62 +44,68 @@ export function openSettingsModal() {
   let selControl = current.control;
   let selSpeed = current.speed;
   let selTips = current.tips;
+  let selLang = current.lang;
 
   modalEl.innerHTML = `
     <div class="sm-card" role="dialog" aria-modal="true" aria-labelledby="sm-title">
       <div class="sm-head">
-        <h2 class="sm-title" id="sm-title">GAME SETTINGS</h2>
-        <button type="button" class="sm-close" id="sm-btn-close" aria-label="Close">✕</button>
+        <h2 class="sm-title" id="sm-title">${t('GAME SETTINGS')}</h2>
+        <button type="button" class="sm-close" id="sm-btn-close" aria-label="${t('Close')}">✕</button>
       </div>
 
       <div class="sm-body">
-        <div class="sm-section-label">CONTROLS (PLAYER 1)</div>
+        <div class="sm-section-label">${t('CONTROLS (PLAYER 1)')}</div>
         <div class="sm-options-grid" id="sm-control-options">
           <button type="button" class="sm-opt ${selControl === 'auto' ? 'is-selected' : ''}" data-ctrl="auto" tabindex="0">
             <span class="sm-opt-icon">⌨️ + 🎮</span>
-            <span class="sm-opt-name">Keyboard + Controller</span>
-            <span class="sm-opt-sub">Auto-detect connected pad</span>
+            <span class="sm-opt-name">${t('Keyboard + Controller')}</span>
+            <span class="sm-opt-sub">${t('Auto-detect connected pad')}</span>
             <span class="sm-check">✓</span>
           </button>
           <button type="button" class="sm-opt ${selControl === 'kb' ? 'is-selected' : ''}" data-ctrl="kb" tabindex="0">
             <span class="sm-opt-icon">⌨️</span>
-            <span class="sm-opt-name">Keyboard only</span>
+            <span class="sm-opt-name">${t('Keyboard only')}</span>
             <span class="sm-opt-sub">WASD + Space / J</span>
             <span class="sm-check">✓</span>
           </button>
           <button type="button" class="sm-opt ${selControl === 'pad' ? 'is-selected' : ''}" data-ctrl="pad" tabindex="0">
             <span class="sm-opt-icon">🎮</span>
-            <span class="sm-opt-name">Controller only</span>
+            <span class="sm-opt-name">${t('Controller only')}</span>
             <span class="sm-opt-sub">Xbox / PlayStation</span>
             <span class="sm-check">✓</span>
           </button>
         </div>
 
-        <div class="sm-section-label">GAME SPEED</div>
+        <div class="sm-section-label">${t('GAME SPEED')}</div>
         <div class="sm-speed-row" id="sm-speed-options">
           <button type="button" class="sm-speed-btn ${selSpeed === 0.7 ? 'is-selected' : ''}" data-spd="0.7" tabindex="0">
-            Slow (70%)
+            ${t('Slow (70%)')}
           </button>
           <button type="button" class="sm-speed-btn ${selSpeed === 0.85 ? 'is-selected' : ''}" data-spd="0.85" tabindex="0">
-            Normal (85%)
+            ${t('Normal (85%)')}
           </button>
           <button type="button" class="sm-speed-btn ${selSpeed === 1 ? 'is-selected' : ''}" data-spd="1" tabindex="0">
-            Fast (100% Real)
+            ${t('Fast (100% Real)')}
           </button>
         </div>
 
-        <div class="sm-section-label">TIPS AT CHANGEOVERS</div>
+        <div class="sm-section-label">${t('TIPS AT CHANGEOVERS')}</div>
         <div class="sm-speed-row sm-two" id="sm-tips-options">
-          <button type="button" class="sm-speed-btn ${selTips ? 'is-selected' : ''}" data-tips="1" tabindex="0">On</button>
-          <button type="button" class="sm-speed-btn ${selTips ? '' : 'is-selected'}" data-tips="0" tabindex="0">Off</button>
+          <button type="button" class="sm-speed-btn ${selTips ? 'is-selected' : ''}" data-tips="1" tabindex="0">${t('On')}</button>
+          <button type="button" class="sm-speed-btn ${selTips ? '' : 'is-selected'}" data-tips="0" tabindex="0">${t('Off')}</button>
+        </div>
+
+        <div class="sm-section-label">${t('LANGUAGE')}</div>
+        <div class="sm-speed-row sm-lang" id="sm-lang-options">
+          ${[['', `🌐 ${t('Auto')}`], ...LANGS].map(([c, name]) => `<button type="button" class="sm-speed-btn ${selLang === c ? 'is-selected' : ''}" data-lang="${c}" lang="${c || 'en'}" tabindex="0">${name}</button>`).join('')}
         </div>
       </div>
 
       <div class="sm-foot">
-        <div class="sm-pad-hint" id="sm-pad-hint">${padText('A Save · B Close')}</div>
+        <div class="sm-pad-hint" id="sm-pad-hint">${padText(t('A Save · B Close'))}</div>
         <div class="sm-foot-actions">
-          <button type="button" class="sm-btn is-cancel" id="sm-btn-cancel" tabindex="0">Cancel</button>
-          <button type="button" class="sm-btn is-save" id="sm-btn-save" tabindex="0">Save Settings</button>
+          <button type="button" class="sm-btn is-cancel" id="sm-btn-cancel" tabindex="0">${t('Cancel')}</button>
+          <button type="button" class="sm-btn is-save" id="sm-btn-save" tabindex="0">${t('Save Settings')}</button>
         </div>
       </div>
     </div>
@@ -125,6 +133,13 @@ export function openSettingsModal() {
     };
   });
 
+  modalEl.querySelectorAll('#sm-lang-options .sm-speed-btn').forEach(btn => {
+    btn.onclick = () => {
+      selLang = btn.dataset.lang;
+      modalEl.querySelectorAll('#sm-lang-options .sm-speed-btn').forEach(b => b.classList.toggle('is-selected', b === btn));
+    };
+  });
+
   function close() {
     modalEl.hidden = true;
     if (pollTimer) {
@@ -134,7 +149,8 @@ export function openSettingsModal() {
   }
 
   function save() {
-    const updated = saveSettings({ control: selControl, speed: selSpeed, tips: selTips });
+    const updated = saveSettings({ control: selControl, speed: selSpeed, tips: selTips, lang: selLang });
+    if (updated.lang !== current.lang) { location.reload(); return; }  // boot.js loads the new language
     // Also sync legacy form inputs if in DOM
     const oldCtrl = document.getElementById('control');
     if (oldCtrl) oldCtrl.value = updated.control;

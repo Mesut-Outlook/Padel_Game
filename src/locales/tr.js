@@ -1,0 +1,22 @@
+// Türkçe. Keys are the English UI texts (src/i18n.js); a missing key shows the English text.
+export default {
+  'GAME SETTINGS': 'OYUN AYARLARI',
+  'CONTROLS (PLAYER 1)': 'KONTROLLER (OYUNCU 1)',
+  'Keyboard + Controller': 'Klavye + Kumanda',
+  'Auto-detect connected pad': 'Bağlı kumandayı otomatik bulur',
+  'Keyboard only': 'Yalnız klavye',
+  'Controller only': 'Yalnız kumanda',
+  'GAME SPEED': 'OYUN HIZI',
+  'Slow (70%)': 'Yavaş (%70)',
+  'Normal (85%)': 'Normal (%85)',
+  'Fast (100% Real)': 'Hızlı (%100 gerçek)',
+  'TIPS AT CHANGEOVERS': 'TARAF DEĞİŞİMİNDE İPUÇLARI',
+  'On': 'Açık',
+  'Off': 'Kapalı',
+  'LANGUAGE': 'DİL',
+  'Auto': 'Otomatik',
+  'Cancel': 'İptal',
+  'Save Settings': 'Ayarları kaydet',
+  'Close': 'Kapat',
+  'A Save · B Close': 'A Kaydet · B Kapat',
+};

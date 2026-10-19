@@ -1948,6 +1948,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
     border-radius: 16px;
     width: 100%;
     max-width: 540px;
+    max-height: calc(100dvh - 24px);
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
     display: flex;
     flex-direction: column;
@@ -1978,7 +1979,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
     border-radius: 6px;
   }
   .sm-close:hover { color: #fff; background: rgba(255,255,255,0.08); }
-  .sm-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .sm-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
   .sm-section-label {
     font-family: var(--head-font);
     font-weight: 700;
@@ -2010,6 +2011,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   .sm-opt.is-selected .sm-check { opacity: 1; }
   .sm-speed-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .sm-speed-row.sm-two { grid-template-columns: repeat(2, 1fr); }
+  .sm-speed-row.sm-lang { grid-template-columns: repeat(3, 1fr); }
   .sm-speed-btn {
     font-family: var(--head-font);
     font-weight: 700;
@@ -2234,6 +2236,6 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
 <div id="help" hidden></div>
 <div id="touchUi" hidden></div>
 <div id="rotate"><div class="rt-icon">📱↻</div>ROTATE YOUR PHONE<small>Padel Legends plays in landscape</small></div>
-<script type="module" src="/src/main.js"></script>
+<script type="module" src="/src/boot.js"></script>
 </body>
 </html>

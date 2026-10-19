@@ -32,5 +32,6 @@ Read `CLAUDE.md` — it is the shared guide for every agent (Claude, Antigravity
 | `agy-19` | Career Polish & Fixes Package (forfeit on quit, template clone filter, clean 16-pair draw, online form recovery, remote racket, bot multiplier) | `agents/reports/agy-19-career-fixes.md` | Completed, Opus reviewed (a forfeit pays 0 Credits, otherwise quit-farming paid "Played") |
 | `agy-20` | Friendly karakter kartı: güçlü/zayıf yanlar + oyun ipucu (`src/charcard.js`) | `agents/reports/agy-20-friendly-character-card.md` | Completed, Opus reviewed |
 | `agy-21` | Telefon/tablet + Xbox/PS kumandası: pad varken dokunmatik kontroller gizli, ekran kararmaz, sesi aç rozeti, uygulama modu (manifest) | `agents/reports/agy-21-mobile-gamepad.md` | Completed, Opus reviewed (the `createFx` import was dropped — every match start crashed; duplicate audio-unlock listeners removed) |
+| `agy-22` | Çok dil (8 dil), aşama 2: bütün arayüz metinlerini `t()` / `data-i18n` ile sar (`src/i18n.js`) | `agents/reports/agy-22-i18n-strings.md` | Assigned 2026-10-20 |
 
 
