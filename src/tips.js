@@ -3,7 +3,7 @@ export const TIPS = [
   { kb: 'Opponents at the net? Lob over them with K', pad: 'Opponents at the net? Lob over them with B' },
   { kb: 'Hold A / D while hitting to aim left or right', pad: 'Hold the left stick while hitting to aim left or right' },
   { kb: 'Press C to switch camera angles', pad: 'Press View to switch camera angles' },
-  { kb: 'Plug in a controller: keyboard + controller = 2 players', pad: 'Keyboard + controller = 2 players: team up or face off' },
+  { kb: 'Plug in a controller: keyboard + controller = 2 players', pad: 'A second pad (or the keyboard) = 2 players: team up or face off' },
   { kb: 'High ball near the net? Smash it with L', pad: 'High ball near the net? Smash it with Y' },
   { kb: 'Víbora (I): a sliced overhead that curls into the side glass', pad: 'Víbora (RB): a sliced overhead that curls into the side glass' },
   { kb: 'Chiquita (U): a soft ball at the net players’ feet', pad: 'Chiquita (X): a soft ball at the net players’ feet' },

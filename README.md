@@ -135,7 +135,7 @@ docs/     re-findings.md (rea tersine mühendislik notları)
 - [x] PlayStation kolu (DualShock 4 / DualSense) etiketleri
 - [x] Kariyer marketinde enerji ürünleri: muz, izotonik, jel (5'li paket, Energy sekmesi, dolapta Bag yuvası, her kariyer maçında 1 adet; molada ek enerji + daha yavaş yorulma; online'da sunucu sınırlıyor) — tasarım: `docs/superpowers/specs/2026-10-18-home-modes-energy-design.md` §4
 - [x] Telefon desteği: dokunmatik ekranda sol sanal çubuk + SHOT/LOB/SMASH ve pause/kamera düğmeleri, dikey tutuşta "telefonu çevir" uyarısı, yatay telefonda sıkıştırılmış menüler ve küçük skor tablosu (`src/touch.js`, tasarım: `docs/superpowers/specs/2026-10-19-phone-support.md`; masaüstünde `?touch` ile denenir)
-- [ ] İki kolla yan yana: 2 kişi + 2 kol takılıysa kontrol kendiliğinden "Controller only" (P1 = 1. kol, P2 = 2. kol); her oyuncu kendi kolunun tuş yazılarını görür (Xbox A/B, PS ✕/○) — planlandı (2026-10-19 gece)
+- [x] İki kolla yan yana: 2 kişi + 2 kol takılıysa kontrol kendiliğinden kola geçer (P1 = 1. kol, P2 = 2. kol; maç sırasında takılan kol da devralır), 1 kolda P1 klavyede kalır; P1'in vuruş ipuçları yalnızca kendi cihazına göre, yardım panelinde o an kullanılan kolun tuş yazıları (Xbox A/B, PS ✕/○)
 - [ ] Yorgunluk hissedilsin: enerjisi düşen oyuncunun koşusu (hız, toparlanma, uzanma) ve vuruş kalitesi belirgin düşsün; enerji değerlerinin oynayarak ince ayarı (`ENERGY` tablosu, `src/game.js`) — planlandı (2026-10-19 gece)
 - [x] Tüm oyuncuların enerji çubukları skor tablosunda; klavyede pause yalnızca Esc (P vuruş tuşlarına çok yakın) — `agy-17`
 - [x] Sayı bildiriminde yalnızca hatayı yapan / sayıyı kazandıran oyuncunun adı (oyun/set bildirimlerinde iki isim) — `agy-18`

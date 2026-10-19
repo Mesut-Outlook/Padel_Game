@@ -274,3 +274,11 @@ test('touch stick moves like the keyboard', async () => {
   setTouchMove(0, 0);
   assert.deepEqual(readKeyboard(0).move, [0, 0]);
 });
+
+test('local control: two humans with two pads both play on pads, otherwise P1 keeps the keyboard', async () => {
+  const { localControl } = await import('../src/input.js');
+  assert.equal(localControl('auto', 2, 2), 'pad');  // P1 = 1st pad, P2 = 2nd pad
+  assert.equal(localControl('auto', 2, 1), 'kb');   // P1 keyboard, P2 the only pad
+  assert.equal(localControl('auto', 1, 2), 'auto'); // one human: keyboard and 1st pad together
+  assert.equal(localControl('kb', 2, 2), 'kb');     // an explicit setting wins
+});

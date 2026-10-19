@@ -9,7 +9,7 @@ import { createAvatar } from './player.js';
 import { createCameraRig } from './camera.js';
 import { createReplay } from './replay.js';
 import { aiInput } from './ai.js';
-import { readLocal, readGamepad, consumePressed, clearPressed } from './input.js';
+import { readLocal, readGamepad, consumePressed, clearPressed, localControl } from './input.js';
 import { connect } from './net.js';
 import { serverUrl, NO_SERVER } from './serverurl.js';
 import { track, trackOnce } from './track.js';
@@ -292,8 +292,6 @@ export async function startMatch(cfg) {
   onEnd = cfg.onEnd || null; pointsWon = [0, 0]; fuelName = cfg.fuel?.[0]?.name || null;
   const ids = cfg.players === 2 ? [0, 2] : [0, 2, 1, 3];
   humans = (cfg.sameTeam && cfg.humans === 2 ? [0, 1] : ids).slice(0, cfg.humans);  // P2 partners P1 instead of facing them
-  // keyboard + controller: with several local humans the keyboard is P1's alone so the first pad goes to P2
-  if (control === 'auto' && humans.length > 1) control = 'kb';
   world = newWorld({
     players: cfg.players,
     match: cfg.match,
@@ -453,12 +451,12 @@ function getCamPlane() {
 
 function inputs() {
   const inp = {};
-  const cp = getCamPlane();
+  const cp = getCamPlane(), ctl = localControl(control, humans.length);
   for (const pl of world.players) {
     if (!pl.active) continue;
     const h = humans.indexOf(pl.id);
-    if (h === 0) inp[pl.id] = assisted(pl, readLocal(pl.team, control, cp));
-    else if (h > 0) { const pad = readGamepad(control === 'kb' ? h - 1 : h, pl.team, cp); inp[pl.id] = pad ? assisted(pl, pad) : aiInput(world, pl.id, aiLevel); }
+    if (h === 0) inp[pl.id] = assisted(pl, readLocal(pl.team, ctl, cp));
+    else if (h > 0) { const pad = readGamepad(ctl === 'kb' ? h - 1 : h, pl.team, cp); inp[pl.id] = pad ? assisted(pl, pad) : aiInput(world, pl.id, aiLevel); }
     else inp[pl.id] = aiInput(world, pl.id, aiLevel);
   }
   return inp;
@@ -838,7 +836,9 @@ addEventListener('keydown', (e) => { if (replay.playing && !e.repeat && !['KeyH'
 function padButtonDown() {
   const pads = [...(navigator.getGamepads?.() || [])];
   const down = pads.some(gp => gp?.buttons.some(b => b.pressed));
-  if (down || pads.some(gp => gp?.axes.some(a => Math.abs(a) > 0.5))) device = 'pad';
+  // hints follow P1's own controller: when P1 is on the keyboard, P2's pad must not switch them to pad buttons
+  const mine = localControl(control, humans.length) === 'kb' ? [] : pads.filter(Boolean).slice(0, 1);
+  if (mine.some(gp => gp.buttons.some(b => b.pressed) || gp.axes.some(a => Math.abs(a) > 0.5))) device = 'pad';
   const edge = down && !padWasDown; padWasDown = down; return edge;
 }
 

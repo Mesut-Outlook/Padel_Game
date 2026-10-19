@@ -66,7 +66,7 @@ export function mountKeyHelp(el) {
         <div class="hk-arrows">${cap('ArrowUp', 'up')}${cap('ArrowLeft', 'lf')}${cap('ArrowDown', 'dn')}${cap('ArrowRight', 'rt')}</div>
       </div>
       <div class="hk-main pad-only">${padSvg('xbox')}${padLegend('xbox')}</div>
-      <div class="hk-foot"><span class="kb-only">Hold <b>A</b>/<b>D</b> or <b>←</b>/<b>→</b> while hitting = aim · <b>Esc</b>: pause · ⛶ / <b>F11</b>: fullscreen · </span><span class="pad-only">Keyboard + controller = 2 players: P1 controls “Keyboard only” · </span><a href="kontroller.html" target="_blank" rel="noopener">all controls →</a></div>
+      <div class="hk-foot"><span class="kb-only">Hold <b>A</b>/<b>D</b> or <b>←</b>/<b>→</b> while hitting = aim · <b>Esc</b>: pause · ⛶ / <b>F11</b>: fullscreen · </span><span class="pad-only">2 players: keyboard + a pad, or a pad each · </span><a href="kontroller.html" target="_blank" rel="noopener">all controls →</a></div>
     </div>`;
   let hidden = false, pos = 'bl';
   try { hidden = localStorage.getItem(STORE) === '1'; pos = localStorage.getItem(POS_STORE) || 'bl'; } catch { /* storage blocked: defaults */ }
@@ -96,12 +96,16 @@ export function mountKeyHelp(el) {
     el.querySelector('.hk-main.pad-only').innerHTML = padSvg(kind) + padLegend(kind);
     padEls = [...el.querySelectorAll('.pad-only [data-b]')]; dots = [...el.querySelectorAll('[data-stick]')];
   };
-  let upWas = false;
+  let upWas = false, lastId = '';
   const pollPad = () => {
     requestAnimationFrame(pollPad);
     if (el.hidden) return;
-    const gp = [...(navigator.getGamepads?.() || [])].find(Boolean);
+    // the pad in use: with two pads each player sees their own pad's labels (Xbox A/B or PlayStation ✕/○)
+    const pads = [...(navigator.getGamepads?.() || [])].filter(Boolean);
+    const busy = (p) => p.buttons.some(b => b.pressed) || p.axes.some(a => Math.abs(a) > 0.5);
+    const gp = pads.find(busy) || pads.find(p => p.id === lastId) || pads[0];
     if (!gp) return;
+    lastId = gp.id;
     const kind = isPlayStation(gp.id) ? 'ps' : 'xbox';
     if (kind !== kindNow) relabel(kind);
     if (gp.buttons.some(b => b.pressed) || gp.axes.some(a => Math.abs(a) > 0.5)) setDev('pad');

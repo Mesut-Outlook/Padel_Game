@@ -70,8 +70,8 @@ export function readKeyboard(team, camPlane) {
   return { move, swing, aim: move[0] }; // aim: hold left/right while swinging to place the ball
 }
 
-export function readGamepad(index, team, camPlane) {
-  const gp = navigator.getGamepads?.()[index];
+export function readGamepad(index, team, camPlane) {  // index = the n-th connected pad (browser slots can have gaps after a reconnect)
+  const gp = [...(navigator.getGamepads?.() || [])].filter(Boolean)[index];
   if (!gp) return null;
   const dz = v => (Math.abs(v) < 0.18 ? 0 : v);
   const sx = dz(gp.axes[0]), sy = -dz(gp.axes[1]);
@@ -84,6 +84,12 @@ export function readGamepad(index, team, camPlane) {
 }
 
 export const gamepadCount = () => [...(navigator.getGamepads?.() || [])].filter(Boolean).length;
+
+// control for this frame: with several local humans and a pad each, everyone plays on a pad (P1 = 1st pad,
+// P2 = 2nd…); with fewer pads P1 keeps the keyboard and the pads go to P2 onward. Checked every frame, so a pad
+// plugged in mid-match takes over.
+export const localControl = (control, humans, pads = gamepadCount()) =>
+  control === 'auto' && humans > 1 ? (pads >= humans ? 'pad' : 'kb') : control;
 
 // first local player: 'kb' keyboard only, 'pad' first gamepad only, 'auto' both
 export function readLocal(team, mode = 'auto', camPlane) {
