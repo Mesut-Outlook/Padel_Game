@@ -9,7 +9,7 @@ const K = {
   KeyK: ['K', 'shot', 'lob'], KeyL: ['L', 'shot', 'smash'], KeyU: ['U', 'shot', 'chiq.'], KeyI: ['I', 'shot', 'víbora'],
   KeyO: ['O', 'shot', 'contra'], KeyF: ['F', 'shot', 'slice'],
   KeyC: ['C', 'sys', 'cam'], KeyR: ['R', 'sys', 'replay'], KeyM: ['M', 'sys', 'sound'], KeyH: ['H', 'sys', 'hide'],
-  Escape: ['Esc', 'sys', 'pause'], Enter: ['Enter', 'sys', 'menu'], KeyP: ['P', 'sys', 'pause'],
+  Escape: ['Esc', 'sys', 'pause'], Enter: ['Enter', 'sys', 'menu'],
 };
 const ROWS = [
   ['Escape'],
@@ -66,7 +66,7 @@ export function mountKeyHelp(el) {
         <div class="hk-arrows">${cap('ArrowUp', 'up')}${cap('ArrowLeft', 'lf')}${cap('ArrowDown', 'dn')}${cap('ArrowRight', 'rt')}</div>
       </div>
       <div class="hk-main pad-only">${padSvg('xbox')}${padLegend('xbox')}</div>
-      <div class="hk-foot"><span class="kb-only">Hold <b>A</b>/<b>D</b> or <b>←</b>/<b>→</b> while hitting = aim · <b>P</b> / <b>Esc</b>: pause · ⛶ / <b>F11</b>: fullscreen · </span><span class="pad-only">Keyboard + controller = 2 players: P1 controls “Keyboard only” · </span><a href="kontroller.html" target="_blank" rel="noopener">all controls →</a></div>
+      <div class="hk-foot"><span class="kb-only">Hold <b>A</b>/<b>D</b> or <b>←</b>/<b>→</b> while hitting = aim · <b>Esc</b>: pause · ⛶ / <b>F11</b>: fullscreen · </span><span class="pad-only">Keyboard + controller = 2 players: P1 controls “Keyboard only” · </span><a href="kontroller.html" target="_blank" rel="noopener">all controls →</a></div>
     </div>`;
   let hidden = false, pos = 'bl';
   try { hidden = localStorage.getItem(STORE) === '1'; pos = localStorage.getItem(POS_STORE) || 'bl'; } catch { /* storage blocked: defaults */ }

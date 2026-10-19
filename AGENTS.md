@@ -27,5 +27,7 @@ Read `CLAUDE.md` — it is the shared guide for every agent (Claude, Antigravity
 | `agy-14` | Jersey styles (polo, vneck, tank, patterns) & kit shop items | `agents/reports/agy-14-jerseys.md` | Completed, Opus reviewed (accents painted on the body, no tank armhole, side-seam panels, shallower sash, Kerim accent) |
 | `agy-15` | Opening splash animation, HOME screen, settings modal & PS controller hints | `agents/reports/agy-15-splash-home.md` | Completed, Opus reviewed (wizard no longer disposed by HOME, Back from career, escaped name) |
 | `agy-16` | Fullscreen toggle button (⛶), F in menus | `agents/reports/agy-16-fullscreen.md` | Completed, Opus reviewed (F is the slice shot in a match: menus only) |
+| `agy-17` | Pause yalnızca Esc + tüm oyuncuların enerji çubukları | `agents/reports/agy-17-esc-pause-energy-hud.md` | Completed, Opus reviewed (energy rows = teams like the scoreboard, smash banner moved below the taller HUD) |
+| `agy-18` | Sayı bildiriminde tek oyuncunun adı | `agents/reports/agy-18-point-call-player-name.md` | Completed, Opus reviewed (`pointcall.js` table instead of six copied branches) |
 
 

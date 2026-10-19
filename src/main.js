@@ -28,6 +28,7 @@ import { initHome, showHome, hideHome } from './home.js';
 import { initSettingsModal, openSettingsModal } from './settingsmodal.js';
 import { bindFullscreenKey, toggleFullscreen, isFullscreen } from './fullscreen.js';
 import { padDir } from './padnav.js';
+import { pointCall } from './pointcall.js';
 import { tipCycle } from './tips.js';
 
 const $ = (id) => document.getElementById(id);
@@ -593,13 +594,11 @@ function handleEvents(events, score, winner) {
       const hitter = lastHitter;
       if (lastHitter != null && Math.random() < 0.75) speak(lastHitter, teamOf(lastHitter) === e.team);
       lastHitter = null;
-      const WHY = { 'double bounce': 'double bounce', 'bounced own side': 'bounced on own side', 'hit own mesh': 'hit own mesh', 'hit opponent wall directly': 'direct wall out', 'double fault': 'double fault', out: 'out', 'volleyed serve': 'volleyed serve', 'double hit': 'double hit' };
-      const ERRORS = new Set(['bounced own side', 'hit own mesh', 'hit opponent wall directly', 'double fault', 'volleyed serve', 'double hit']);
-      const isError = ERRORS.has(e.why) || (e.why === 'out' && (hitter == null || teamOf(hitter) !== e.team));
-      // Attribute errors to the offending team (the point loser); winners to the scoring team
-      const subjectTeam = isError ? 1 - e.team : e.team;
-      const team = subjectTeam === 0 ? $('t0').textContent : $('t1').textContent;
-      if (!tut) flash(`${team}\n${WHY[e.why] || e.why}`, 2.1, kicker);
+      const call = pointCall(e.why, e.team, hitter);
+      const subject = (call.pid != null && avatars[call.pid]?.ch?.name)
+        ? avatars[call.pid].ch.name
+        : (call.team === 0 ? $('t0').textContent : $('t1').textContent);
+      if (!tut) flash(`${subject}\n${call.text}`, 2.1, kicker);
       // auto highlight: long rally, smash, or a ball played off the glass
       if (!tut && (rallyLen >= 8 || rallyFlags.smash || rallyFlags.glass)) setTimeout(() => startReplay(true), 900);
       rallyFlags = {};
@@ -615,11 +614,12 @@ function handleEvents(events, score, winner) {
           done({ won: winner === 0, gamesWon: world.match.sets.reduce((n, g) => n + g[0], 0), pointsWon: pointsWon[0], points: [...pointsWon], style: styleStats.pts, games: world.match.sets.reduce((g, s) => [g[0] + s[0], g[1] + s[1]], [0, 0]), scoring: world.match.opts.pointsTo ? 'rally' : 'sets', ai: aiLevel, score: scoreText(world.match) });
           onEnd = () => {};  // keeps toMenu pointed at #career without paying twice
         }
+        const winningTeam = winner === 0 ? $('t0').textContent : $('t1').textContent;
         const medalsStr = styleStats.medals.length
           ? 'Medals: ' + styleStats.medals.map(k => `${MEDALS[k][0]} ${MEDALS[k][1]}`).join(' · ')
           : `Best Rally: ${styleStats.maxRally} shots`;
         flash(
-          `🏆 ${team} WINS!`,
+          `🏆 ${winningTeam} WINS!`,
           999,
           `FINAL STYLE SCORE: ${styleStats.pts} PTS`,
           `${medalsStr} · Press Enter / Start for ${onEnd ? 'Career' : 'Main Menu'}`
@@ -633,23 +633,33 @@ function handleEvents(events, score, winner) {
   renderHud(s);
 }
 
-// energy bars for the local humans (offline from the world, online from the snapshot); red and pulsing when spent
+// energy bars for all active players (offline from the world, online from the snapshot); red and pulsing when spent
 let energyUi = null, tiredWarned = false;
 function renderEnergy(view) {
   const box = $('hudEnergy');
   if (!box) return;
-  const key = humans.join();
+  const isDoubles = world ? (world.players[1]?.active ?? true) : !!avatars[1];
+  const activeIds = isDoubles ? [0, 1, 2, 3] : [0, 2];  // two columns: a row per team, in the scoreboard's order
+  const names = activeIds.map(id => avatars[id]?.ch?.name?.split(' ').pop() || ('P' + (id + 1)));
+  const key = activeIds.join() + ':' + humans.join() + ':' + names.join();
   if (energyUi?.key !== key) {
-    box.innerHTML = humans.map(id => `<div class="he-row"><span>⚡ ${escapeText(avatars[id]?.ch?.name?.split(' ').pop() || 'P' + (id + 1))}</span><span class="he-bar"><i></i></span></div>`).join('');
-    energyUi = { key, bars: [...box.querySelectorAll('i')] };
-    box.hidden = !humans.length;
+    box.innerHTML = activeIds.map((id, i) => {
+      const isHuman = humans.includes(id);
+      return `<div class="he-row${isHuman ? ' human' : ''}"><span class="he-name">${escapeText(names[i])}</span><span class="he-bar"><i></i></span></div>`;
+    }).join('');
+    energyUi = { key, ids: activeIds, bars: [...box.querySelectorAll('i')] };
+    box.hidden = false;
   }
-  humans.forEach((id, k) => {
-    const e = world ? world.players[id].energy : (view.pl[id]?.[7] ?? 1), bar = energyUi.bars[k];
-    bar.style.width = `${Math.round(e * 100)}%`;
-    bar.className = e < 0.25 ? 'low' : e < 0.5 ? 'mid' : '';
-    if (k === 0 && e < 0.25 && !tiredWarned) { tiredWarned = true; showHype('😮‍💨 TIRED — catch your breath between points', 0, 2.2); }
-    if (k === 0 && e > 0.4) tiredWarned = false;
+  activeIds.forEach((id, k) => {
+    const e = world ? (world.players[id]?.energy ?? 1) : (view.pl[id]?.[7] ?? 1), bar = energyUi.bars[k];
+    if (bar) {
+      bar.style.width = `${Math.round(e * 100)}%`;
+      bar.className = e < 0.25 ? 'low' : e < 0.5 ? 'mid' : '';
+    }
+    if (humans.length && id === humans[0]) {
+      if (e < 0.25 && !tiredWarned) { tiredWarned = true; showHype('😮‍💨 TIRED — catch your breath between points', 0, 2.2); }
+      if (e > 0.4) tiredWarned = false;
+    }
   });
 }
 
@@ -676,7 +686,7 @@ function renderHud(s) {
   $('hudLabel').textContent = n ? `SET ${b.setNo}` + (b.label ? ' · ' + b.label : '') : b.label;  // rally scoring has no sets
 }
 
-// Pause menu: P, Esc (when no replay is running) or pad Start. Freezes the match; online games keep running.
+// Pause menu: Esc (when no replay is running) or pad Start. Freezes the match; online games keep running.
 let paused = false, pauseSel = 0;
 let lastPadNavY = 0, padRepeatTimer = 0;
 let lastPadNavA = false, lastPadNavB = false, lastPadNavStart = false;
@@ -718,7 +728,7 @@ function drawPause() {
   $('pzNote').textContent = net ? 'Online match continues in the background.' : '';
   const hintEl = document.querySelector('#pause .pz-hint');
   if (hintEl) {
-    hintEl.textContent = padText('↑ ↓ / Left Stick select · A confirm · B / Start resume');
+    hintEl.textContent = padText('↑ ↓ / Left Stick select · Enter / A confirm · Esc / Start resume');
   }
 }
 
@@ -795,7 +805,7 @@ function pauseInput() {
   const up = consumePressed('ArrowUp') | consumePressed('KeyW') | padUp;
   const down = consumePressed('ArrowDown') | consumePressed('KeyS') | padDown;
   const pick = consumePressed('Enter') | consumePressed('Space') | padPick;
-  const back = consumePressed('KeyP') | consumePressed('Escape') | consumePressed('Pause') | padBack;
+  const back = consumePressed('Escape') | consumePressed('Pause') | padBack;
 
   if (up || down) {
     pauseSel = (pauseSel + (down ? 1 : n - 1)) % n;
@@ -843,8 +853,8 @@ function loop(now) {
     if (!paused) { requestAnimationFrame(loop); return; }
   }
   const over = world?.match.winner != null || net?.winner != null;
-  if (consumePressed('KeyP') | consumePressed('Pause') | (!replay.playing && consumePressed('Escape'))) {
-    if (over && !tut) { toMenu(); return; }  // Start / P on the final score: back to the menu
+  if (consumePressed('Pause') | (!replay.playing && consumePressed('Escape'))) {
+    if (over && !tut) { toMenu(); return; }  // Start / Esc on the final score: back to the menu
     setPaused(true); requestAnimationFrame(loop); return;
   }
   // skip first, so the press that starts a replay (R / R3) can't also end it

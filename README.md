@@ -136,7 +136,10 @@ docs/     re-findings.md (rea tersine mühendislik notları)
 - [ ] Kariyer marketinde enerji ürünleri (muz, izotonik, jel) — karar verildi, tasarım: `docs/superpowers/specs/2026-10-18-home-modes-energy-design.md`
 - [ ] Telefon desteği: maçta dokunmatik kontroller (sol sanal çubuk, sağda vuruş düğmeleri), dikte "telefonu çevir" uyarısı, menülerin dokunmaya ve küçük ekrana uygun hale gelmesi — planlandı (2026-10-19 gece, enerji ürünlerinden sonra)
 - [ ] İki kolla yan yana: 2 kişi + 2 kol takılıysa kontrol kendiliğinden "Controller only" (P1 = 1. kol, P2 = 2. kol); her oyuncu kendi kolunun tuş yazılarını görür (Xbox A/B, PS ✕/○) — planlandı (2026-10-19 gece)
-- [ ] Enerji değerlerinin oynayarak ince ayarı (`ENERGY` tablosu, `src/game.js`)
+- [ ] Yorgunluk hissedilsin: enerjisi düşen oyuncunun koşusu (hız, toparlanma, uzanma) ve vuruş kalitesi belirgin düşsün; enerji değerlerinin oynayarak ince ayarı (`ENERGY` tablosu, `src/game.js`) — planlandı (2026-10-19 gece)
+- [x] Tüm oyuncuların enerji çubukları skor tablosunda; klavyede pause yalnızca Esc (P vuruş tuşlarına çok yakın) — `agy-17`
+- [x] Sayı bildiriminde yalnızca hatayı yapan / sayıyı kazandıran oyuncunun adı (oyun/set bildirimlerinde iki isim) — `agy-18`
+- [ ] Oyuncu tepki sesleri: erkeklerde erkek, kadınlarda kadın sesi (bugün tarayıcının varsayılan sesi, yalnızca perde değişiyor — `callout()` `src/audio.js`); `speechSynthesis.getVoices()` içinden cinsiyete göre ses seçimi ve her oyuncuya kendi perde/hız tonu — acil değil
 - [x] Forma çeşitleri: polo, V yaka, kolsuz, desenli (bazı karakterlerde ve markette) — `agy-14`
 - [x] Açılış animasyonu + ana ekran (Friendly Match / Career / Friends Cup), Friendly'de Where? (bu bilgisayar / online, oda linki `?room=`), ortak Settings (kariyer maçları da okur), `#home` / `#friendly` / `#career` rotaları — `agy-15`
 - [x] Tam ekran: ⛶ düğmesi (ana ekran, menü, maç), duraklatma menüsü, menülerde F (maçta F = slice) — `agy-16`

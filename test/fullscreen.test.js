@@ -37,6 +37,34 @@ test('toggleFullscreen enters fullscreen when not active and exits when active',
   assert.equal(fakeDoc.fullscreenElement, null);
 });
 
+test('toggleFullscreen locks Escape on enter and unlocks on exit', async () => {
+  const lockedKeys = [];
+  let unlockCalled = false;
+  const fakeNav = {
+    keyboard: {
+      lock: async (keys) => { lockedKeys.push(...keys); },
+      unlock: () => { unlockCalled = true; }
+    }
+  };
+  const fakeTarget = {
+    requestFullscreen: async () => { fakeDoc.fullscreenElement = fakeTarget; }
+  };
+  const fakeDoc = {
+    documentElement: fakeTarget,
+    fullscreenElement: null,
+    exitFullscreen: async () => { fakeDoc.fullscreenElement = null; }
+  };
+
+  // Enter fullscreen -> should lock Escape
+  await toggleFullscreen(fakeTarget, fakeDoc, fakeNav);
+  assert.deepEqual(lockedKeys, ['Escape']);
+  assert.equal(unlockCalled, false);
+
+  // Exit fullscreen -> should unlock
+  await toggleFullscreen(fakeTarget, fakeDoc, fakeNav);
+  assert.equal(unlockCalled, true);
+});
+
 test('bindFullscreenKey triggers on KeyF when not inside an input field', () => {
   let calls = 0;
   const fakeTarget = {

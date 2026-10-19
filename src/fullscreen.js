@@ -13,7 +13,7 @@ export function isFullscreen(doc = (typeof document !== 'undefined' ? document :
   );
 }
 
-export async function toggleFullscreen(target = (typeof document !== 'undefined' ? document.documentElement : null), doc = (typeof document !== 'undefined' ? document : null)) {
+export async function toggleFullscreen(target = (typeof document !== 'undefined' ? document.documentElement : null), doc = (typeof document !== 'undefined' ? document : null), nav = (typeof navigator !== 'undefined' ? navigator : null)) {
   if (!doc || !target) return false;
   try {
     if (!isFullscreen(doc)) {
@@ -21,9 +21,11 @@ export async function toggleFullscreen(target = (typeof document !== 'undefined'
       else if (target.webkitRequestFullscreen) await target.webkitRequestFullscreen();
       else if (target.mozRequestFullScreen) await target.mozRequestFullScreen();
       else if (target.msRequestFullscreen) await target.msRequestFullscreen();
+      try { await nav?.keyboard?.lock?.(['Escape']); } catch {}
       track('fullscreen-on');
       return true;
     } else {
+      try { nav?.keyboard?.unlock?.(); } catch {}
       if (doc.exitFullscreen) await doc.exitFullscreen();
       else if (doc.webkitExitFullscreen) await doc.webkitExitFullscreen();
       else if (doc.mozCancelFullScreen) await doc.mozCancelFullScreen();
@@ -67,6 +69,9 @@ export function bindFullscreenKey(target = (typeof window !== 'undefined' ? wind
     }
   };
   const onFsChange = () => {
+    if (!isFullscreen(doc)) {
+      try { (typeof navigator !== 'undefined' ? navigator : null)?.keyboard?.unlock?.(); } catch {}
+    }
     updateFullscreenButtons(doc);
   };
 
