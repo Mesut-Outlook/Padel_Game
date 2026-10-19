@@ -290,32 +290,40 @@
   },
   {
     "id": "p09",
-    "name": "Deniz",
+    "name": "Javier",
     "gender": "m",
-    "country": "Türkiye",
-    "countryCode": "TR",
-    "skinTone": "#E0B088",
+    "country": "España",
+    "countryCode": "ES",
+    "skinTone": "#DDAA80",
     "outfit": {
-      "shirt": "#009246",
-      "shorts": "#FFFFFF",
-      "shoes": "#CE2B37"
+      "shirt": "#C8102E",
+      "shorts": "#1B1B1E",
+      "shoes": "#FFFFFF",
+      "style": "polo",
+      "pattern": "none",
+      "accent": "#FFC400"
     },
     "hand": "left",
-    "position": "reves",
+    "position": "revés",
     "stats": {
       "speed": 8,
       "power": 7,
       "control": 9,
       "volley": 9,
       "smash": 7,
-      "stamina": 7
+      "stamina": 6
     },
     "aiLevel": "legend",
     "body": {
-      "type": "petite",
-      "height": 0.93,
-      "width": 0.95
-    }
+      "type": "athletic",
+      "height": 1.05,
+      "width": 0.98,
+      "shoulders": 1.05
+    },
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#241811",
+    "beard": "stubble",
+    "beardColor": "#241811"
   },
   {
     "id": "p10",
@@ -452,34 +460,40 @@
   },
   {
     "id": "p25",
-    "name": "Mehmet",
+    "name": "Matteo",
     "gender": "m",
-    "country": "Türkiye",
-    "countryCode": "TR",
-    "skinTone": "#B07A4F",
+    "country": "Italia",
+    "countryCode": "IT",
+    "skinTone": "#D29D72",
     "outfit": {
-      "shirt": "#7D3C98",
-      "shorts": "#F7DC6F",
-      "shoes": "#FFFFFF"
+      "shirt": "#0B5FA5",
+      "shorts": "#FFFFFF",
+      "shoes": "#0B5FA5",
+      "style": "crew",
+      "pattern": "side",
+      "accent": "#FFFFFF"
     },
     "hand": "right",
     "position": "drive",
     "stats": {
-      "speed": 8,
-      "power": 6,
-      "control": 7,
-      "volley": 8,
-      "smash": 6,
-      "stamina": 8
+      "speed": 7,
+      "power": 8,
+      "control": 6,
+      "volley": 7,
+      "smash": 8,
+      "stamina": 6
     },
     "aiLevel": "club",
     "body": {
-      "type": "slim",
-      "height": 1.02,
-      "width": 0.92
+      "type": "athletic",
+      "height": 1.06,
+      "width": 1.0,
+      "shoulders": 1.05
     },
     "hair": "Hair_SimpleParted",
-    "hairColor": "#2b1d14"
+    "hairColor": "#151010",
+    "beard": "stubble",
+    "beardColor": "#151010"
   },
   {
     "id": "p26",
@@ -878,5 +892,234 @@
     "hairColor": "#e2e2e2",
     "beard": "goatee",
     "beardColor": "#e2e2e2"
+  },
+  {
+    "id": "p27",
+    "name": "Lucía",
+    "gender": "f",
+    "country": "España",
+    "countryCode": "ES",
+    "skinTone": "#E6B48C",
+    "outfit": {
+      "shirt": "#FFC400",
+      "shorts": "#1B1B1E",
+      "shoes": "#FFFFFF",
+      "style": "tank",
+      "pattern": "none",
+      "accent": "#C8102E"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 8,
+      "power": 7,
+      "control": 8,
+      "volley": 7,
+      "smash": 6,
+      "stamina": 8
+    },
+    "aiLevel": "pro",
+    "body": {
+      "type": "slim",
+      "height": 1.03,
+      "width": 0.89,
+      "waist": 0.77,
+      "hips": 1.08
+    },
+    "hair": "Hair_Long",
+    "hairColor": "#3d2416",
+    "makeup": true,
+    "hairLength": 2.3
+  },
+  {
+    "id": "p28",
+    "name": "Camille",
+    "gender": "f",
+    "country": "France",
+    "countryCode": "FR",
+    "skinTone": "#F8DDCC",
+    "outfit": {
+      "shirt": "#FFFFFF",
+      "shorts": "#0D2C6C",
+      "shoes": "#E63946",
+      "style": "vneck",
+      "pattern": "chest",
+      "accent": "#0D2C6C"
+    },
+    "hand": "right",
+    "position": "revés",
+    "stats": {
+      "speed": 7,
+      "power": 5,
+      "control": 9,
+      "volley": 8,
+      "smash": 5,
+      "stamina": 8
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "slim",
+      "height": 1.0,
+      "width": 0.89,
+      "waist": 0.77,
+      "hips": 1.08
+    },
+    "hair": "Hair_Buns",
+    "hairColor": "#B4472A",
+    "makeup": true
+  },
+  {
+    "id": "p29",
+    "name": "Julien",
+    "gender": "m",
+    "country": "France",
+    "countryCode": "FR",
+    "skinTone": "#EEC7A4",
+    "outfit": {
+      "shirt": "#0D2C6C",
+      "shorts": "#FFFFFF",
+      "shoes": "#FFFFFF",
+      "style": "polo",
+      "pattern": "none",
+      "accent": "#E63946"
+    },
+    "hand": "right",
+    "position": "revés",
+    "stats": {
+      "speed": 7,
+      "power": 6,
+      "control": 8,
+      "volley": 8,
+      "smash": 7,
+      "stamina": 6
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "athletic",
+      "height": 1.04,
+      "width": 0.97,
+      "shoulders": 1.05
+    },
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#6B4A2E"
+  },
+  {
+    "id": "p30",
+    "name": "Sanne",
+    "gender": "f",
+    "country": "Nederland",
+    "countryCode": "NL",
+    "skinTone": "#F6DCC8",
+    "outfit": {
+      "shirt": "#FF6B00",
+      "shorts": "#FFFFFF",
+      "shoes": "#1B1B1E",
+      "style": "tank",
+      "pattern": "side",
+      "accent": "#FFFFFF"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 8,
+      "power": 7,
+      "control": 7,
+      "volley": 7,
+      "smash": 6,
+      "stamina": 8
+    },
+    "aiLevel": "pro",
+    "body": {
+      "type": "slim",
+      "height": 1.06,
+      "width": 0.89,
+      "waist": 0.77,
+      "hips": 1.08
+    },
+    "hair": "Hair_Long",
+    "hairColor": "#EBD08E",
+    "makeup": true,
+    "hairLength": 2.4,
+    "headwear": {
+      "type": "headband",
+      "color": "#FF6B00"
+    }
+  },
+  {
+    "id": "p31",
+    "name": "Daan",
+    "gender": "m",
+    "country": "Nederland",
+    "countryCode": "NL",
+    "skinTone": "#F1D1B8",
+    "outfit": {
+      "shirt": "#FF6B00",
+      "shorts": "#1B1B1E",
+      "shoes": "#FFFFFF",
+      "style": "crew",
+      "pattern": "none",
+      "accent": "#FFFFFF"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 7,
+      "power": 7,
+      "control": 6,
+      "volley": 6,
+      "smash": 7,
+      "stamina": 8
+    },
+    "aiLevel": "rookie",
+    "body": {
+      "type": "athletic",
+      "height": 1.08,
+      "width": 0.96,
+      "shoulders": 1.05
+    },
+    "hair": "Hair_Buzzed",
+    "hairColor": "#D9B878"
+  },
+  {
+    "id": "p32",
+    "name": "Giulia",
+    "gender": "f",
+    "country": "Italia",
+    "countryCode": "IT",
+    "skinTone": "#D7A47C",
+    "outfit": {
+      "shirt": "#1B1B1E",
+      "shorts": "#1B1B1E",
+      "shoes": "#2E8B57",
+      "style": "vneck",
+      "pattern": "none",
+      "accent": "#2E8B57"
+    },
+    "hand": "left",
+    "position": "revés",
+    "stats": {
+      "speed": 7,
+      "power": 6,
+      "control": 8,
+      "volley": 8,
+      "smash": 6,
+      "stamina": 7
+    },
+    "aiLevel": "club",
+    "body": {
+      "type": "slim",
+      "height": 1.02,
+      "width": 0.89,
+      "waist": 0.77,
+      "hips": 1.08
+    },
+    "hair": "Hair_Long",
+    "hairColor": "#16100C",
+    "makeup": true,
+    "hairLength": 1.9,
+    "headwear": {
+      "type": "visor",
+      "color": "#FFFFFF"
+    }
   }
 ]

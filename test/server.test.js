@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
 import { startServer } from '../server/server.js';
+import { readFileSync } from 'node:fs';
+
+const ROSTER = JSON.parse(readFileSync(new URL('../data/characters.json', import.meta.url))).length;
 
 // one client: resolves with the first message of `type`
 function client(port) {
@@ -87,7 +90,7 @@ test('join: look is whitelisted (bad markup/colours/keys dropped), stats and rac
     assert.equal(look.onclick, undefined);
     assert.equal(look.headwear, undefined);
     assert.equal(look.glasses, '#000000');
-    assert.equal(l.chars[0], 25, 'char index clamped to the roster');
+    assert.equal(l.chars[0], ROSTER - 1, 'char index clamped to the roster');
     const pl = srv.rooms.get('SAFE').world.players[0];
     assert.equal(pl.stats.volley, 10);
     assert.equal(pl.stats.speed, 6);
