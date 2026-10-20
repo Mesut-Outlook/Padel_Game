@@ -298,8 +298,8 @@ export function buildVenue(scene, venue, opts = {}) {
       });
     }
 
-    // Billboard quad (0.85m wide x 1.35m tall, bottom centered on seat)
-    const quadGeo = new THREE.PlaneGeometry(0.85, 1.35).translate(0, 0.675, 0);
+    // Billboard quad (0.80m wide x 1.45m tall, bottom centered on seat)
+    const quadGeo = new THREE.PlaneGeometry(0.80, 1.45).translate(0, 0.725, 0);
     const aCell = new THREE.InstancedBufferAttribute(new Float32Array(n), 1);
     for (let i = 0; i < n; i++) aCell.setX(i, occupied[i].plan.lookIndex);
     quadGeo.setAttribute('aCell', aCell);

@@ -91,13 +91,27 @@ async function generateCrowdAtlas() {
     if (hand) hand.children.forEach((c) => { if (!c.isBone) c.visible = false; });
 
     // --- Pose 0: Sitting (Rows 0 & 1, indices 0..15) ---
+    // Turned ~46° towards the court (facing +X / right) with gaze down at the players
     const sitCol = i % ATLAS_COLS;
     const sitRow = Math.floor(i / ATLAS_COLS); // 0 or 1
-    avatar.update(0.1, [0, 0, 0, 'sit', null, 0, false]);
+    const bodyYaw = -0.80; // ~ -46 deg
+    avatar.update(0.1, [0, 0, bodyYaw, 'sit', null, 0, false]);
+
+    // Gaze down towards the players on the court with natural variety
+    const gazePitch = 0.14 + (i % 4) * 0.03; // tilt down ~8° to ~13° towards court floor
+    const gazeYaw = -0.12 - ((i * 3) % 5) * 0.04; // turn ~7° to ~16° further towards center court
+    const qGaze = new THREE.Quaternion().setFromEuler(new THREE.Euler(gazePitch, gazeYaw, 0, 'YXZ'));
+    if (avatar.bones.Head) {
+      avatar.bones.Head.quaternion.multiply(qGaze);
+    }
+    if (avatar.bones.neck_01) {
+      avatar.bones.neck_01.rotation.x += 0.06;
+      avatar.bones.neck_01.rotation.y += -0.06;
+    }
     avatar.holder.updateMatrixWorld(true);
 
-    camera.position.set(0, 1.15, 2.3);
-    camera.lookAt(0, 0.82, 0);
+    camera.position.set(0, 1.15, 2.65);
+    camera.lookAt(0, 0.80, 0);
 
     r.render(offScene, camera);
     masterCtx.drawImage(r.domElement, sitCol * TILE_W, sitRow * TILE_H);
@@ -105,7 +119,7 @@ async function generateCrowdAtlas() {
     // --- Pose 1: Cheering (Rows 2 & 3, indices 16..31) ---
     const cheerCol = i % ATLAS_COLS;
     const cheerRow = 2 + Math.floor(i / ATLAS_COLS); // 2 or 3
-    avatar.update(0.1, [0, 0, 0, (i % 2 === 0 ? 'cheer' : 'dance'), null, 0, false]);
+    avatar.update(0.1, [0, 0, bodyYaw, (i % 2 === 0 ? 'cheer' : 'dance'), null, 0, false]);
 
     // Lift and wave arms if available for a spirited cheer
     if (avatar.bones.upperarm_l) {
@@ -116,10 +130,15 @@ async function generateCrowdAtlas() {
       avatar.bones.upperarm_r.rotation.z = -1.35;
       avatar.bones.upperarm_r.rotation.x = 0.3;
     }
+    // Cheering while still watching the court / celebrating the point
+    if (avatar.bones.Head) {
+      const qCheerGaze = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.08, -0.15, 0, 'YXZ'));
+      avatar.bones.Head.quaternion.multiply(qCheerGaze);
+    }
     avatar.holder.updateMatrixWorld(true);
 
-    camera.position.set(0, 1.25, 2.45);
-    camera.lookAt(0, 0.90, 0);
+    camera.position.set(0, 1.25, 2.85);
+    camera.lookAt(0, 1.05, 0);
 
     r.render(offScene, camera);
     masterCtx.drawImage(r.domElement, cheerCol * TILE_W, cheerRow * TILE_H);
@@ -178,10 +197,14 @@ export function createCrowdMaterial(atlasTexture) {
       #include <uv_vertex>
       float col = mod(aCell, 8.0);
       float row = floor(aCell / 8.0);
+      // Spectators on left stand (X < 0) face right towards court.
+      // Spectators on right stand (X > 0) face left towards court: mirror horizontally.
+      vec4 instCenter = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+      float u = instCenter.x > 0.0 ? (1.0 - uv.x) : uv.x;
       // 8 columns x 4 rows
       // uv.y in Three.js starts at bottom (0) to top (1)
       // row 0 is top row of canvas, so v in [0.75, 1.0]
-      vCrowdUv = vec2((uv.x + col) * 0.125, (uv.y + (3.0 - row)) * 0.25);
+      vCrowdUv = vec2((u + col) * 0.125, (uv.y + (3.0 - row)) * 0.25);
       `
     ).replace(
       '#include <project_vertex>',
