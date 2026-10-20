@@ -4,3 +4,5 @@ dist/
 .superpowers/
 # security audits list open weaknesses: keep them out of the public repo
 agents/reports/security-*.md
+# agent report screenshots stay on this machine (reports themselves are tracked)
+agents/reports/*/
