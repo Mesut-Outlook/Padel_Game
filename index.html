@@ -11,9 +11,14 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <!-- GoatCounter: cookie-free visit counts (no consent banner needed); localhost is not counted. Events: src/track.js -->
-<script>/* GoatCounter sends location.search: take a ?room= invite code out of the URL before it loads (main.js reads window.__padelRoom) */
-try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) { window.__padelRoom = r; u.searchParams.delete('room'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } } catch { /* keep the URL as is */ }</script>
-<script data-goatcounter="https://padellegends.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<script>/* GoatCounter sends location.search: take a ?room= invite code and a ?server= address out of the URL before it loads
+   (main.js reads window.__padelRoom, serverurl.js window.__padelServer; the server is kept for this tab so a reload still finds it) */
+try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.searchParams.get('server');
+  if (r) { window.__padelRoom = r; u.searchParams.delete('room'); }
+  if (s) { try { sessionStorage.setItem('padel.server', s); } catch { /* per page */ } u.searchParams.delete('server'); }
+  try { window.__padelServer = s || sessionStorage.getItem('padel.server') || undefined; } catch { window.__padelServer = s || undefined; }
+  if (r || s) history.replaceState(history.state, '', u.pathname + u.search + u.hash); } catch { /* keep the URL as is */ }</script>
+<script data-goatcounter="https://padellegends.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
 <style>
   /* Barlow Condensed (OFL, public/fonts/OFL.txt) served from this site, not Google Fonts: no visitor IP goes to Google */
   @font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url(fonts/barlow-condensed-600-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }

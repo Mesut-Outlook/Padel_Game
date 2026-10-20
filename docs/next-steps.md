@@ -30,12 +30,7 @@ Bu not, 2026-10-19/20 tarihlerinde ev dizininden açılan bir Claude Code oturum
 
 ## Sıradaki işler (kullanıcının onayladığı sıra)
 Ayrıntılar ve satır numaraları yerel güvenlik raporunda (`agents/reports/security-2026-10-20.md`).
-1. **Site:** Harici bir oyun sunucusundan (`?server=`) gelen verilerin güvenli işlenmesi.
-   - Sunucudan gelen her değer `escapeText`/`escapeHtml` ya da sayıya çevrilerek ekrana konsun.
-   - Harici bir sunucuya bağlanmadan önce onay sorulsun ya da izin listesi kullanılsın.
-   - `?server=` adresi, `?room=` gibi, GoatCounter yüklenmeden URL'den çıkarılsın.
-   - `privacy.html`'ye harici sunucuya giden verilerin tam listesi (IP, isim, görünüm, seviye, statlar) ve kısa bir "Your rights" bölümü eklensin.
-   - GoatCounter script'i sürümlü dosya ve SRI ile yüklensin (hash'i GoatCounter belgelerinden doğrula).
+1. ~~**Site:** `?server=` ile gelen veriler~~ **Bitti (2026-10-20):** yabancı sunucuya bağlanmadan önce onay (`allowServer` in `serverurl.js`), `?server=` URL'den çıkarılıyor, GoatCounter `count.v5.js` + SRI, `privacy.html` (online verileri + Your rights).
 2. **DNS (Namecheap → Advanced DNS):** Kullanıcı Chrome'da oturum açıkken ajan yapabilir.
    - TXT `_dmarc` = `v=DMARC1; p=reject; adkim=s; aspf=s`
    - CAA `@` = `0 issue "letsencrypt.org"`

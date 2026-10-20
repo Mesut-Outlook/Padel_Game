@@ -11,7 +11,7 @@ import { createReplay } from './replay.js';
 import { aiInput } from './ai.js';
 import { readLocal, readGamepad, consumePressed, clearPressed, localControl } from './input.js';
 import { connect } from './net.js';
-import { serverUrl, NO_SERVER } from './serverurl.js';
+import { serverUrl, NO_SERVER, allowServer, NOT_CONNECTED } from './serverurl.js';
 import { track, trackOnce } from './track.js';
 import { predict } from './physics.js';
 import { createFx } from './fx.js';
@@ -252,6 +252,7 @@ export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', ma
   };
   url ||= serverUrl(location);  // null on the static web build unless ?server= points at one
   if (!url) { say(t(NO_SERVER), null, true); return null; }
+  if (!allowServer(url)) { say(t(NOT_CONNECTED), null, true); return null; }
   code = String(code || '').trim().toUpperCase();
   if (!code) { say(t('Enter a room code first.'), null, true); return null; }
   onEnd = end || null; pointsWon = [0, 0]; bagLeft = bag ? { ...bag } : null; tally = end ? newTally() : null;
@@ -260,7 +261,7 @@ export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', ma
     cfg: { players, ...match, ai, venue, outdoor: venues[venue]?.type === 'outdoor' },
     onError: (e) => say(escapeText(e), null, true),
     onLobby: (l) => {
-      say(t('Room <b>{code}</b> · your seat: {seat} · players: {taken}/{total} (empty = AI)', { code: escapeText(l.code), seat: net.seat, taken: l.taken.length, total: l.seats.length }) +
+      say(t('Room <b>{code}</b> · your seat: {seat} · players: {taken}/{total} (empty = AI)', { code: escapeText(l.code), seat: Number(net.seat) || 0, taken: Number(l.taken?.length) || 0, total: Number(l.seats?.length) || 0 }) +
         (l.started ? '' : t(' — <b>click “START MATCH” when everyone is ready</b>')), l);
       if (l.started && !avatars.length) {
         const ids = l.seats, roster = {}, rk = {};
@@ -542,7 +543,7 @@ function renderOffers() {
   const two = humans.length > 1 && !net;
   box.innerHTML = [...offers].map(([pid, o]) => {
     const h = humans.indexOf(pid), pad = offerKeyLabel({ pid, humans, device, control, touch: isTouch() });
-    return `<button type="button" class="eat-offer" data-pid="${pid}">${two ? `P${h + 1} ` : ''}⚡ ${Math.round(o.energy * 100)}% — ${t('eat {food}?', { food: t(FOOD_NAME[o.item]) })} <kbd>${pad}</kbd></button>`;
+    return `<button type="button" class="eat-offer" data-pid="${+pid}">${two ? `P${h + 1} ` : ''}⚡ ${Math.round(o.energy * 100)}% — ${t('eat {food}?', { food: t(FOOD_NAME[o.item]) })} <kbd>${pad}</kbd></button>`;
   }).join('');
 }
 function hideOffer(pid) { const o = offers.get(pid); if (o) { clearTimeout(o.timer); offers.delete(pid); renderOffers(); } }
@@ -802,8 +803,8 @@ function renderHud(s) {
   let h = c('') + c('') + b.sets.map((_, i) => c(t('SET {n}', { n: i + 1 }), 'hd' + cur(i))).join('') + c(t('PTS'), 'hd');
   for (const tIdx of [0, 1]) {
     h += c(b.server === tIdx ? '●' : '', 'srv') + c(escapeText(names[tIdx]), 'nm')
-      + b.sets.map((st, i) => c(st[tIdx], 'g' + cur(i) + (i < n - 1 && st[tIdx] > st[1 - tIdx] ? ' won' : ''))).join('')
-      + c(b.pts[tIdx], 'pt');
+      + b.sets.map((st, i) => c(escapeText(st[tIdx]), 'g' + cur(i) + (i < n - 1 && st[tIdx] > st[1 - tIdx] ? ' won' : ''))).join('')
+      + c(escapeText(b.pts[tIdx]), 'pt');  // online: board values come from the server
   }
   const grid = $('hudGrid');
   grid.style.gridTemplateColumns = `14px auto ${n > 0 ? `repeat(${n}, 34px) ` : ''}48px`;

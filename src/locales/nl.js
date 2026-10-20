@@ -1023,4 +1023,8 @@ export default {
   "Controller": "Controller",
   "Star point": "Star Point",
   "Fast": "Snel",
+  "This link uses a game server that Padel Legends does not run: {host}": "Deze link gebruikt een gameserver die Padel Legends niet beheert: {host}",
+  "That server will receive your IP address and the player you play with: name, look, level, stats and equipment.": "Die server ontvangt je IP-adres en de speler waarmee je speelt: naam, uiterlijk, niveau, statistieken en uitrusting.",
+  "Connect anyway?": "Toch verbinden?",
+  "Not connected: you did not allow that game server.": "Niet verbonden: je hebt die gameserver niet toegestaan.",
 };

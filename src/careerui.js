@@ -1,6 +1,6 @@
 // Career mode UI screens: Template picker, Character Creator, Career Hub, Career Play, Training, Shop, Locker, Match Reward, Profile.
 // Reuses the menu's single 3D preview canvas (Intel HD 620 friendly) and routes all storage through src/career.js.
-import { serverUrl, NO_SERVER } from './serverurl.js';
+import { serverUrl, NO_SERVER, allowServer, NOT_CONNECTED } from './serverurl.js';
 import { track } from './track.js';
 import characters from '../data/characters.json';
 import venues from '../data/venues.json';
@@ -2662,6 +2662,7 @@ function leaveOnline() {
 async function refreshRooms() {
   const url = onlineUrl();
   if (!url) { onlineState.rooms = []; setOnlineStatus(t(NO_SERVER), null, true); return; }
+  if (!allowServer(url)) { onlineState.rooms = []; setOnlineStatus(t(NOT_CONNECTED), null, true); return; }
   onlineState.busy = true;
   setOnlineStatus(t('Looking for rooms…'));
   try { onlineState.rooms = await listRooms(url); onlineState.status = ''; }

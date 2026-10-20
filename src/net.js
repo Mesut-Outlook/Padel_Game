@@ -49,6 +49,11 @@ export function listRooms(url) {
     const timer = setTimeout(() => done(reject, new Error('Server did not answer')), 4000);
     ws.onopen = () => ws.send(JSON.stringify({ type: 'list' }));
     ws.onerror = () => done(reject, new Error('Could not connect to server: ' + url));
-    ws.onmessage = (ev) => { const m = JSON.parse(ev.data); if (m.type === 'rooms') done(resolve, m.rooms); };
+    ws.onmessage = (ev) => {  // the server may be anyone's (?server=): keep only the fields the list shows, as plain strings and numbers
+      let m; try { m = JSON.parse(ev.data); } catch { return; }
+      if (m?.type === 'rooms') done(resolve, (Array.isArray(m.rooms) ? m.rooms : []).map(r => ({
+        code: String(r?.code ?? ''), host: String(r?.host ?? ''), venue: Number(r?.venue) || 0, players: Number(r?.players) || 0, free: Number(r?.free) || 0,
+      })));
+    };
   });
 }

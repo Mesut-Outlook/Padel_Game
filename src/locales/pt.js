@@ -1023,4 +1023,8 @@ export default {
   "Controller": "Comando",
   "Star point": "Star Point",
   "Fast": "Rápido",
+  "This link uses a game server that Padel Legends does not run: {host}": "Este link usa um servidor de jogo que o Padel Legends não gere: {host}",
+  "That server will receive your IP address and the player you play with: name, look, level, stats and equipment.": "Esse servidor vai receber o teu endereço IP e o jogador com que jogas: nome, aspeto, nível, estatísticas e equipamento.",
+  "Connect anyway?": "Ligar mesmo assim?",
+  "Not connected: you did not allow that game server.": "Sem ligação: não autorizaste esse servidor de jogo.",
 };

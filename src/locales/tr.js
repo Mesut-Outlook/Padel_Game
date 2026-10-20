@@ -1023,4 +1023,8 @@ export default {
   "Controller": "Kol",
   "Star point": "Yıldız sayı",
   "Fast": "Hızlı",
+  "This link uses a game server that Padel Legends does not run: {host}": "Bu bağlantı, Padel Legends'ın işletmediği bir oyun sunucusunu kullanıyor: {host}",
+  "That server will receive your IP address and the player you play with: name, look, level, stats and equipment.": "O sunucu IP adresini ve oynadığın oyuncunun bilgilerini alacak: isim, görünüm, seviye, statlar ve ekipman.",
+  "Connect anyway?": "Yine de bağlanılsın mı?",
+  "Not connected: you did not allow that game server.": "Bağlanılmadı: o oyun sunucusuna izin vermedin.",
 };
