@@ -1028,4 +1028,5 @@ export default {
   "Connect anyway?": "Toch verbinden?",
   "Not connected: you did not allow that game server.": "Niet verbonden: je hebt die gameserver niet toegestaan.",
   " — the room creator starts the match": " — de maker van de kamer start de wedstrijd",
+  "Nobody has joined yet: send your friend the invite link first.": "Er is nog niemand binnen: stuur je vriend eerst de uitnodigingslink.",
 };

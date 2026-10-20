@@ -1028,4 +1028,5 @@ export default {
   "Connect anyway?": "Ligar mesmo assim?",
   "Not connected: you did not allow that game server.": "Sem ligação: não autorizaste esse servidor de jogo.",
   " — the room creator starts the match": " — quem criou a sala inicia o jogo",
+  "Nobody has joined yet: send your friend the invite link first.": "Ainda ninguém entrou: primeiro envia o link de convite ao teu amigo.",
 };

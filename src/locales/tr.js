@@ -1028,4 +1028,5 @@ export default {
   "Connect anyway?": "Yine de bağlanılsın mı?",
   "Not connected: you did not allow that game server.": "Bağlanılmadı: o oyun sunucusuna izin vermedin.",
   " — the room creator starts the match": " — maçı odayı kuran başlatır",
+  "Nobody has joined yet: send your friend the invite link first.": "Henüz kimse katılmadı: önce arkadaşına davet linkini gönder.",
 };

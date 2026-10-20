@@ -281,6 +281,9 @@ export function startOnline({ url, code, create = false, players = 4, venue = 0,
       }
     },
   });
+  // the creator alone: a second START used to begin a match against AI before the friend could join
+  const start = net.start;
+  net.start = () => (net.lobby?.taken?.length || 0) < 2 ? say(t('Nobody has joined yet: send your friend the invite link first.'), null, true) : start();
   return net;
 }
 const escapeText = (t) => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
