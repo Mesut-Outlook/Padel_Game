@@ -17,7 +17,7 @@ export function isFullscreen(doc = (typeof document !== 'undefined' ? document :
 export const canFullscreen = (target) => !!(target?.requestFullscreen || target?.webkitRequestFullscreen || target?.mozRequestFullScreen || target?.msRequestFullscreen);
 
 // without the Fullscreen API (iPhone) the game goes full screen only as a home-screen app (manifest + apple meta in index.html)
-const HINT = N_('📱 Full screen on iPhone: tap <b>Share</b> (the square with the arrow) → <b>Add to Home Screen</b>, then open Padel Legends from the new icon.');
+const HINT = N_('📱 Full screen on iPhone: tap <b>Share</b> (the square with the arrow; in Chrome it is in the address bar) → <b>Add to Home Screen</b>, then open Padel Legends from the new icon.');
 function showHomeScreenHint(doc) {
   let el = doc.getElementById?.('fsHint');
   if (!el) {
