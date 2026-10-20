@@ -31,10 +31,7 @@ Bu not, 2026-10-19/20 tarihlerinde ev dizininden açılan bir Claude Code oturum
 ## Sıradaki işler (kullanıcının onayladığı sıra)
 Ayrıntılar ve satır numaraları yerel güvenlik raporunda (`agents/reports/security-2026-10-20.md`).
 1. ~~**Site:** `?server=` ile gelen veriler~~ **Bitti (2026-10-20):** yabancı sunucuya bağlanmadan önce onay (`allowServer` in `serverurl.js`), `?server=` URL'den çıkarılıyor, GoatCounter `count.v5.js` + SRI, `privacy.html` (online verileri + Your rights).
-2. **DNS (Namecheap → Advanced DNS):** Kullanıcı Chrome'da oturum açıkken ajan yapabilir.
-   - TXT `_dmarc` = `v=DMARC1; p=reject; adkim=s; aspf=s`
-   - CAA `@` = `0 issue "letsencrypt.org"`
-   - MX/SPF ve GitHub TXT kayıtlarına dokunma.
+2. ~~**DNS**~~ **Bitti (2026-10-20):** Namecheap'e TXT `_dmarc` = `v=DMARC1; p=reject; adkim=s; aspf=s` ve CAA `@` = `0 issue "letsencrypt.org"` eklendi. MX/SPF ve GitHub TXT kayıtlarına dokunulmadı. İleride oyun sunucusu Let's Encrypt dışında bir sertifika kullanırsa CAA'ya o da eklenmeli.
 3. **GitHub:** `main` için branch protection (force-push ve silme yasak), Chrome'dan. SSH parolası kullanıcıda (yukarıya bak).
 4. **Oyun sunucusunu sağlamlaştırma** (`server/server.js`; her biri için test ekle):
    - Bozuk mesaj ya da bozuk URL ile çökmesin.
