@@ -117,7 +117,7 @@ export function initMenu() {
             <div class="pl-section-label">${t('WHERE TO PLAY?')}</div>
             <div class="pl-where-grid" id="pl-where-grid">
               <button type="button" class="pl-card pl-where-card is-selected" data-where="local">
-                <div class="pl-card-title">🖥️ ${t('On this device')}</div>
+                <div class="pl-card-title"><svg class="pl-dev-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h18V4H4c-1.1 0-2 .9-2 2v11H0v3h14v-3H4V6zm19 2h-6c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1zm-1 9h-4v-7h4v7z"/></svg> ${t('On this device')}</div>
                 <div class="pl-card-sub">${t('Local couch match · Keyboard or gamepads')}</div>
                 <span class="pl-check">✓</span>
               </button>
