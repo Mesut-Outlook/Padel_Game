@@ -624,8 +624,9 @@ function addHeadwear(head, root, ch, hairColor) {
   if (ch.ponytail) {
     const tie = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.008, 6, 12), lam(ch.headwear?.color || '#222222'));
     tie.position.set(0, 1.71, -0.115); parts.push(tie);
-    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.008, 0.22, 10).translate(0, -0.11, 0), lam(hairColor));
-    tail.position.set(0, 1.715, -0.125); tail.rotation.x = -0.3;  // tipped toward the neck: the ready stance pitches the head forward, so it hangs straight down
+    const len = ch.ponytail === true ? 0.22 : ch.ponytail;  // a number = tail length in metres (0.4 = mid-back)
+    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.008, len, 10).translate(0, -len / 2, 0), lam(hairColor));
+    tail.position.set(0, 1.715, -0.125); tail.rotation.x = -0.066 / len;  // tipped toward the neck: the ready stance pitches the head forward, so it hangs straight down (a long tail tips less, or it sinks into the back)
     parts.push(tail);
   }
   if (ch.topknot) {  // samurai bun on the crown

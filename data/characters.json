@@ -357,6 +357,44 @@
     "hairColor": "#a9a9a9"
   },
   {
+    "id": "p33",
+    "name": "Erhan",
+    "gender": "m",
+    "country": "Türkiye",
+    "countryCode": "TR",
+    "skinTone": "#E8C3A0",
+    "outfit": {
+      "shirt": "#2B2D42",
+      "shorts": "#2B2D42",
+      "shoes": "#FFFFFF",
+      "style": "crew",
+      "pattern": "none",
+      "accent": "#C0C0C0"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 5,
+      "power": 9,
+      "control": 6,
+      "volley": 7,
+      "smash": 9,
+      "stamina": 7
+    },
+    "aiLevel": "pro",
+    "body": {
+      "type": "muscular",
+      "height": 1.12,
+      "width": 1.1,
+      "shoulders": 1.12
+    },
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#a9a7a3",
+    "ponytail": 0.4,
+    "beard": "full",
+    "beardColor": "#f2f0ec"
+  },
+  {
     "id": "p11",
     "name": "Fırat",
     "gender": "m",
