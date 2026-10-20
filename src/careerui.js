@@ -590,7 +590,7 @@ function renderTemplatesScreen() {
     <div class="cr-head">
       <div>
         <h2 class="cr-title">${t('NEW CAREER · <span>CHOOSE A TEMPLATE</span>')}</h2>
-        <div class="cr-sub">${t('Pick any of the 26 players as your starting template, then customize your look.')}</div>
+        <div class="cr-sub">${t('Pick any of the {n} players as your starting template, then customize your look.', { n: characters.length })}</div>
       </div>
       <div class="cr-banner-actions">
         <button type="button" class="cr-btn" id="cr-tpl-import">${t('Import Profile')}</button>
@@ -598,7 +598,7 @@ function renderTemplatesScreen() {
       </div>
     </div>
     <div class="pl-filter-row" id="cr-tpl-filters">
-      <button type="button" class="pl-chip ${templateFilter === 'all' ? 'is-active' : ''}" data-filter="all">${t('All (26)')}</button>
+      <button type="button" class="pl-chip ${templateFilter === 'all' ? 'is-active' : ''}" data-filter="all">${t('All ({n})', { n: characters.length })}</button>
       <button type="button" class="pl-chip ${templateFilter === 'f' ? 'is-active' : ''}" data-filter="f">${t('Women')}</button>
       <button type="button" class="pl-chip ${templateFilter === 'm' ? 'is-active' : ''}" data-filter="m">${t('Men')}</button>
     </div>

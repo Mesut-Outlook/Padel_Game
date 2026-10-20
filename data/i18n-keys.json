@@ -150,7 +150,7 @@
     "src/menu.js:223",
     "src/menu.js:233"
   ],
-  "All (26)": [
+  "All ({n})": [
     "src/careerui.js:601"
   ],
   "Already owned.": [
@@ -1651,7 +1651,7 @@
   "Phone touch screen": [
     "src/home.js:15"
   ],
-  "Pick any of the 26 players as your starting template, then customize your look.": [
+  "Pick any of the {n} players as your starting template, then customize your look.": [
     "src/careerui.js:593"
   ],
   "Plant your feet": [
