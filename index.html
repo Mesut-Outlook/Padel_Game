@@ -583,6 +583,32 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   }
   .pl-lobby-status { font-size: 12px; color: var(--muted); margin-top: 4px; }
   .pl-lobby-status b { color: var(--acc); }
+  /* online: Create / Join cards, then the room (src/lobbyview.js draws the players into .pl-lobby-status) */
+  .pl-online-pre { display: flex; flex-direction: column; gap: 10px; }
+  .pl-online-name { display: flex; flex-direction: column; gap: 4px; }
+  .pl-online-name .pl-room-input { width: 100%; text-transform: none; letter-spacing: 0; }
+  .pl-online-card { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: rgba(0,0,0,.2); }
+  .pl-online-card-title { font: 800 15px var(--head-font, 'Barlow Condensed'), system-ui; letter-spacing: .8px; text-transform: uppercase; color: #fff; }
+  .pl-online-hint { font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .pl-online-card > .pl-online-btn { align-self: flex-start; }
+  .pl-leave-btn { align-self: flex-start; background: transparent; }
+  .pl-start-btn:disabled { opacity: .55; cursor: default; box-shadow: none; transform: none; }
+  .pl-shell[data-where="online"] .pl-field:has(#pl-humans-seg) { display: none; }  /* online: one human per device */
+  .pl-shell[data-room="1"] .pl-field:has(#pl-mode-seg), .pl-shell[data-room="1"] .pl-match-col + .pl-match-col { opacity: .4; pointer-events: none; }  /* the room was made with these */
+  .lb { display: flex; flex-direction: column; gap: 8px; color: #dfe8f1; }
+  .lb-head { font-size: 13px; } .lb-head b { color: var(--acc); letter-spacing: 1px; }
+  .lb-teams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .lb-team { border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; background: rgba(0,0,0,.2); min-width: 0; }
+  .lb-team-name { font: 800 11px var(--head-font, 'Barlow Condensed'), system-ui; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .lb-team ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .lb-seat { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; font-size: 13px; color: var(--muted); }
+  .lb-seat.is-human { color: #fff; font-weight: 700; }
+  .lb-seat .lb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .lb-tag { font-size: 10px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; padding: 1px 6px; border-radius: 999px; background: #ffffff1a; color: #dfe8f1; }
+  .lb-tag.lb-host { background: rgba(216,245,58,.18); color: var(--acc); }
+  .lb-state { font-size: 11px; font-weight: 400; color: var(--muted); }
+  .lb-rules { font-size: 12px; color: var(--muted); }
+  .lb-next { font-size: 13px; font-weight: 700; color: var(--acc); }
   .pl-next-btn {
     flex: 0 0 auto;
     width: auto;

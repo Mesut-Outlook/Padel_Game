@@ -2669,7 +2669,7 @@ async function refreshRooms() {
   onlineState.busy = true;
   setOnlineStatus(t('Looking for rooms…'));
   try { onlineState.rooms = await listRooms(url); onlineState.status = ''; }
-  catch (e) { onlineState.rooms = []; onlineState.status = escapeHtml(e.message); }
+  catch (e) { onlineState.rooms = []; onlineState.status = escapeHtml(t(e.message)); }
   onlineState.busy = false;
   if (curScreen === 'online') renderOnlineScreen();
 }

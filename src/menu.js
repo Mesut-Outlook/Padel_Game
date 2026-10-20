@@ -43,9 +43,9 @@ export function setCareerGamepadHandler(fn) {
 export function setWizardWhere(where, room) {
   return setWizardWhereFn?.(where, room);
 }
-let setWizardRoomFn = null;
-export function setWizardRoom(code) {  // the server picked the room code: show it with the invite link
-  return setWizardRoomFn?.(code);
+let setWizardLobbyFn = null;
+export function setWizardLobby(view) {  // lobbyview.js view of the room we are in (null = not in a room): code, link, players, buttons
+  return setWizardLobbyFn?.(view);
 }
 
 let disposeFn = null;
@@ -173,18 +173,34 @@ export function initMenu() {
                 </div>
 
                 <div class="pl-online-section" id="pl-online-section" hidden>
-                  <div class="pl-room-link-box">
-                    <div style="font-weight:700;font-size:13px;white-space:nowrap;">${t('ROOM CODE:')} <b id="pl-room-code-val" style="color:var(--acc);letter-spacing:1px;">------</b></div>
-                    <input type="text" readonly id="pl-room-link-input" class="pl-room-link-input" value="">
-                    <button type="button" id="pl-copy-link-btn" class="pl-copy-btn">📋 ${t('Copy Link')}</button>
-                    <span id="pl-copy-status" class="pl-copy-status"></span>
+                  <div class="pl-online-pre" id="pl-online-pre">
+                    <label class="pl-online-name"><span class="pl-field-label">${t('Your name')}</span>
+                      <input type="text" class="pl-room-input" id="pl-online-name" maxlength="16" autocomplete="off" placeholder="${t('so your friends know who joined')}"></label>
+                    <div class="pl-online-card">
+                      <div class="pl-online-card-title">${t('Create a room')}</div>
+                      <div class="pl-online-hint">${t('You get an invite link for your friends. The room plays the venue, format and rules you picked.')}</div>
+                      <button type="button" class="pl-online-btn" id="pl-create-room-btn">${t('CREATE ROOM')}</button>
+                    </div>
+                    <div class="pl-online-divider"><span>${t('OR')}</span></div>
+                    <div class="pl-online-card">
+                      <div class="pl-online-card-title">${t("Join a friend's room")}</div>
+                      <div class="pl-online-hint">${t('Type the 6-character code from the invite, or simply open the invite link.')}</div>
+                      <div style="display:flex;gap:8px;align-items:center;">
+                        <input type="text" class="pl-room-input" id="pl-join-room-input" placeholder="${t('ROOM CODE')}" maxlength="6" autocomplete="off">
+                        <button type="button" class="pl-online-btn" id="pl-join-room-btn">${t('JOIN')}</button>
+                      </div>
+                    </div>
                   </div>
-                  <div class="pl-online-divider"><span>${t('OR JOIN / ENTER CODE')}</span></div>
-                  <div style="display:flex;gap:8px;align-items:center;">
-                    <input type="text" class="pl-room-input" id="pl-join-room-input" placeholder="${t('ROOM CODE')}" maxlength="6">
-                    <button type="button" class="pl-online-btn" id="pl-set-room-btn">${t('USE CODE')}</button>
+                  <div class="pl-online-room" id="pl-online-room" hidden>
+                    <div class="pl-room-link-box">
+                      <div style="font-weight:700;font-size:13px;white-space:nowrap;">${t('ROOM CODE:')} <b id="pl-room-code-val" style="color:var(--acc);letter-spacing:1px;">------</b></div>
+                      <input type="text" readonly id="pl-room-link-input" class="pl-room-link-input" value="">
+                      <button type="button" id="pl-copy-link-btn" class="pl-copy-btn">📋 ${t('Copy Link')}</button>
+                      <span id="pl-copy-status" class="pl-copy-status"></span>
+                    </div>
                   </div>
                   <div class="pl-lobby-status" id="pl-online-lobby-status"></div>
+                  <button type="button" class="pl-online-btn pl-leave-btn" id="pl-leave-room-btn" hidden>${t('Leave room')}</button>
                 </div>
 
                 <div class="pl-field"><span class="pl-field-label">${t('Format')}</span>
@@ -766,36 +782,84 @@ export function initMenu() {
     };
   });
 
-  // Where to play & Online Room
+  // Where to play & Online Room: before a room, Create or Join; in a room, its code, invite link, players and Leave
   let selectedWhere = 'local';
   let currentRoomCode = '';
+  let lobby = null;  // lobbyview.js view of the room we are in
+  const startLabel = `${t('START MATCH')} ▶`;
 
   function updateRoomDisplay(code) {
     currentRoomCode = (code || '').toUpperCase().slice(0, 6);
     const codeEl = shell.querySelector('#pl-room-code-val');
     const linkInput = shell.querySelector('#pl-room-link-input');
-    const joinInput = shell.querySelector('#pl-join-room-input');
     if (codeEl) codeEl.textContent = currentRoomCode || '------';
-    if (linkInput) {
-      linkInput.value = currentRoomCode ? `${location.origin}${location.pathname}?room=${currentRoomCode}` : '';
+    if (linkInput) {  // a game played through ?server= keeps that server in the invite, or the friend lands on no server
+      const srv = window.__padelServer ? `&server=${encodeURIComponent(window.__padelServer)}` : '';
+      linkInput.value = currentRoomCode ? `${location.origin}${location.pathname}?room=${currentRoomCode}${srv}` : '';
     }
-    if (joinInput && code) joinInput.value = currentRoomCode;
     if ($('room')) $('room').value = currentRoomCode;
   }
 
-  let roomJoined = false;  // typed / invited code (join) vs the generated one (create), for analytics
+  const joinInput = shell.querySelector('#pl-join-room-input');
+  const nameInput = shell.querySelector('#pl-online-name');
+  const lobbyStatus = shell.querySelector('#pl-online-lobby-status');
+  try { if (nameInput) nameInput.value = localStorage.getItem('padel.onlineName') || ''; } catch { /* storage blocked */ }
+  if (nameInput) nameInput.onchange = () => { try { localStorage.setItem('padel.onlineName', nameInput.value.trim().slice(0, 16)); } catch { /* not kept */ } };
+  const typedCode = () => (joinInput?.value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+
+  // the footer button follows the online state: create / join, then START (host, once someone joined) or wait (guest)
+  function syncStartBtn() {
+    const btn = shell.querySelector('#pl-start-btn');
+    if (!btn) return;
+    let label = startLabel, off = false;
+    if (selectedWhere === 'online') {
+      if (!lobby) label = typedCode() ? `${t('JOIN ROOM')} ▶` : `${t('CREATE ROOM')} ▶`;
+      else if (lobby.amHost) off = !lobby.canStart;
+      else { label = t('WAITING FOR THE HOST…'); off = true; }
+    }
+    btn.textContent = label; btn.disabled = off;
+    shell.dataset.where = selectedWhere;  // CSS: online hides Humans; in a room the room's rules are fixed
+    shell.dataset.room = lobby ? '1' : '';
+  }
+
   function setWhere(where, code) {
     selectedWhere = where;
-    if (code) roomJoined = true;  // arrived with a ?room= invite
     shell.querySelectorAll('#pl-where-seg [data-where]').forEach(c => c.classList.toggle('is-selected', c.dataset.where === where));
     const onlineSec = shell.querySelector('#pl-online-section');
     if (onlineSec) onlineSec.hidden = (where !== 'online');
-    if (where === 'online' && code) updateRoomDisplay(code);  // no code: START creates the room and the server names it
+    if (where === 'online' && code && joinInput && !lobby) {  // arrived with a ?room= invite: the Match step, code filled in
+      joinInput.value = String(code).toUpperCase().slice(0, 6);
+      if (lobbyStatus) lobbyStatus.innerHTML = t('You are invited to room <b>{code}</b>. Pick your player and racket if you like, then press JOIN.', { code: joinInput.value.replace(/[^A-Z0-9]/g, '') });
+      switchStep(3);
+    }
+    syncStartBtn();
   }
 
   shell.querySelectorAll('#pl-where-seg [data-where]').forEach(card => {
-    card.onclick = () => setWhere(card.dataset.where);
+    card.onclick = () => { if (!lobby) setWhere(card.dataset.where); };  // in a room: Leave first
   });
+
+  // connect: no code = a new room (the server names it), a code = that room
+  function goOnline(code) {
+    if (lobby) return;
+    track(code ? 'online-join' : 'online-create');
+    nameInput?.onchange?.();
+    if ($('room')) $('room').value = code || '';
+    if (lobbyStatus) lobbyStatus.textContent = t('Connecting…');
+    if ($('online')) $('online').click();
+  }
+  shell.querySelector('#pl-create-room-btn').onclick = () => goOnline('');
+  shell.querySelector('#pl-join-room-btn').onclick = () => {
+    const code = typedCode();
+    if (code) goOnline(code);
+    else if (lobbyStatus) lobbyStatus.textContent = t('Enter a room code first.');
+  };
+  if (joinInput) {
+    joinInput.oninput = syncStartBtn;
+    joinInput.onkeydown = (e) => { if (e.key === 'Enter') shell.querySelector('#pl-join-room-btn').click(); };
+  }
+  // a joined room lives in main.js: reload to drop it cleanly (the invite code is not kept)
+  shell.querySelector('#pl-leave-room-btn').onclick = () => { history.replaceState(history.state, '', '#friendly'); location.reload(); };
 
   const copyBtn = shell.querySelector('#pl-copy-link-btn');
   const copyStatus = shell.querySelector('#pl-copy-status');
@@ -821,27 +885,16 @@ export function initMenu() {
     };
   }
 
-  const joinInput = shell.querySelector('#pl-join-room-input');
-  const setRoomBtn = shell.querySelector('#pl-set-room-btn');
-  if (setRoomBtn && joinInput) {
-    const applyJoin = () => {
-      const val = joinInput.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-      if (val) {
-        roomJoined = true;
-        updateRoomDisplay(val);
-        const lobbyStatus = shell.querySelector('#pl-online-lobby-status');
-        if (lobbyStatus) lobbyStatus.innerHTML = t('Room code set to <b>{code}</b>. Click START MATCH to connect!', { code: val });
-      }
-    };
-    setRoomBtn.onclick = applyJoin;
-    joinInput.onkeydown = (e) => { if (e.key === 'Enter') applyJoin(); };
-  }
-
   setWizardWhereFn = (where, room) => setWhere(where, room);
-  setWizardRoomFn = (code) => {  // a new room: open the Match step, the only one that shows the code and invite link
-    const fresh = String(code || '').toUpperCase().slice(0, 6) !== currentRoomCode;
-    updateRoomDisplay(code);
-    if (fresh) switchStep(3);
+  setWizardLobbyFn = (view) => {
+    const first = view && !lobby;
+    lobby = view;
+    shell.querySelector('#pl-online-pre').hidden = !!view;
+    shell.querySelector('#pl-online-room').hidden = !view;
+    shell.querySelector('#pl-leave-room-btn').hidden = !view;
+    if (view) updateRoomDisplay(view.code);
+    if (first) { setWhere('online'); switchStep(3); }  // the Match step is the one that shows the room
+    syncStartBtn();
   };
 
   // Home & Fullscreen buttons
@@ -902,9 +955,8 @@ export function initMenu() {
   if (startBtn) {
     startBtn.onclick = () => {
       if (selectedWhere === 'online') {
-        track(roomJoined ? 'online-join' : 'online-create');
-        if ($('room')) $('room').value = currentRoomCode;
-        if ($('online')) $('online').click();
+        if (lobby) { if ($('online')) $('online').click(); }  // in the room: the host starts the match (main.js checks)
+        else goOnline(typedCode());
       } else {
         cleanUp();
         if ($('start')) $('start').click();

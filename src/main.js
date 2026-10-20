@@ -17,7 +17,8 @@ import { track, trackOnce } from './track.js';
 import { predict } from './physics.js';
 import { createFx } from './fx.js';
 import { unlockAudio, isAudioSuspended, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxReward, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
-import { initMenu, setWizardWhere, setWizardRoom, disposeMenu } from './menu.js';
+import { initMenu, setWizardWhere, setWizardLobby, disposeMenu } from './menu.js';
+import { lobbyView, lobbyHtml } from './lobbyview.js';
 import { initCareer, openCareer } from './careerui.js';
 import { createTutorial } from './tutorial.js';
 import { padText, isPlayStation } from './padstyle.js';
@@ -261,7 +262,10 @@ export function startOnline({ url, code, create = false, players = 4, venue = 0,
   net = connect({
     url, code, create, char, stats, racket, public: isPublic, name, look, shoes, ball, bag,
     cfg: { players, ...match, ai, venue, outdoor: venues[venue]?.type === 'outdoor' },
-    onError: (e) => { say(escapeText(e), null, true); if (!net?.lobby?.started) net = null; else flash(e, 4); },  // not in a match yet: START can try again
+    onError: (e) => {  // server texts are fixed English sentences (marked in net.js), so they translate
+      say(escapeText(t(e)), null, true);
+      if (!net?.lobby?.started) { net = null; setWizardLobby(null); } else flash(t(e), 4);  // not in a match yet: START can try again
+    },
     onStatus: (s) => flash(s === 'back' ? t('You are back in the match.') : t('Connection lost. Getting you back into the match…'), s === 'back' ? 2.5 : 30),
     onLobby: (l) => {
       // in the match: tell the others when a player drops (the AI plays their seat) and when they come back
@@ -271,9 +275,9 @@ export function startOnline({ url, code, create = false, players = 4, venue = 0,
         for (const id of awaySeats) if (!(l.away || []).includes(id) && l.taken?.includes(id)) flash(t('{name} is back.', { name: nameOf(id) }), 2.5);
       }
       awaySeats = l.away || [];
-      setWizardRoom(l.code);
-      say(t('Room <b>{code}</b> · your seat: {seat} · players: {taken}/{total} (empty = AI)', { code: escapeText(l.code), seat: Number(net.seat) || 0, taken: Number(l.taken?.length) || 0, total: Number(l.seats?.length) || 0 }) +
-        (l.started ? '' : l.host === net.seat ? t(' — <b>click “START MATCH” when everyone is ready</b>') : t(' — the room creator starts the match')), l);
+      const view = lobbyView(l, net.seat, characters, venues);
+      setWizardLobby(view);
+      say(lobbyHtml(view), l);
       if (l.started && !avatars.length) {
         const ids = l.seats, roster = {}, rk = {};
         for (const id of ids) {
@@ -298,13 +302,14 @@ export function startOnline({ url, code, create = false, players = 4, venue = 0,
 }
 const escapeText = (t) => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 
+const onlineName = () => document.getElementById('pl-online-name')?.value.trim().slice(0, 16) || undefined;  // Friendly: optional, shown to the others
 $('online').onclick = () => {
   if (net) { net.start(); return; }  // already in the room: START again starts the match (host only, the server checks)
   track('online-click');
   const me = +$('char').value;
   const myRk = rackets[+$('racket').value];
   startOnline({
-    code: $('room').value, create: !$('room').value, char: me, stats: characters[me].stats, racket: myRk.stats,
+    code: $('room').value, create: !$('room').value, char: me, stats: characters[me].stats, racket: myRk.stats, name: onlineName(),
     look: { racket: myRk.id, racketColor: myRk.color, racketShape: myRk.shape },
     players: +$('mode').value, match: matchOpts(), ai: $('ai').value, venue: +$('venue').value,
   });
