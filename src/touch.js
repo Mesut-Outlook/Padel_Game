@@ -3,13 +3,14 @@
 // They feed input.js like a keyboard, so the {move, swing, aim} input stays the same everywhere.
 import { setTouchMove } from './input.js';
 import { padText } from './padstyle.js';
+import { t } from './i18n.js';
 
 export const isTouch = () => (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches) || (typeof location !== 'undefined' && new URLSearchParams(location.search).has('touch'));
 
 export function offerKeyLabel({ pid = 0, humans = [0], device = 'kb', control = 'auto', touch = isTouch() } = {}) {
   const h = humans.indexOf(pid);
   const hasPad = (h > 0 || device === 'pad' || control === 'pad');
-  return hasPad ? padText('LT') : (touch ? 'tap' : 'E');
+  return hasPad ? padText('LT') : (touch ? t('tap') : 'E');
 }
 
 const TIPS_SEEN = 'padel.touchTipsSeen';
@@ -29,14 +30,14 @@ export function mountTouch(el) {
     <div class="tc-zone"><div class="tc-base" hidden><i class="tc-knob"></i></div></div>
     <div class="tc-btns">${BUTTONS.map(([code, label, cls, r, deg]) => {
       const a = deg * Math.PI / 180, x = SHOT_C - r * Math.cos(a), y = SHOT_C + r * Math.sin(a);
-      return `<button type="button" class="tc-btn ${cls}" data-key="${code}" style="right:${x.toFixed(0)}px;bottom:${y.toFixed(0)}px">${label}</button>`;
+      return `<button type="button" class="tc-btn ${cls}" data-key="${code}" style="right:${x.toFixed(0)}px;bottom:${y.toFixed(0)}px">${t(label)}</button>`;
     }).join('')}</div>
-    <div class="tc-top">${TOP.map(([code, icon, name]) => `<button type="button" class="tc-btn tc-small" data-key="${code}" aria-label="${name}">${icon}</button>`).join('')}<button type="button" class="tc-btn tc-small tc-q" aria-label="How to play">❔</button></div>
+    <div class="tc-top">${TOP.map(([code, icon, name]) => `<button type="button" class="tc-btn tc-small" data-key="${code}" aria-label="${t(name)}">${icon}</button>`).join('')}<button type="button" class="tc-btn tc-small tc-q" aria-label="${t('How to play')}">❔</button></div>
     <div class="tc-tips" hidden>
-      <div class="tc-tip tt-move">👆 Put your thumb down anywhere here<br>and drag to run</div>
-      <div class="tc-tip tt-btns">SHOT: smart shot · serve<br>stick left / right while tapping = aim<br>inner ring: LOB · VÍBORA · SMASH<br>outer ring: CHIQUITA · CONTRA (off your glass) · SLICE serve</div>
-      <div class="tc-tip tt-top">camera · pause · replay · sound · scoreboard · these tips</div>
-      <button type="button" class="tc-tip tt-ok">Got it ✓</button>
+      <div class="tc-tip tt-move">${t('👆 Put your thumb down anywhere here<br>and drag to run')}</div>
+      <div class="tc-tip tt-btns">${t('SHOT: smart shot · serve<br>stick left / right while tapping = aim<br>inner ring: LOB · VÍBORA · SMASH<br>outer ring: CHIQUITA · CONTRA (off your glass) · SLICE serve')}</div>
+      <div class="tc-tip tt-top">${t('camera · pause · replay · sound · scoreboard · these tips')}</div>
+      <button type="button" class="tc-tip tt-ok">${t('Got it ✓')}</button>
     </div>`;
   const zone = el.querySelector('.tc-zone'), base = el.querySelector('.tc-base'), knob = el.querySelector('.tc-knob');
   let id = null, cx = 0, cy = 0;

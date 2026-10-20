@@ -205,21 +205,25 @@ function growStats(profile, gain, eco) {
   return { profile: { ...profile, stats, xp }, ups };
 }
 
-// one line after a match on the worst measured area + what to do: { text, action: { train: stat } | { restock: true } | null }
+// one line after a match on the worst measured area + what to do: { text, msg, action: { train: stat } | { restock: true } | null }
+// msg = the same line as [template, vars] pieces (lead — rest[ alt]) for the UI's t(); `stat` / `tier` vars are names to translate too
+const fill = ([s, v = {}]) => s.replace(/\{(\w+)\}/g, (_, k) => v[k]);
+const tip = (lead, rest, alt, action) => ({ text: `${fill(lead)} — ${fill(rest)}${alt ? ' ' + fill(alt) : ''}`, msg: { lead, rest, alt }, action });
 export function coachTip(t, profile, eco) {
   const cap = statCap(profile), next = TIERS.find(x => x.cap > cap);
-  const train = (k, lead, alt = '') => profile.stats[k] >= cap
-    ? { text: `${lead} — ${next ? `reach ${next.name} to train beyond ${cap}` : 'keep playing'}`, action: null }
-    : { text: `${lead} — Train ${STAT_NAME[k]} (${trainCost(profile.stats[k], eco)} Credits)${alt}`, action: { train: k } };
+  const train = (k, lead, alt = null) => profile.stats[k] >= cap
+    ? tip(lead, next ? ['reach {tier} to train beyond {cap}', { tier: next.name, cap }] : ['keep playing'], null, null)
+    : tip(lead, ['Train {stat} ({cost} Credits)', { stat: STAT_NAME[k], cost: trainCost(profile.stats[k], eco) }], alt, { train: k });
   const food = (profile.bag?.bag_banana || 0) + (profile.bag?.bag_gel || 0);
-  if (t.drySec >= 30) return { text: `You were dehydrated for ${Math.round(t.drySec)} s — keep water in your bag`, action: { restock: true } };
-  if (t.tiredSec >= 30) return food ? train('stamina', `You were exhausted for ${Math.round(t.tiredSec)} s`, ' or eat at changeovers')
-    : { text: `You were exhausted for ${Math.round(t.tiredSec)} s — keep food in your bag and eat at changeovers`, action: { restock: true } };
+  if (t.drySec >= 30) return tip(['You were dehydrated for {s} s', { s: Math.round(t.drySec) }], ['keep water in your bag'], null, { restock: true });
+  const tired = ['You were exhausted for {s} s', { s: Math.round(t.tiredSec) }];
+  if (t.tiredSec >= 30) return food ? train('stamina', tired, ['or eat at changeovers'])
+    : tip(tired, ['keep food in your bag and eat at changeovers'], null, { restock: true });
   const [vm, vx] = t.volley, [sm, sx] = t.smash;
-  if (vm + vx >= 5 && vx / (vm + vx) >= 0.4) return train('volley', `Your volleys missed ${vx} of ${vm + vx}`, ' or play at the net more');
-  if (sm + sx >= 4 && sx / (sm + sx) >= 0.4) return train('smash', `Your smashes missed ${sx} of ${sm + sx}`, ' or let more lobs bounce off the glass');
+  if (vm + vx >= 5 && vx / (vm + vx) >= 0.4) return train('volley', ['Your volleys missed {x} of {n}', { x: vx, n: vm + vx }], ['or play at the net more']);
+  if (sm + sx >= 4 && sx / (sm + sx) >= 0.4) return train('smash', ['Your smashes missed {x} of {n}', { x: sx, n: sm + sx }], ['or let more lobs bounce off the glass']);
   const weak = STATS.reduce((a, k) => (profile.stats[k] < profile.stats[a] ? k : a));
-  return train(weak, `Your weakest skill is ${STAT_NAME[weak]} (${profile.stats[weak]})`);
+  return train(weak, ['Your weakest skill is {stat} ({v})', { stat: STAT_NAME[weak], v: profile.stats[weak] }]);
 }
 
 // Credits to raise a stat from `level` to level + 1

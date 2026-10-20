@@ -5,6 +5,7 @@ import { aimVelocity } from './physics.js';
 import { newMatch, servePosition } from './rules.js';
 import { padText } from './padstyle.js';
 import { isTouch } from './touch.js';
+import { t } from './i18n.js';
 
 // key names per device; the instructions follow whichever device was used last
 const KEYS = {
@@ -18,59 +19,59 @@ const landed = (a) => a.land && a.land[1] < 0;  // first bounce after your hit w
 // kind: move | serve | feed | ui | match. feed(p, R) -> [landX, landZ, flightTime] on YOUR side (R = racket side, +1 right-handed).
 const LESSONS = [
   { id: 'move', title: 'Movement', kind: 'move', need: 4, start: [0, 8],
-    text: (k) => `Use <b>${k.move}</b> to walk onto the yellow rings on the court.`,
+    text: (k) => t('Use <b>{move}</b> to walk onto the yellow rings on the court.', { move: k.move }),
     rings: [[-3, 8.5], [3, 8.5], [3, 4], [-3, 4]] },
   { id: 'serve', title: 'Serve', kind: 'serve', need: 3,
-    text: (k) => `Press <b>${k.hit}</b> to serve: drop the ball, let it bounce, and hit underhand into the diagonal service box. You can adjust your position with <b>${k.move}</b> before serving.`,
+    text: (k) => t('Press <b>{hit}</b> to serve: drop the ball, let it bounce, and hit underhand into the diagonal service box. You can adjust your position with <b>{move}</b> before serving.', { hit: k.hit, move: k.move }),
     judge: (a) => a.shot === 'serve' && landed(a) },
   { id: 'slice', title: 'Slice Serve', kind: 'serve', need: 1,
-    text: (k) => `Press <b>${k.slice}</b> to hit a slice serve: the ball stays low and curves sideways.`,
+    text: (k) => t('Press <b>{slice}</b> to hit a slice serve: the ball stays low and curves sideways.', { slice: k.slice }),
     judge: (a) => a.shot === 'serve' && a.slice && landed(a) },
   { id: 'forehand', title: 'Forehand', kind: 'feed', need: 3, start: [1.2, 8.3],
     feed: (p, R) => [p[0] + 0.9 * R, p[1] - 1.3, 1.15],
-    text: (k) => `The ball is coming to your forehand side. Press <b>${k.hit}</b> as it approaches to send it over the net.`,
+    text: (k) => t('The ball is coming to your forehand side. Press <b>{hit}</b> as it approaches to send it over the net.', { hit: k.hit }),
     judge: landed },
   { id: 'backhand', title: 'Backhand', kind: 'feed', need: 3, start: [-1.2, 8.3],
     feed: (p, R) => [p[0] - 0.9 * R, p[1] - 1.3, 1.15],
-    text: (k) => `Now the ball comes to your backhand side. Press <b>${k.hit}</b> to return it across the net.`,
+    text: (k) => t('Now the ball comes to your backhand side. Press <b>{hit}</b> to return it across the net.', { hit: k.hit }),
     judge: landed },
   { id: 'aim', title: 'Aiming', kind: 'feed', need: 2, start: [0, 8.3], zones: [[-5, -1, -10, 0], [1, 5, -10, 0]],
     feed: (p, R) => [p[0] + 0.7 * R, p[1] - 1.3, 1.15],
-    text: (k, n) => n === 0 ? `Hold <b>${k.left}</b> while hitting to aim into the <b>left</b> target zone.` : `Now hold <b>${k.right}</b> while hitting to aim into the <b>right</b> target zone.`,
+    text: (k, n) => n === 0 ? t('Hold <b>{left}</b> while hitting to aim into the <b>left</b> target zone.', { left: k.left }) : t('Now hold <b>{right}</b> while hitting to aim into the <b>right</b> target zone.', { right: k.right }),
     judge: (a, n) => landed(a) && (n === 0 ? a.land[0] < -1 : a.land[0] > 1) },
   { id: 'lob', title: 'Lob', kind: 'feed', need: 2, start: [0.5, 8.3], zones: [[-5, 5, -10, -7]],
     feed: (p, R) => [p[0] + 0.7 * R, p[1] - 1.3, 1.15],
-    text: (k) => `Press <b>${k.lob}</b> to hit a high lob deep into the opponent's backcourt (yellow zone).`,
-    hint: (a, n, k) => a.hit && a.shot !== 'lob' ? `Use ${k.lob} to hit a lob.` : null,
+    text: (k) => t("Press <b>{lob}</b> to hit a high lob deep into the opponent's backcourt (yellow zone).", { lob: k.lob }),
+    hint: (a, n, k) => a.hit && a.shot !== 'lob' ? t('Use {lob} to hit a lob.', { lob: k.lob }) : null,
     judge: (a) => a.shot === 'lob' && landed(a) && a.land[1] < -7 },
   { id: 'chiquita', title: 'Chiquita', kind: 'feed', need: 2, start: [0.5, 8.3], zones: [[-5, 5, -4.5, 0]],
     feed: (p, R) => [p[0] + 0.7 * R, p[1] - 1.3, 1.15],
-    text: (k) => `Press <b>${k.chiquita}</b> for a soft, short shot that drops right behind the net (yellow zone).`,
-    hint: (a, n, k) => a.hit && a.shot !== 'chiquita' ? `Use ${k.chiquita} for a chiquita.` : null,
+    text: (k) => t('Press <b>{chiquita}</b> for a soft, short shot that drops right behind the net (yellow zone).', { chiquita: k.chiquita }),
+    hint: (a, n, k) => a.hit && a.shot !== 'chiquita' ? t('Use {chiquita} for a chiquita.', { chiquita: k.chiquita }) : null,
     judge: (a) => a.shot === 'chiquita' && landed(a) && a.land[1] > -4.5 },
   { id: 'volley', title: 'Volley', kind: 'feed', need: 3, start: [0.8, 3.2],
     feed: (p, R) => [p[0] + 0.5 * R, 6.8, 1.0],
-    text: (k) => `You are at the net. Hit the ball in the air with <b>${k.hit}</b> before it bounces.`,
-    hint: (a) => a.bounced ? 'The ball bounced — hit it in the air before it touches the floor.' : null,
+    text: (k) => t('You are at the net. Hit the ball in the air with <b>{hit}</b> before it bounces.', { hit: k.hit }),
+    hint: (a) => a.bounced ? t('The ball bounced — hit it in the air before it touches the floor.') : null,
     judge: (a) => !a.bounced && landed(a) },
   { id: 'smash', title: 'Smash', kind: 'feed', need: 2, start: [0.4, 3.8],
     feed: (p) => [p[0], p[1] + 0.8, 2.0],
-    text: (k) => `A high lob is coming! Get under it and press <b>${k.smash}</b> (or <b>${k.hit}</b>) to crush an overhead.`,
+    text: (k) => t('A high lob is coming! Get under it and press <b>{smash}</b> (or <b>{hit}</b>) to crush an overhead.', { smash: k.smash, hit: k.hit }),
     judge: (a) => OVERHEAD.includes(a.shot) && landed(a) },
   { id: 'glass', title: 'Off the Glass', kind: 'feed', need: 2, start: [1, 6.6],
     feed: (p, R) => [p[0] + 0.5 * R, 8.6, 0.85],
-    text: (k) => `The ball will bounce in front of you and hit the back glass. <b>Wait for it</b>: let it pass, then hit <b>${k.hit}</b> after it rebounds off the glass.`,
-    hint: (a) => a.hit && !a.glass ? 'Too early — wait for the ball to rebound off the back glass first.' : null,
+    text: (k) => t('The ball will bounce in front of you and hit the back glass. <b>Wait for it</b>: let it pass, then hit <b>{hit}</b> after it rebounds off the glass.', { hit: k.hit }),
+    hint: (a) => a.hit && !a.glass ? t('Too early — wait for the ball to rebound off the back glass first.') : null,
     judge: (a) => a.glass && landed(a) },
   { id: 'contra', title: 'Contrapared', kind: 'feed', need: 1, start: [1.2, 7.8],
     feed: (p, R) => [p[0] + 0.4 * R, 9.3, 1.1],
-    hint: (a, n, k) => a.hit && a.shot !== 'contra' ? `Use ${k.contra} for a contrapared.` : null,
-    text: (k) => `The ball is getting behind you. Press <b>${k.contra}</b> to blast it against your own glass wall so it rebounds over the net. (Hold ${k.left} / ${k.right} for the side glass.)`,
+    hint: (a, n, k) => a.hit && a.shot !== 'contra' ? t('Use {contra} for a contrapared.', { contra: k.contra }) : null,
+    text: (k) => t('The ball is getting behind you. Press <b>{contra}</b> to blast it against your own glass wall so it rebounds over the net. (Hold {left} / {right} for the side glass.)', { contra: k.contra, left: k.left, right: k.right }),
     judge: (a) => a.shot === 'contra' && landed(a) },
   { id: 'ui', title: 'Camera & Replay', kind: 'ui', need: 3,
-    text: (k) => `Press <b>${k.cam}</b> twice to cycle the camera angle, then press <b>${k.replay}</b> to watch an instant replay.` },
+    text: (k) => t('Press <b>{cam}</b> twice to cycle the camera angle, then press <b>{replay}</b> to watch an instant replay.', { cam: k.cam, replay: k.replay }) },
   { id: 'match', title: 'Mini Match', kind: 'match', need: 3,
-    text: () => `Win 3 points against the Rookie AI. Put everything you learned into action!` },
+    text: () => t('Win 3 points against the Rookie AI. Put everything you learned into action!') },
 ];
 
 const STORE = 'padel.tutorial';
@@ -84,7 +85,10 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
   let count = 0, att = null, wait = 0, msg = '', msgT = 0, device = isTouch() ? 'touch' : navigator.getGamepads?.().some(Boolean) ? 'pad' : 'kb',  // touch first: its buttons are on screen until a pad is pressed
     camSeen = null, camChanges = 0, sawReplay = false;
   // pad labels follow the connected pad (✕ ○ □ △ on a PlayStation pad)
-  const keys = () => (device === 'pad' ? Object.fromEntries(Object.entries(KEYS.pad).map(([k, v]) => [k, padText(v)])) : KEYS[device]);
+  const keys = () => {
+    const raw = (device === 'pad' ? Object.fromEntries(Object.entries(KEYS.pad).map(([k, v]) => [k, padText(v)])) : KEYS[device]);
+    return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, t(v)]));
+  };
 
   // --- DOM panel
   const el = document.createElement('div');
@@ -119,14 +123,14 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
 
   function render() {
     const l = LESSONS[li], k = keys();
-    $('.tut-step').textContent = `TRAINING · LESSON ${li + 1}/${LESSONS.length}`;
-    $('.tut-title').textContent = l.title + (done.has(l.id) ? ' ✓' : '');
+    $('.tut-step').textContent = t('TRAINING · LESSON {current}/{total}', { current: li + 1, total: LESSONS.length });
+    $('.tut-title').textContent = t(l.title) + (done.has(l.id) ? ' ✓' : '');
     $('.tut-text').innerHTML = l.text(k, count);
     $('.tut-dots').innerHTML = Array.from({ length: l.need }, (_, i) => `<i class="${i < count ? 'on' : ''}"></i>`).join('');
     $('.tut-msg').textContent = msgT > 0 ? msg : '';
-    $('.tut-foot').innerHTML = `<b class="tut-next">${k.next}</b>: skip lesson · ${LESSONS.map((x, i) => `<span class="${done.has(x.id) ? 'ok' : ''}${i === li ? ' cur' : ''}">${i + 1}</span>`).join('')}`;
+    $('.tut-foot').innerHTML = `<b class="tut-next">${k.next}</b>: ${t('skip lesson')} · ${LESSONS.map((x, i) => `<span class="${done.has(x.id) ? 'ok' : ''}${i === li ? ' cur' : ''}">${i + 1}</span>`).join('')}`;
   }
-  const say = (t, s = 1.4) => { msg = t; msgT = s; };
+  const say = (tMsg, s = 1.4) => { msg = tMsg; msgT = s; };
 
   // --- lesson flow
   function begin(i) {
@@ -145,7 +149,7 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
   function pass() {
     const l = LESSONS[li];
     done.add(l.id); saveDone(done);
-    if (li + 1 < LESSONS.length) { say(`✓ ${l.title} complete!`, 1.6); setTimeout(() => begin(li + 1), 1600); }
+    if (li + 1 < LESSONS.length) { say(t('✓ {title} complete!', { title: t(l.title) }), 1.6); setTimeout(() => begin(li + 1), 1600); }
     else finish();
   }
   function finish() {
@@ -153,15 +157,15 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
     el.classList.add('final');
     const k = keys();
     const all = LESSONS.every(l => done.has(l.id));
-    el.innerHTML = `<div class="tut-title">${all ? '🏆 Training Complete!' : 'Training Finished'}</div>${all ? '' : '<div class="tut-step">You can retry any ○ lessons from TRAINING in the main menu</div>'}<div class="tut-text">${LESSONS.map(l => `${done.has(l.id) ? '✓' : '○'} ${l.title}`).join('<br>')}</div><div class="tut-foot"><b class="tut-next">${k.next}</b>: main menu</div>`;
+    el.innerHTML = `<div class="tut-title">${all ? t('🏆 Training Complete!') : t('Training Finished')}</div>${all ? '' : `<div class="tut-step">${t('You can retry any ○ lessons from TRAINING in the main menu')}</div>`}<div class="tut-text">${LESSONS.map(l => `${done.has(l.id) ? '✓' : '○'} ${t(l.title)}`).join('<br>')}</div><div class="tut-foot"><b class="tut-next">${k.next}</b>: ${t('main menu')}</div>`;
     li = -1;
   }
   function verdict(ok) {
     const l = LESSONS[li], a = att;
     att = null; wait = 1.3;
     w.state = 'over'; w.timer = 1e9;
-    if (ok) { count++; say(['Great!', 'Awesome!', 'Spot on!', 'Nailed it!'][count % 4]); if (count >= l.need) return pass(); }
-    else say(l.hint?.(a, count, keys()) || (a.hit ? 'Missed — try again!' : 'You missed the ball — try again!'), 2);
+    if (ok) { count++; say([t('Great!'), t('Awesome!'), t('Spot on!'), t('Nailed it!')][count % 4]); if (count >= l.need) return pass(); }
+    else say(l.hint?.(a, count, keys()) || (a.hit ? t('Missed — try again!') : t('You missed the ball — try again!')), 2);
     drawMarks(l); render();
   }
 
@@ -195,13 +199,13 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
       if (l.kind === 'move') {
         const [x, z] = l.rings[count] || [];
         if (x != null && Math.hypot(w.players[0].p[0] - x, w.players[0].p[1] - z) < 0.5) {
-          count++; say('Nice!', 0.8);
+          count++; say(t('Nice!'), 0.8);
           if (count >= l.need) pass(); else { drawMarks(l); render(); }
         }
         return;
       }
       if (l.kind === 'match') {
-        for (const e of w.events) if (e.type === 'point' && e.team === 0) { count++; say('Your point!'); render(); if (count >= l.need) return pass(); }
+        for (const e of w.events) if (e.type === 'point' && e.team === 0) { count++; say(t('Your point!')); render(); if (count >= l.need) return pass(); }
         return;
       }
       if (!att) return;

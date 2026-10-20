@@ -1,4 +1,6 @@
 // Short gameplay tips shown at changeovers. Pad texts use Xbox names; main.js runs them through padText().
+import { t } from './i18n.js';
+
 export const TIPS = [
   { kb: 'Opponents at the net? Lob over them with K', pad: 'Opponents at the net? Lob over them with B' },
   { kb: 'Hold A / D while hitting to aim left or right', pad: 'Hold the left stick while hitting to aim left or right' },
@@ -15,5 +17,5 @@ export const TIPS = [
 // Walks the list from a random start so a match never repeats a tip before all were shown.
 export function tipCycle(rand = Math.random) {
   let i = Math.floor(rand() * TIPS.length);
-  return (device) => TIPS[i++ % TIPS.length][device === 'pad' ? 'pad' : 'kb'];
+  return (device) => t(TIPS[i++ % TIPS.length][device === 'pad' ? 'pad' : 'kb']);
 }

@@ -2,6 +2,7 @@
 // Supports standard Fullscreen API with webkit/moz/ms fallbacks and input field guards.
 
 import { track } from './track.js';
+import { t } from './i18n.js';
 
 export function isFullscreen(doc = (typeof document !== 'undefined' ? document : null)) {
   if (!doc) return false;
@@ -21,7 +22,7 @@ function showHomeScreenHint(doc) {
   let el = doc.getElementById?.('fsHint');
   if (!el) {
     el = doc.createElement('div'); el.id = 'fsHint'; el.setAttribute('role', 'status');
-    el.innerHTML = `<span>${HINT}</span><button type="button" aria-label="Close">✕</button>`;
+    el.innerHTML = `<span>${t(HINT)}</span><button type="button" aria-label="${t('Close')}">✕</button>`;
     el.querySelector('button').onclick = () => { el.hidden = true; };
     doc.body.appendChild(el);
   }
@@ -59,15 +60,15 @@ export function updateFullscreenButtons(doc = (typeof document !== 'undefined' ?
   if (!doc || !doc.querySelectorAll) return;
   const full = isFullscreen(doc);
   const icon = full ? '🗗' : '⛶';
-  const label = full ? 'Exit Fullscreen' : 'Fullscreen';
+  const label = full ? t('Exit Fullscreen') : t('Fullscreen');
   const btns = doc.querySelectorAll('.fs-btn-sync');
   btns.forEach(btn => {
     if (btn.dataset.iconOnly === '1') {
       btn.textContent = icon;
-      btn.title = full ? 'Exit fullscreen' : 'Fullscreen';
+      btn.title = full ? t('Exit fullscreen') : t('Fullscreen');
     } else {
       btn.textContent = `${icon} ${label}`;
-      btn.title = full ? 'Exit fullscreen' : 'Fullscreen';
+      btn.title = full ? t('Exit fullscreen') : t('Fullscreen');
     }
   });
 }

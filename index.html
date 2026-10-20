@@ -2177,40 +2177,40 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
       <div class="splash-logo">PADEL <b>LEGENDS</b></div>
       <div class="splash-sponsor">MESUT PADEL</div>
     </div>
-    <div class="splash-skip-hint" id="splashSkipHint">Press any key or A to skip</div>
+    <div class="splash-skip-hint" id="splashSkipHint" data-i18n="Press any key or A to skip">Press any key or A to skip</div>
   </div>
 </div>
 <div id="home" class="panel" hidden></div>
 <div id="menu" class="panel" hidden>
   <div class="card">
     <h1>PADEL <b>LEGENDS</b></h1>
-    <div class="sub">Quick match · 1–4 players · vs AI or friends</div>
+    <div class="sub" data-i18n="Quick match · 1–4 players · vs AI or friends">Quick match · 1–4 players · vs AI or friends</div>
     <div class="row">
-      <div><label>Mode</label><select id="mode"><option value="4">Doubles (2v2)</option><option value="2">Singles (1v1)</option></select></div>
-      <div><label>Human players</label><select id="humans"><option value="0">0 (watch)</option><option selected>1</option><option>2</option><option>3</option><option>4</option></select></div>
-      <div><label>Two humans</label><select id="sides"><option value="opp" selected>Opponents</option><option value="same">Same team</option></select></div>
+      <div><label data-i18n="Mode">Mode</label><select id="mode"><option value="4" data-i18n="Doubles (2v2)">Doubles (2v2)</option><option value="2" data-i18n="Singles (1v1)">Singles (1v1)</option></select></div>
+      <div><label data-i18n="Human players">Human players</label><select id="humans"><option value="0" data-i18n="0 (watch)">0 (watch)</option><option selected>1</option><option>2</option><option>3</option><option>4</option></select></div>
+      <div><label data-i18n="Two humans">Two humans</label><select id="sides"><option value="opp" selected data-i18n="Opponents">Opponents</option><option value="same" data-i18n="Same team">Same team</option></select></div>
     </div>
     <div class="row">
-      <div><label>Player</label><select id="char"></select></div>
-      <div><label>AI level</label><select id="ai"><option value="rookie">Rookie</option><option value="club" selected>Club</option><option value="pro">Pro</option><option value="legend">Legend</option></select></div>
+      <div><label data-i18n="Player">Player</label><select id="char"></select></div>
+      <div><label data-i18n="AI level">AI level</label><select id="ai"><option value="rookie" data-i18n="Rookie">Rookie</option><option value="club" selected data-i18n="Club">Club</option><option value="pro" data-i18n="Pro">Pro</option><option value="legend" data-i18n="Legend">Legend</option></select></div>
     </div>
     <div class="row">
-      <div><label>Venue</label><select id="venue"></select></div>
-      <div><label>Racket</label><select id="racket"></select></div>
+      <div><label data-i18n="Venue">Venue</label><select id="venue"></select></div>
+      <div><label data-i18n="Racket">Racket</label><select id="racket"></select></div>
     </div>
     <div class="row">
-      <div><label>Sets</label><select id="sets"><option value="1">1 set</option><option value="3" selected>3 sets</option><option value="3s">2 sets + super tie-break</option></select></div>
-      <div><label>Deuce</label><select id="golden"><option value="1">Golden point</option><option value="0">Advantage</option><option value="star">Star Point (FIP 2026)</option></select></div>
+      <div><label data-i18n="Sets">Sets</label><select id="sets"><option value="1" data-i18n="1 set">1 set</option><option value="3" selected data-i18n="3 sets">3 sets</option><option value="3s" data-i18n="2 sets + super tie-break">2 sets + super tie-break</option></select></div>
+      <div><label data-i18n="Deuce">Deuce</label><select id="golden"><option value="1" data-i18n="Golden point">Golden point</option><option value="0" data-i18n="Advantage">Advantage</option><option value="star" data-i18n="Star Point (FIP 2026)">Star Point (FIP 2026)</option></select></div>
     </div>
     <div class="row">
-      <div><label>Controls (P1)</label><select id="control"><option value="auto" selected>Keyboard + Xbox controller</option><option value="kb">Keyboard only</option><option value="pad">Xbox controller only</option></select></div>
-      <div><label>Game speed</label><select id="speed"><option value="0.7">Slow</option><option value="0.85" selected>Normal</option><option value="1">Fast (real)</option></select></div>
+      <div><label data-i18n="Controls (P1)">Controls (P1)</label><select id="control"><option value="auto" selected data-i18n="Keyboard + Xbox controller">Keyboard + Xbox controller</option><option value="kb" data-i18n="Keyboard only">Keyboard only</option><option value="pad" data-i18n="Xbox controller only">Xbox controller only</option></select></div>
+      <div><label data-i18n="Game speed">Game speed</label><select id="speed"><option value="0.7" data-i18n="Slow">Slow</option><option value="0.85" selected data-i18n="Normal">Normal</option><option value="1" data-i18n="Fast (real)">Fast (real)</option></select></div>
     </div>
-    <button class="go" id="start">START MATCH</button>
-    <label>Online — play with friends</label>
+    <button class="go" id="start" data-i18n="START MATCH">START MATCH</button>
+    <label data-i18n="Online — play with friends">Online — play with friends</label>
     <div class="row">
       <div><input id="room" placeholder="Room code (e.g. PADEL1)" maxlength="6"></div>
-      <div><button id="online">JOIN / CREATE ROOM</button></div>
+      <div><button id="online" data-i18n="JOIN / CREATE ROOM">JOIN / CREATE ROOM</button></div>
     </div>
     <div class="sub" id="lobby" style="margin-top:10px"></div>
     <div class="credits">Developer: <b>Mesut</b> · Main sponsor: <b>MESUT PADEL</b></div>
@@ -2226,17 +2226,17 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
 <div id="eatOffers"></div>
 <div id="hypeToast" hidden><span class="ht-text" id="htText"></span><span class="ht-pts" id="htPts"></span></div>
 <div id="msg"></div>
-<button type="button" id="unmuteBadge" hidden>🔇 Tap for sound</button>
-<button type="button" id="fsBtn" class="fs-btn-sync" data-icon-only="1" hidden title="Fullscreen">⛶</button>
+<button type="button" id="unmuteBadge" hidden data-i18n="🔇 Tap for sound">🔇 Tap for sound</button>
+<button type="button" id="fsBtn" class="fs-btn-sync" data-icon-only="1" hidden title="Fullscreen" data-i18n-title="Fullscreen">⛶</button>
 <div id="cam" hidden></div>
 <div id="shotHint" hidden></div>
 <div id="smashVignette" hidden></div>
 <div id="smashBanner" hidden><div class="sb-kicker" id="sbKicker"></div><div class="sb-title" id="sbTitle"></div><div class="sb-sub" id="sbSub"></div></div>
-<div id="pause" hidden><div class="pz-card"><div class="pz-title">PAUSED</div><div id="pzItems"></div><div id="pzNote" class="pz-note"></div><div class="pz-hint">↑ ↓ select · Enter / A (✕) confirm · Esc / Start (Options) resume</div></div></div>
-<div id="replayTag" hidden>● REPLAY <small style="font-weight:600;opacity:.85">· press any key to skip</small></div>
+<div id="pause" hidden><div class="pz-card"><div class="pz-title" data-i18n="PAUSED">PAUSED</div><div id="pzItems"></div><div id="pzNote" class="pz-note"></div><div class="pz-hint" data-i18n="↑ ↓ select · Enter / A (✕) confirm · Esc / Start (Options) resume">↑ ↓ select · Enter / A (✕) confirm · Esc / Start (Options) resume</div></div></div>
+<div id="replayTag" hidden data-i18n-html="● REPLAY <small style=&quot;font-weight:600;opacity:.85&quot;>· press any key to skip</small>">● REPLAY <small style="font-weight:600;opacity:.85">· press any key to skip</small></div>
 <div id="help" hidden></div>
 <div id="touchUi" hidden></div>
-<div id="rotate"><div class="rt-icon">📱↻</div>ROTATE YOUR PHONE<small>Padel Legends plays in landscape</small></div>
+<div id="rotate"><div class="rt-icon">📱↻</div><span data-i18n="ROTATE YOUR PHONE">ROTATE YOUR PHONE</span><small data-i18n="Padel Legends plays in landscape">Padel Legends plays in landscape</small></div>
 <script type="module" src="/src/boot.js"></script>
 </body>
 </html>

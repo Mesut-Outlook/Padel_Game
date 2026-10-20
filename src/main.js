@@ -33,6 +33,7 @@ import { tipCycle } from './tips.js';
 import { newTally, tallyEvents, tallyFrame } from './matchstats.js';
 import { isTouch, mountTouch, offerKeyLabel, showTouchTips } from './touch.js';
 import { keepAwake } from './wakelock.js';
+import { t } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 const matchOpts = () => ({ sets: parseInt($('sets').value), superTiebreak: $('sets').value === '3s', goldenPoint: $('golden').value === '1', starPoint: $('golden').value === 'star' });
@@ -48,8 +49,9 @@ if (isTouch()) document.body.classList.add('touch');  // CSS: no key help, rotat
 addEventListener('pointerdown', unlockAudio, { once: true });
 addEventListener('touchend', unlockAudio, { once: true });
 addEventListener('keydown', unlockAudio, { once: true });
-addEventListener('pointerdown', () => {
-  if (isTouch() && document.body.classList.contains('pad')) {
+addEventListener('pointerdown', (e) => {
+  // a tap on the controls help (move / hide it) keeps the pad mode; any other tap brings the touch controls back
+  if (isTouch() && document.body.classList.contains('pad') && !e.target.closest?.('#help')) {
     document.body.classList.remove('pad');
     if ((world || net) && !loadingScene) {
       const t = $('touchUi');
@@ -165,10 +167,10 @@ function resetStyleStats() {
 function renderStyleHud() {
   const ptsEl = $('hsPts'), strEl = $('hsStreak'), medEl = $('hsMedals');
   if (!ptsEl) return;
-  ptsEl.innerHTML = `STYLE <b>${styleStats.pts}</b> PTS`;
+  ptsEl.innerHTML = t('STYLE <b>{pts}</b> PTS', { pts: styleStats.pts });
   if (strEl) {
     strEl.hidden = styleStats.streak < 2;
-    if (styleStats.streak >= 2) strEl.textContent = `🔥 x${styleStats.streak >= 3 ? '2.0' : '1.5'} ON FIRE`;
+    if (styleStats.streak >= 2) strEl.textContent = t('🔥 x{mult} ON FIRE', { mult: styleStats.streak >= 3 ? '2.0' : '1.5' });
   }
   if (medEl) medEl.textContent = styleStats.medals.map(k => MEDALS[k][0]).join(' ');
 }
@@ -180,7 +182,7 @@ function showHype(text, pts = 0, sec = 1.05) {
   $('htText').textContent = text;
   const pEl = $('htPts');
   pEl.hidden = !pts;
-  if (pts) pEl.textContent = `+${pts} PTS`;
+  if (pts) pEl.textContent = t('+{pts} PTS', { pts });
   el.hidden = false;
   el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
   hypeTimer = sec;
@@ -198,7 +200,7 @@ function awardStyle(basePts, label = '', medalKey = null, tier = 1) {
   }
   renderStyleHud();
   sfxReward(newMedal ? 2 : tier);
-  if (newMedal) showHype(`${newMedal[0]} ${newMedal[1]} UNLOCKED!`, gained, 1.35);
+  if (newMedal) showHype(t('{icon} {name} UNLOCKED!', { icon: newMedal[0], name: t(newMedal[1]) }), gained, 1.35);
   else if (label) showHype(label, gained, 0.95);
   return gained;
 }
@@ -207,7 +209,7 @@ async function setupScene(venue, ids, roster, rk) {
   loadingScene = true;
   $('menu').hidden = true;
   disposeMenu();
-  $('msg').textContent = 'Loading…';
+  $('msg').textContent = t('Loading…');
   scene.clear();
   venueGroup = buildVenue(scene, venue);
   ballView = buildBall(scene);
@@ -248,17 +250,17 @@ export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', ma
     $('lobby').innerHTML = t; document.querySelectorAll('.pl-lobby-status').forEach(e => { e.innerHTML = t; }); status?.(t, l, err);
   };
   url ||= serverUrl(location);  // null on the static web build unless ?server= points at one
-  if (!url) { say(NO_SERVER, null, true); return null; }
+  if (!url) { say(t(NO_SERVER), null, true); return null; }
   code = String(code || '').trim().toUpperCase();
-  if (!code) { say('Enter a room code first.', null, true); return null; }
+  if (!code) { say(t('Enter a room code first.'), null, true); return null; }
   onEnd = end || null; pointsWon = [0, 0]; bagLeft = bag ? { ...bag } : null; tally = end ? newTally() : null;
   net = connect({
     url, code, char, stats, racket, public: isPublic, name, look, shoes, ball, bag,
     cfg: { players, ...match, ai, venue, outdoor: venues[venue]?.type === 'outdoor' },
     onError: (e) => say(escapeText(e), null, true),
     onLobby: (l) => {
-      say(`Room <b>${escapeText(l.code)}</b> · your seat: ${net.seat} · players: ${l.taken.length}/${l.seats.length} (empty = AI)` +
-        (l.started ? '' : ' — <b>click “START MATCH” when everyone is ready</b>'), l);
+      say(t('Room <b>{code}</b> · your seat: {seat} · players: {taken}/{total} (empty = AI)', { code: escapeText(l.code), seat: net.seat, taken: l.taken.length, total: l.seats.length }) +
+        (l.started ? '' : t(' — <b>click “START MATCH” when everyone is ready</b>')), l);
       if (l.started && !avatars.length) {
         const ids = l.seats, roster = {}, rk = {};
         for (const id of ids) {
@@ -417,7 +419,7 @@ function showHint(list, title = '') {
   hintKey = key;
   const el = $('shotHint');
   el.hidden = !list.length;
-  if (list.length) el.innerHTML = `<span class="sh-t">${title}</span>` + list.map((s, i) => `<span class="sh${i ? '' : ' best'}">${SHOT_NAME[s]} <kbd>${device === 'pad' ? padText(SHOT_KEYS.pad[s]) : SHOT_KEYS.kb[s]}</kbd></span>`).join('');
+  if (list.length) el.innerHTML = `<span class="sh-t">${t(title)}</span>` + list.map((s, i) => `<span class="sh${i ? '' : ' best'}">${t(SHOT_NAME[s])} <kbd>${device === 'pad' ? padText(SHOT_KEYS.pad[s]) : SHOT_KEYS.kb[s]}</kbd></span>`).join('');
 }
 
 function setSmashBanner(mode, kicker = '', title = '', sub = '') {
@@ -457,7 +459,7 @@ function coach(dt) {
     approach = 0; armed = true; updateSmashBanner(); return showHint([]);
   }
   // came off your back glass and is rising toward you: attack it
-  if (r.bouncesSinceHit === 1 && b.p[2] * zs > 7 && b.v[2] * zs < 0 && b.p[1] > 1.5) return showHint(['bajada'], 'Glass rebound');
+  if (r.bouncesSinceHit === 1 && b.p[2] * zs > 7 && b.v[2] * zs < 0 && b.p[1] > 1.5) return showHint(['bajada'], t('Glass rebound'));
   if (r.bouncesSinceHit !== 0) return showHint([]);
   // where will the ball be high and within reach, before it bounces on your side?
   const { pts, contacts } = predict(b, 1.6);
@@ -465,26 +467,26 @@ function coach(dt) {
   const hit = pts.find(q => q.t < tEnd && q.p[2] * zs > 0 && q.p[1] > 1.8 && q.p[1] < 2.9 && Math.hypot(q.p[0] - me.p[0], q.p[2] - me.p[1]) < 2.2);
   if (!hit) {
     const opps = world.players.filter(p => p.active && p.team !== me.team);
-    if (opps.length && opps.every(o => Math.abs(o.p[1]) < 4.5) && Math.abs(me.p[1]) > 5) return showHint(['lob'], 'Opponents at net');
+    if (opps.length && opps.every(o => Math.abs(o.p[1]) < 4.5) && Math.abs(me.p[1]) > 5) return showHint(['lob'], t('Opponents at net'));
     if (approach <= 0) updateSmashBanner();
     return showHint([]);
   }
   const dist = (p) => Math.hypot(hit.p[0] - p.p[0], hit.p[2] - p.p[1]);
   if (world.players.some(p => p.active && p.team === me.team && p !== me && dist(p) < dist(me) - 0.3)) return showHint([]);  // partner's ball
   const depth = Math.abs(hit.p[2]);
-  if (depth >= 6.95) return showHint(['bandeja', 'vibora', 'lob'], 'High ball');
+  if (depth >= 6.95) return showHint(['bandeja', 'vibora', 'lob'], t('High ball'));
   if (armed) {
     armed = false; approach = 1.6; rig.pov(1.6);
     sfxSmashSlowMo();
     const k = device === 'pad' ? Object.fromEntries(Object.entries(SHOT_KEYS.pad).map(([s, b]) => [s, padText(b)])) : SHOT_KEYS.kb;
     setSmashBanner(
       'approach',
-      '⚡ SLOW MOTION · OVERHEAD LOCKED ⚡',
-      depth < 4.5 ? 'SMASH TIME!' : 'OVERHEAD ZONE!',
-      `PRESS <b>${k.smash}</b> SMASH · <b>${k.vibora}</b> VÍBORA · <b>${k.bandeja}</b> BANDEJA`
+      t('⚡ SLOW MOTION · OVERHEAD LOCKED ⚡'),
+      depth < 4.5 ? t('SMASH TIME!') : t('OVERHEAD ZONE!'),
+      t('PRESS <b>{smash}</b> SMASH · <b>{vibora}</b> VÍBORA · <b>{bandeja}</b> BANDEJA', { smash: k.smash, vibora: k.vibora, bandeja: k.bandeja })
     );
   }
-  showHint(depth < 4.5 ? ['smash', 'vibora', 'bandeja'] : ['vibora', 'bandeja', 'smash'], depth < 4.5 ? 'SMASH CHANCE' : 'Overhead shot');
+  showHint(depth < 4.5 ? ['smash', 'vibora', 'bandeja'] : ['vibora', 'bandeja', 'smash'], depth < 4.5 ? t('SMASH CHANCE') : t('Overhead shot'));
 }
 const teamOf = (pid) => (pid < 2 ? 0 : 1);
 const speak = (pid, good) => { const a = avatars[pid]; if (a) a.say(callout(a.ch, good)); };
@@ -539,7 +541,7 @@ function renderOffers() {
   const two = humans.length > 1 && !net;
   box.innerHTML = [...offers].map(([pid, o]) => {
     const h = humans.indexOf(pid), pad = offerKeyLabel({ pid, humans, device, control, touch: isTouch() });
-    return `<button type="button" class="eat-offer" data-pid="${pid}">${two ? `P${h + 1} ` : ''}⚡ ${Math.round(o.energy * 100)}% — eat ${FOOD_NAME[o.item]}? <kbd>${pad}</kbd></button>`;
+    return `<button type="button" class="eat-offer" data-pid="${pid}">${two ? `P${h + 1} ` : ''}⚡ ${Math.round(o.energy * 100)}% — ${t('eat {food}?', { food: t(FOOD_NAME[o.item]) })} <kbd>${pad}</kbd></button>`;
   }).join('');
 }
 function hideOffer(pid) { const o = offers.get(pid); if (o) { clearTimeout(o.timer); offers.delete(pid); renderOffers(); } }
@@ -581,9 +583,9 @@ function handleEvents(events, score, winner) {
           const kmh = Math.round((e.speed || 22) * 3.6);
           setSmashBanner(
             'hit',
-            e.quality === 'perfect' ? '🔥 PERFECT TIMING 🔥' : '💥 POWER OVERHEAD 💥',
-            e.shot === 'smash' ? 'SUPER SMASH!' : `${SHOT_NAME[e.shot] || 'OVERHEAD'}!`,
-            `<b>${kmh} KM/H</b> UNSTOPPABLE SHOT`
+            e.quality === 'perfect' ? t('🔥 PERFECT TIMING 🔥') : t('💥 POWER OVERHEAD 💥'),
+            e.shot === 'smash' ? t('SUPER SMASH!') : t('{shot}!', { shot: t(SHOT_NAME[e.shot] || 'OVERHEAD') }),
+            t('<b>{speed} KM/H</b> UNSTOPPABLE SHOT', { speed: kmh })
           );
         } else if (wasApproach) {
           setSmashBanner('');
@@ -592,12 +594,12 @@ function handleEvents(events, score, winner) {
       }
       // Mid-rally motivational micro-callouts & style points (tasteful: only on special shots or perfect timing)
       if (isHumanHit && e.shot !== 'serve') {
-        if (e.shot === 'contra') awardStyle(50, '🧱 CONTRAPARED SAVE!', 'wall', 1);
-        else if (e.shot === 'bajada') awardStyle(45, '💥 GLASS BAJADA!', 'wall', 1);
-        else if (wasAfterGlass && e.quality === 'perfect') awardStyle(40, '🧱 OFF THE GLASS!', 'wall', 1);
-        else if (e.quality === 'perfect' && e.shot === 'chiquita') awardStyle(35, '🎯 SILKY CHIQUITA!', null, 1);
-        else if (e.quality === 'perfect' && e.shot === 'volley') awardStyle(30, '⚡ LASER VOLLEY!', null, 1);
-        else if (e.quality === 'perfect' && power > 0.55) awardStyle(25, '✨ PERFECT TIMING!', null, 1);
+        if (e.shot === 'contra') awardStyle(50, t('🧱 CONTRAPARED SAVE!'), 'wall', 1);
+        else if (e.shot === 'bajada') awardStyle(45, t('💥 GLASS BAJADA!'), 'wall', 1);
+        else if (wasAfterGlass && e.quality === 'perfect') awardStyle(40, t('🧱 OFF THE GLASS!'), 'wall', 1);
+        else if (e.quality === 'perfect' && e.shot === 'chiquita') awardStyle(35, t('🎯 SILKY CHIQUITA!'), null, 1);
+        else if (e.quality === 'perfect' && e.shot === 'volley') awardStyle(30, t('⚡ LASER VOLLEY!'), null, 1);
+        else if (e.quality === 'perfect' && power > 0.55) awardStyle(25, t('✨ PERFECT TIMING!'), null, 1);
       }
       // Realistic crowd reactions + 3D stand wave during exciting shots
       if (e.shot === 'smash' || e.shot === 'vibora') {
@@ -630,13 +632,13 @@ function handleEvents(events, score, winner) {
       if (FOOD_NAME[e.item]) hideOffer(e.pid);
     }
     else if (e.type === 'offer') { if (isLocal(e.pid)) showOffer(e); }
-    else if (e.type === 'nowater') { if (bagLeft && e.pid === localPid()) changeMsgs.push('💧 Out of water — buy more in the Shop after the match'); }
-    else if (e.type === 'fault') { flash('SERVE FAULT', 1); sfxCrowdReact('murmur'); }
-    else if (e.type === 'let') flash('LET', 1);
+    else if (e.type === 'nowater') { if (bagLeft && e.pid === localPid()) changeMsgs.push(t('💧 Out of water — buy more in the Shop after the match')); }
+    else if (e.type === 'fault') { flash(t('SERVE FAULT'), 1); sfxCrowdReact('murmur'); }
+    else if (e.type === 'let') flash(t('LET'), 1);
     else if (e.type === 'drink') {  // after the point call; then one tip, so they come every other game at most
-      setTimeout(() => showHype('💧 CHANGEOVER — water break, energy back up', 0, 2.4), 1300);
+      setTimeout(() => showHype(t('💧 CHANGEOVER — water break, energy back up'), 0, 2.4), 1300);
       const pid = localPid();
-      if (bagLeft && !emptyFoodWarned && energyOf(pid) < 0.5 && !bagLeft.bag_banana && !bagLeft.bag_gel) { emptyFoodWarned = true; changeMsgs.push('🍌 Your bag is empty — buy food in the Shop'); }
+      if (bagLeft && !emptyFoodWarned && energyOf(pid) < 0.5 && !bagLeft.bag_banana && !bagLeft.bag_gel) { emptyFoodWarned = true; changeMsgs.push(t('🍌 Your bag is empty — buy food in the Shop')); }
       let at = 4000;  // bag messages queue after the changeover hype, the tip after them
       for (const m of changeMsgs.splice(0)) { setTimeout(() => showHype(m, 0, 2.6), at); at += 2800; }
       if (humans.length && loadSettings().tips) setTimeout(() => showHype('💡 ' + (device === 'pad' ? padText(nextTip('pad')) : nextTip('kb')), 0, 5), at);
@@ -667,29 +669,29 @@ function handleEvents(events, score, winner) {
       if (myWin && !tut) {
         if (wasClutch) {
           bonus = awardStyle(200, '', 'clutch', 2);
-          kicker = `👑 CLUTCH POINT! · +${bonus} PTS`;
+          kicker = t('👑 CLUTCH POINT! · +{bonus} PTS', { bonus });
         } else if (rallyLen >= 10) {
           bonus = awardStyle(160, '', 'iron', 2);
-          kicker = `🔥 MARATHON RALLY! (${rallyLen} SHOTS) · +${bonus} PTS`;
+          kicker = t('🔥 MARATHON RALLY! ({shots} SHOTS) · +{bonus} PTS', { shots: rallyLen, bonus });
         } else if (cleanWinner && (rallyFlags.lastShot === 'smash' || rallyFlags.lastShot === 'vibora')) {
           styleStats.smashes++;
           bonus = awardStyle(120, '', styleStats.smashes >= 2 ? 'smash' : null, 2);
-          kicker = `💥 UNSTOPPABLE WINNER! · +${bonus} PTS`;
+          kicker = t('💥 UNSTOPPABLE WINNER! · +{bonus} PTS', { bonus });
         } else if (cleanWinner && rallyFlags.lastWasGlassSave) {
           bonus = awardStyle(130, '', 'wall', 2);
-          kicker = `🧱 GLASS MASTERPIECE! · +${bonus} PTS`;
+          kicker = t('🧱 GLASS MASTERPIECE! · +{bonus} PTS', { bonus });
         } else if (cleanWinner) {
           bonus = awardStyle(80, '', null, 1);
-          kicker = `⚡ CLEAN WINNER! · +${bonus} PTS`;
+          kicker = t('⚡ CLEAN WINNER! · +{bonus} PTS', { bonus });
         } else if (rallyLen >= 7) {
           bonus = awardStyle(90, '', null, 1);
-          kicker = `👏 GREAT RALLY! (${rallyLen} SHOTS) · +${bonus} PTS`;
+          kicker = t('👏 GREAT RALLY! ({shots} SHOTS) · +{bonus} PTS', { shots: rallyLen, bonus });
         } else {
           awardStyle(40, '', null, 1);
         }
       } else {
         renderStyleHud();
-        if (!myWin && rallyLen >= 10) kicker = `🔥 EPIC ${rallyLen}-SHOT RALLY`;
+        if (!myWin && rallyLen >= 10) kicker = t('🔥 EPIC {shots}-SHOT RALLY', { shots: rallyLen });
       }
 
       // last hitter reacts: celebrates a winner, groans at an error
@@ -700,7 +702,7 @@ function handleEvents(events, score, winner) {
       const subject = (call.pid != null && avatars[call.pid]?.ch?.name)
         ? avatars[call.pid].ch.name
         : (call.team === 0 ? $('t0').textContent : $('t1').textContent);
-      if (!tut) flash(`${subject}\n${call.text}`, 2.1, kicker);
+      if (!tut) flash(`${subject}\n${t(call.text)}`, 2.1, kicker);
       // auto highlight: long rally, smash, or a ball played off the glass
       if (!tut && (rallyLen >= 8 || rallyFlags.smash || rallyFlags.glass)) setTimeout(() => startReplay(true), 900);
       rallyFlags = {};
@@ -723,13 +725,13 @@ function handleEvents(events, score, winner) {
         }
         const winningTeam = winner === 0 ? $('t0').textContent : $('t1').textContent;
         const medalsStr = styleStats.medals.length
-          ? 'Medals: ' + styleStats.medals.map(k => `${MEDALS[k][0]} ${MEDALS[k][1]}`).join(' · ')
-          : `Best Rally: ${styleStats.maxRally} shots`;
+          ? t('Medals: ') + styleStats.medals.map(k => `${MEDALS[k][0]} ${t(MEDALS[k][1])}`).join(' · ')
+          : t('Best Rally: {shots} shots', { shots: styleStats.maxRally });
         flash(
-          `🏆 ${winningTeam} WINS!`,
+          t('🏆 {winner} WINS!', { winner: winningTeam }),
           999,
-          `FINAL STYLE SCORE: ${styleStats.pts} PTS`,
-          `${medalsStr} · Press Enter / Start for ${onEnd ? 'Career' : 'Main Menu'}`
+          t('FINAL STYLE SCORE: {pts} PTS', { pts: styleStats.pts }),
+          t('{medals} · Press Enter / Start for {target}', { medals: medalsStr, target: onEnd ? t('Career') : t('Main Menu') })
         );
       }
     }
@@ -767,7 +769,7 @@ function renderEnergy(view) {
     const hy = world ? (world.players[id]?.hyd ?? 1) : (view.pl[id]?.[8] ?? 1), hb = energyUi.hyd[k];
     if (hb) { hb.style.width = `${Math.round(hy * 100)}%`; hb.className = hy < 0.3 ? 'low' : ''; }
     if (humans.length && id === humans[0]) {
-      if (e < 0.25 && !tiredWarned) { tiredWarned = true; showHype('😮‍💨 TIRED — catch your breath between points', 0, 2.2); }
+      if (e < 0.25 && !tiredWarned) { tiredWarned = true; showHype(t('😮‍💨 TIRED — catch your breath between points'), 0, 2.2); }
       if (e > 0.4) tiredWarned = false;
     }
   });
@@ -781,7 +783,7 @@ try { const m = localStorage.getItem(HUD_MODE_KEY); if (HUD_MODES.includes(m)) h
 function nextHudMode() {
   hudMode = HUD_MODES[(HUD_MODES.indexOf(hudMode) + 1) % HUD_MODES.length];
   try { localStorage.setItem(HUD_MODE_KEY, hudMode); } catch { /* not kept */ }
-  flash('📊 ' + HUD_NAME[hudMode], 1.4);
+  flash('📊 ' + t(HUD_NAME[hudMode]), 1.4);
 }
 const hudAway = (state) => $('hud').classList.toggle('away', hudMode === 'off' || (hudMode === 'auto' && (state === 'toss' || state === 'play')));
 
@@ -795,17 +797,17 @@ function renderHud(s) {
   if (key === hudKey) return;
   hudKey = key;
   const n = b.sets.length, cur = (i) => (i === n - 1 ? ' cur' : '');
-  const c = (t, cls = '') => `<span class="${cls}">${t}</span>`;
-  let h = c('') + c('') + b.sets.map((_, i) => c('SET ' + (i + 1), 'hd' + cur(i))).join('') + c('PTS', 'hd');
-  for (const t of [0, 1]) {
-    h += c(b.server === t ? '●' : '', 'srv') + c(escapeText(names[t]), 'nm')
-      + b.sets.map((st, i) => c(st[t], 'g' + cur(i) + (i < n - 1 && st[t] > st[1 - t] ? ' won' : ''))).join('')
-      + c(b.pts[t], 'pt');
+  const c = (tText, cls = '') => `<span class="${cls}">${tText}</span>`;
+  let h = c('') + c('') + b.sets.map((_, i) => c(t('SET {n}', { n: i + 1 }), 'hd' + cur(i))).join('') + c(t('PTS'), 'hd');
+  for (const tIdx of [0, 1]) {
+    h += c(b.server === tIdx ? '●' : '', 'srv') + c(escapeText(names[tIdx]), 'nm')
+      + b.sets.map((st, i) => c(st[tIdx], 'g' + cur(i) + (i < n - 1 && st[tIdx] > st[1 - tIdx] ? ' won' : ''))).join('')
+      + c(b.pts[tIdx], 'pt');
   }
   const grid = $('hudGrid');
   grid.style.gridTemplateColumns = `14px auto ${n > 0 ? `repeat(${n}, 34px) ` : ''}48px`;
   grid.innerHTML = h;
-  $('hudLabel').textContent = n ? `SET ${b.setNo}` + (b.label ? ' · ' + b.label : '') : b.label;  // rally scoring has no sets
+  $('hudLabel').textContent = n ? t('SET {n}', { n: b.setNo }) + (b.label ? ' · ' + t(b.label) : '') : (b.label ? t(b.label) : '');  // rally scoring has no sets
 }
 
 // Pause menu: Esc (when no replay is running) or pad Start. Freezes the match; online games keep running.
@@ -814,11 +816,11 @@ let lastPadNavY = 0, padRepeatTimer = 0;
 let lastPadNavA = false, lastPadNavB = false, lastPadNavStart = false;
 
 function pauseItems() {
-  const items = [['Resume', () => setPaused(false)]];
-  if (tut) items.push(['Skip lesson', () => { setPaused(false); tut.skip(); }]);
-  else if (!net) items.push(['Restart match', () => { setPaused(false); if (replay.playing) endReplay(); lastCfg?.onEnd ? startMatch(lastCfg.bag && bagLeft ? { ...lastCfg, bag: { ...lastCfg.bag, 0: { ...bagLeft } } } : lastCfg) : $('start').click(); }]);  // career matches restart as career matches, with what is left in the bag
-  items.push([isFullscreen() ? 'Exit Fullscreen' : 'Fullscreen', async () => { await toggleFullscreen(); drawPause(); }]);
-  items.push(['Main menu', toMenu]);
+  const items = [[t('Resume'), () => setPaused(false)]];
+  if (tut) items.push([t('Skip lesson'), () => { setPaused(false); tut.skip(); }]);
+  else if (!net) items.push([t('Restart match'), () => { setPaused(false); if (replay.playing) endReplay(); lastCfg?.onEnd ? startMatch(lastCfg.bag && bagLeft ? { ...lastCfg, bag: { ...lastCfg.bag, 0: { ...bagLeft } } } : lastCfg) : $('start').click(); }]);  // career matches restart as career matches, with what is left in the bag
+  items.push([isFullscreen() ? t('Exit Fullscreen') : t('Fullscreen'), async () => { await toggleFullscreen(); drawPause(); }]);
+  items.push([t('Main menu'), toMenu]);
   return items;
 }
 document.addEventListener('fullscreenchange', () => { if (paused) drawPause(); });
@@ -833,7 +835,7 @@ function updatePauseSel() {
 function drawPause() {
   const box = $('pzItems');
   const items = pauseItems();
-  box.innerHTML = items.map(([t], i) => `<button type="button" class="pz-item${i === pauseSel ? ' sel' : ''}" data-i="${i}" tabindex="-1">${t}</button>`).join('');
+  box.innerHTML = items.map(([itemText], i) => `<button type="button" class="pz-item${i === pauseSel ? ' sel' : ''}" data-i="${i}" tabindex="-1">${itemText}</button>`).join('');
   box.querySelectorAll('.pz-item').forEach(b => {
     b.onclick = (e) => {
       e.preventDefault();
@@ -847,10 +849,10 @@ function drawPause() {
       updatePauseSel();
     };
   });
-  $('pzNote').textContent = net ? 'Online match continues in the background.' : '';
+  $('pzNote').textContent = net ? t('Online match continues in the background.') : '';
   const hintEl = document.querySelector('#pause .pz-hint');
   if (hintEl) {
-    hintEl.textContent = padText('↑ ↓ / Left Stick select · Enter / A confirm · Esc / Start resume');
+    hintEl.textContent = padText(t('↑ ↓ / Left Stick select · Enter / A confirm · Esc / Start resume'));
   }
 }
 
@@ -996,7 +998,7 @@ function loop(now) {
   if (padButtonDown() || skipReplay) { if (replay.playing) endReplay(); skipReplay = false; }
   if (consumePressed('KeyC')) rig.next();
   if (consumePressed('KeyR')) startReplay(false);
-  if (consumePressed('KeyM')) flash(toggleMute() ? '🔇 SOUND OFF' : '🔊 SOUND ON', 1);
+  if (consumePressed('KeyM')) flash(toggleMute() ? t('🔇 SOUND OFF') : t('🔊 SOUND ON'), 1);
   if (consumePressed('KeyB')) nextHudMode();
   if (!tut && consumePressed('Enter') && (world?.match.winner != null || net?.winner != null)) { toMenu(); return; }
   let view;
@@ -1056,7 +1058,7 @@ function loop(now) {
   rig.update(dt, { ball: view.b, players: view.pl.map(s => ({ p: [s[0], s[1]], f: s[2] })), focus, team: focus < 2 ? 0 : 1 });
   if (camShown !== rig.name + device) {  // also follows the replay's camera and the input device
     camShown = rig.name + device;
-    $('cam').innerHTML = `🎥 ${CAM_NAME[rig.name] || rig.name} <kbd>${device === 'pad' ? padText('View') : 'C'}</kbd>`;
+    $('cam').innerHTML = `🎥 ${t(CAM_NAME[rig.name] || rig.name)} <kbd>${device === 'pad' ? padText('View') : 'C'}</kbd>`;
   }
   if (msgTimer > 0 && (msgTimer -= dt) <= 0) $('msg').textContent = '';
   if (hypeTimer > 0 && (hypeTimer -= dt) <= 0 && $('hypeToast')) $('hypeToast').hidden = true;

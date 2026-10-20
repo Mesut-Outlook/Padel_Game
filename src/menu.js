@@ -14,6 +14,7 @@ import { padText } from './padstyle.js';
 import { loadSettings, saveSettings } from './settings.js';
 import { toggleFullscreen } from './fullscreen.js';
 import { charCard } from './charcard.js';
+import { t } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -73,11 +74,11 @@ export function initMenu() {
         <div class="pl-tour-tag">MESUT PADEL TOUR</div>
       </div>
       <div class="pl-top-right">
-        <button type="button" class="pl-home-top-btn is-home" id="pl-home-btn" title="Back to the home screen (Esc)">🏠 HOME</button>
-        <button type="button" class="pl-home-top-btn fs-btn-sync" id="pl-fs-btn" title="Fullscreen (F)">⛶ Fullscreen</button>
-        <span class="pl-pad-hint" id="pl-pad-status">🎮 Checking controller…</span>
-        <a class="pl-dev" href="kontroller.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;margin-right:14px">⌨ <b>Controls</b></a>
-        <span class="pl-dev">Developer: <b>Mesut</b></span>
+        <button type="button" class="pl-home-top-btn is-home" id="pl-home-btn" title="${t('Back to the home screen (Esc)')}">🏠 ${t('HOME')}</button>
+        <button type="button" class="pl-home-top-btn fs-btn-sync" id="pl-fs-btn" title="${t('Fullscreen (F)')}">⛶ ${t('Fullscreen')}</button>
+        <span class="pl-pad-hint" id="pl-pad-status">${t('🎮 Checking controller…')}</span>
+        <a class="pl-dev" href="kontroller.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;margin-right:14px">⌨ <b>${t('Controls')}</b></a>
+        <span class="pl-dev">${t('Developer: <b>Mesut</b>')}</span>
       </div>
     </header>
 
@@ -87,10 +88,10 @@ export function initMenu() {
       <section class="pl-left-panel">
         <div class="pl-preview-stage">
           <canvas id="pl-preview-canvas" class="pl-preview-canvas"></canvas>
-          <div class="pl-preview-badge">LIVE PREVIEW</div>
+          <div class="pl-preview-badge">${t('LIVE PREVIEW')}</div>
           <div class="pl-preview-racket-pill" id="pl-preview-racket-pill">Starter Nova</div>
-          <button type="button" class="pl-preview-nav is-prev" data-step="-1" aria-label="Previous player">‹</button>
-          <button type="button" class="pl-preview-nav is-next" data-step="1" aria-label="Next player">›</button>
+          <button type="button" class="pl-preview-nav is-prev" data-step="-1" aria-label="${t('Previous player')}">‹</button>
+          <button type="button" class="pl-preview-nav is-next" data-step="1" aria-label="${t('Next player')}">›</button>
         </div>
         <div class="pl-char-info" id="pl-char-info">
           <!-- Populated dynamically -->
@@ -100,47 +101,47 @@ export function initMenu() {
       <!-- Right Panel: Step Tabs + Step Body + Step Footer -->
       <section class="pl-right-panel">
         <nav class="pl-tabs" role="tablist">
-          <button type="button" class="pl-tab is-active" data-step="0"><span class="pl-tab-num">1</span>Mode</button>
-          <button type="button" class="pl-tab" data-step="1"><span class="pl-tab-num">2</span>Player</button>
-          <button type="button" class="pl-tab" data-step="2"><span class="pl-tab-num">3</span>Venue</button>
-          <button type="button" class="pl-tab" data-step="3"><span class="pl-tab-num">4</span>Racket</button>
-          <button type="button" class="pl-tab" data-step="4"><span class="pl-tab-num">5</span>Match</button>
+          <button type="button" class="pl-tab is-active" data-step="0"><span class="pl-tab-num">1</span>${t('Mode')}</button>
+          <button type="button" class="pl-tab" data-step="1"><span class="pl-tab-num">2</span>${t('Player')}</button>
+          <button type="button" class="pl-tab" data-step="2"><span class="pl-tab-num">3</span>${t('Venue')}</button>
+          <button type="button" class="pl-tab" data-step="3"><span class="pl-tab-num">4</span>${t('Racket')}</button>
+          <button type="button" class="pl-tab" data-step="4"><span class="pl-tab-num">5</span>${t('Match')}</button>
         </nav>
 
         <div class="pl-step-body">
           <!-- Step 0: Mode -->
           <div class="pl-step" data-step="0">
-            <div class="pl-section-label">WHERE TO PLAY?</div>
+            <div class="pl-section-label">${t('WHERE TO PLAY?')}</div>
             <div class="pl-where-grid" id="pl-where-grid">
               <button type="button" class="pl-card pl-where-card is-selected" data-where="local">
-                <div class="pl-card-title">🖥️ On this computer</div>
-                <div class="pl-card-sub">Local couch match · Keyboard or gamepads</div>
+                <div class="pl-card-title">🖥️ ${t('On this computer')}</div>
+                <div class="pl-card-sub">${t('Local couch match · Keyboard or gamepads')}</div>
                 <span class="pl-check">✓</span>
               </button>
               <button type="button" class="pl-card pl-where-card" data-where="online">
-                <div class="pl-card-title">🌐 Online with a friend</div>
-                <div class="pl-card-sub">Play over network with a room code</div>
+                <div class="pl-card-title">🌐 ${t('Online with a friend')}</div>
+                <div class="pl-card-sub">${t('Play over network with a room code')}</div>
                 <span class="pl-check">✓</span>
               </button>
             </div>
 
             <div class="pl-online-section" id="pl-online-section" hidden>
-              <div class="pl-section-label">ONLINE ROOM</div>
+              <div class="pl-section-label">${t('ONLINE ROOM')}</div>
               <div class="pl-room-link-box">
-                <div style="font-weight:700;font-size:13px;white-space:nowrap;">ROOM CODE: <b id="pl-room-code-val" style="color:var(--acc);letter-spacing:1px;">------</b></div>
+                <div style="font-weight:700;font-size:13px;white-space:nowrap;">${t('ROOM CODE:')} <b id="pl-room-code-val" style="color:var(--acc);letter-spacing:1px;">------</b></div>
                 <input type="text" readonly id="pl-room-link-input" class="pl-room-link-input" value="">
-                <button type="button" id="pl-copy-link-btn" class="pl-copy-btn">📋 Copy Link</button>
+                <button type="button" id="pl-copy-link-btn" class="pl-copy-btn">📋 ${t('Copy Link')}</button>
                 <span id="pl-copy-status" class="pl-copy-status"></span>
               </div>
-              <div class="pl-online-divider"><span>OR JOIN / ENTER CODE</span></div>
+              <div class="pl-online-divider"><span>${t('OR JOIN / ENTER CODE')}</span></div>
               <div style="display:flex;gap:8px;align-items:center;">
-                <input type="text" class="pl-room-input" id="pl-join-room-input" placeholder="ROOM CODE" maxlength="6">
-                <button type="button" class="pl-online-btn" id="pl-set-room-btn">USE CODE</button>
+                <input type="text" class="pl-room-input" id="pl-join-room-input" placeholder="${t('ROOM CODE')}" maxlength="6">
+                <button type="button" class="pl-online-btn" id="pl-set-room-btn">${t('USE CODE')}</button>
               </div>
               <div class="pl-lobby-status" id="pl-online-lobby-status"></div>
             </div>
 
-            <div class="pl-section-label">GAME MODE</div>
+            <div class="pl-section-label">${t('GAME MODE')}</div>
             <div class="pl-mode-grid">
               <button type="button" class="pl-card pl-mode-card is-selected" data-mode="4">
                 <svg class="mode-court-svg" viewBox="0 0 100 70">
@@ -152,8 +153,8 @@ export function initMenu() {
                   <circle cx="75" cy="50" r="5" fill="#e63946"/>
                 </svg>
                 <div>
-                  <div class="pl-card-title">DOUBLES (2v2)</div>
-                  <div class="pl-card-sub">4 players · Classic padel team setup</div>
+                  <div class="pl-card-title">${t('DOUBLES (2v2)')}</div>
+                  <div class="pl-card-sub">${t('4 players · Classic padel team setup')}</div>
                 </div>
                 <span class="pl-check">✓</span>
               </button>
@@ -165,16 +166,16 @@ export function initMenu() {
                   <circle cx="75" cy="35" r="6" fill="#e63946"/>
                 </svg>
                 <div>
-                  <div class="pl-card-title">SINGLES (1v1)</div>
-                  <div class="pl-card-sub">2 players · Fast cross-court duel</div>
+                  <div class="pl-card-title">${t('SINGLES (1v1)')}</div>
+                  <div class="pl-card-sub">${t('2 players · Fast cross-court duel')}</div>
                 </div>
                 <span class="pl-check">✓</span>
               </button>
             </div>
 
-            <div class="pl-section-label">HUMAN PLAYERS</div>
+            <div class="pl-section-label">${t('HUMAN PLAYERS')}</div>
             <div class="pl-seg-row" id="pl-humans-seg">
-              <button type="button" class="pl-seg-btn" data-val="0">0 (Watch)</button>
+              <button type="button" class="pl-seg-btn" data-val="0">${t('0 (Watch)')}</button>
               <button type="button" class="pl-seg-btn is-selected" data-val="1">1</button>
               <button type="button" class="pl-seg-btn" data-val="2">2</button>
               <button type="button" class="pl-seg-btn" data-val="3">3</button>
@@ -182,43 +183,43 @@ export function initMenu() {
             </div>
 
             <div id="pl-sides-wrap" hidden>
-              <div class="pl-section-label">TWO PLAYERS</div>
+              <div class="pl-section-label">${t('TWO PLAYERS')}</div>
               <div class="pl-seg-row" id="pl-sides-seg">
-                <button type="button" class="pl-seg-btn is-selected" data-val="opp">Opponents</button>
-                <button type="button" class="pl-seg-btn" data-val="same">Same team (vs 2 AI)</button>
+                <button type="button" class="pl-seg-btn is-selected" data-val="opp">${t('Opponents')}</button>
+                <button type="button" class="pl-seg-btn" data-val="same">${t('Same team (vs 2 AI)')}</button>
               </div>
             </div>
 
-            <div class="pl-section-label">CONTROLS (PLAYER 1)</div>
+            <div class="pl-section-label">${t('CONTROLS (PLAYER 1)')}</div>
             <div class="pl-ctrl-grid">
               <button type="button" class="pl-card pl-ctrl-card is-selected" data-ctrl="auto">
                 <div class="pl-ctrl-icons">⌨️ <span class="pl-ctrl-plus">+</span> 🎮</div>
-                <div class="pl-card-title">Keyboard + Controller</div>
-                <div class="pl-card-sub">Auto-detect</div>
+                <div class="pl-card-title">${t('Keyboard + Controller')}</div>
+                <div class="pl-card-sub">${t('Auto-detect')}</div>
                 <span class="pl-check">✓</span>
               </button>
               <button type="button" class="pl-card pl-ctrl-card" data-ctrl="kb">
                 <div class="pl-ctrl-icons">⌨️</div>
-                <div class="pl-card-title">Keyboard Only</div>
+                <div class="pl-card-title">${t('Keyboard Only')}</div>
                 <div class="pl-card-sub">WASD + Space</div>
                 <span class="pl-check">✓</span>
               </button>
               <button type="button" class="pl-card pl-ctrl-card" data-ctrl="pad">
                 <div class="pl-ctrl-icons">🎮</div>
-                <div class="pl-card-title">Controller Only</div>
-                <div class="pl-card-sub">Left stick + Buttons</div>
+                <div class="pl-card-title">${t('Controller Only')}</div>
+                <div class="pl-card-sub">${t('Left stick + Buttons')}</div>
                 <span class="pl-check">✓</span>
               </button>
             </div>
-            <div class="pl-gamepad-live" id="pl-gp-live">🎮 Checking controller…</div>
+            <div class="pl-gamepad-live" id="pl-gp-live">${t('🎮 Checking controller…')}</div>
           </div>
 
           <!-- Step 1: Player -->
           <div class="pl-step" data-step="1" hidden>
             <div class="pl-filter-row" id="pl-char-filter-row">
-              <button type="button" class="pl-chip is-active" data-filter="all">All</button>
-              <button type="button" class="pl-chip" data-filter="f">Women</button>
-              <button type="button" class="pl-chip" data-filter="m">Men</button>
+              <button type="button" class="pl-chip is-active" data-filter="all">${t('All')}</button>
+              <button type="button" class="pl-chip" data-filter="f">${t('Women')}</button>
+              <button type="button" class="pl-chip" data-filter="m">${t('Men')}</button>
             </div>
             <div class="pl-char-grid" id="pl-char-grid"></div>
           </div>
@@ -226,10 +227,10 @@ export function initMenu() {
           <!-- Step 2: Venue -->
           <div class="pl-step" data-step="2" hidden>
             <div class="pl-filter-row" id="pl-venue-filter-row">
-              <button type="button" class="pl-chip is-active" data-filter="all">All</button>
-              <button type="button" class="pl-chip" data-filter="indoor">Indoor</button>
-              <button type="button" class="pl-chip" data-filter="outdoor">Outdoor</button>
-              <button type="button" class="pl-chip" data-filter="special">Beach / Rooftop</button>
+              <button type="button" class="pl-chip is-active" data-filter="all">${t('All')}</button>
+              <button type="button" class="pl-chip" data-filter="indoor">${t('Indoor')}</button>
+              <button type="button" class="pl-chip" data-filter="outdoor">${t('Outdoor')}</button>
+              <button type="button" class="pl-chip" data-filter="special">${t('Beach / Rooftop')}</button>
             </div>
             <div class="pl-venue-grid" id="pl-venue-grid"></div>
           </div>
@@ -242,33 +243,33 @@ export function initMenu() {
           <!-- Step 4: Match -->
           <div class="pl-step" data-step="4" hidden>
             <div class="pl-match-groups">
-              <div class="pl-section-label">SETS</div>
+              <div class="pl-section-label">${t('SETS')}</div>
               <div class="pl-seg-row" id="pl-sets-seg">
-                <button type="button" class="pl-seg-btn" data-val="1">1 SET</button>
-                <button type="button" class="pl-seg-btn is-selected" data-val="3">3 SETS</button>
-                <button type="button" class="pl-seg-btn" data-val="3s">2 SETS + SUPER TIE-BREAK</button>
+                <button type="button" class="pl-seg-btn" data-val="1">${t('1 SET')}</button>
+                <button type="button" class="pl-seg-btn is-selected" data-val="3">${t('3 SETS')}</button>
+                <button type="button" class="pl-seg-btn" data-val="3s">${t('2 SETS + SUPER TIE-BREAK')}</button>
               </div>
 
-              <div class="pl-section-label">DEUCE FORMAT</div>
+              <div class="pl-section-label">${t('DEUCE FORMAT')}</div>
               <div class="pl-seg-row" id="pl-golden-seg">
-                <button type="button" class="pl-seg-btn is-selected" data-val="1">GOLDEN POINT</button>
-                <button type="button" class="pl-seg-btn" data-val="0">ADVANTAGE</button>
-                <button type="button" class="pl-seg-btn" data-val="star">STAR POINT (FIP 2026)</button>
+                <button type="button" class="pl-seg-btn is-selected" data-val="1">${t('GOLDEN POINT')}</button>
+                <button type="button" class="pl-seg-btn" data-val="0">${t('ADVANTAGE')}</button>
+                <button type="button" class="pl-seg-btn" data-val="star">${t('STAR POINT (FIP 2026)')}</button>
               </div>
 
-              <div class="pl-section-label">AI DIFFICULTY</div>
+              <div class="pl-section-label">${t('AI DIFFICULTY')}</div>
               <div class="pl-seg-row" id="pl-ai-seg">
-                <button type="button" class="pl-seg-btn" data-val="rookie">ROOKIE ★</button>
-                <button type="button" class="pl-seg-btn is-selected" data-val="club">CLUB ★★</button>
-                <button type="button" class="pl-seg-btn" data-val="pro">PRO ★★★</button>
-                <button type="button" class="pl-seg-btn" data-val="legend">LEGEND ★★★★</button>
+                <button type="button" class="pl-seg-btn" data-val="rookie">${t('ROOKIE ★')}</button>
+                <button type="button" class="pl-seg-btn is-selected" data-val="club">${t('CLUB ★★')}</button>
+                <button type="button" class="pl-seg-btn" data-val="pro">${t('PRO ★★★')}</button>
+                <button type="button" class="pl-seg-btn" data-val="legend">${t('LEGEND ★★★★')}</button>
               </div>
 
-              <div class="pl-section-label">GAME SPEED</div>
+              <div class="pl-section-label">${t('GAME SPEED')}</div>
               <div class="pl-seg-row" id="pl-speed-seg">
-                <button type="button" class="pl-seg-btn" data-val="0.7">SLOW (70%)</button>
-                <button type="button" class="pl-seg-btn is-selected" data-val="0.85">NORMAL (85%)</button>
-                <button type="button" class="pl-seg-btn" data-val="1">FAST (REAL)</button>
+                <button type="button" class="pl-seg-btn" data-val="0.7">${t('SLOW (70%)')}</button>
+                <button type="button" class="pl-seg-btn is-selected" data-val="0.85">${t('NORMAL (85%)')}</button>
+                <button type="button" class="pl-seg-btn" data-val="1">${t('FAST (REAL)')}</button>
               </div>
             </div>
           </div>
@@ -276,7 +277,7 @@ export function initMenu() {
 
         <!-- Step Footer: Next Button -->
         <div class="pl-step-footer" style="justify-content:flex-end;">
-          <button type="button" class="pl-next-btn" id="pl-next-btn">NEXT →</button>
+          <button type="button" class="pl-next-btn" id="pl-next-btn">${t('NEXT →')}</button>
         </div>
       </section>
     </main>
@@ -287,7 +288,7 @@ export function initMenu() {
         Doubles · Lucia Varela · Madrid Indoor Arena · Starter Nova · 3 sets
       </div>
       <div class="pl-start-slot">
-        <button type="button" class="pl-start-btn" id="pl-start-btn">START MATCH</button>
+        <button type="button" class="pl-start-btn" id="pl-start-btn">${t('START MATCH')}</button>
       </div>
     </footer>
   `;
@@ -403,7 +404,7 @@ export function initMenu() {
     updateInfoCard(ch, rk);
   }
 
-  async function setCustomPreview(ch, rk = rackets[0], infoHtml = null, badgeText = 'LIVE PREVIEW') {
+  async function setCustomPreview(ch, rk = rackets[0], infoHtml = null, badgeText = t('LIVE PREVIEW')) {
     if (!previewScene) initPreview();
     const req = ++previewReqId;
     const badge = shell.querySelector('.pl-preview-badge');
@@ -438,8 +439,8 @@ export function initMenu() {
     const info = shell.querySelector('#pl-char-info');
     if (!info) return;
     const flag = countryFlag(ch.countryCode);
-    const gText = ch.gender === 'f' ? 'FEMALE' : 'MALE';
-    const hText = ch.hand === 'left' ? 'LEFT-HANDED' : 'RIGHT-HANDED';
+    const gText = ch.gender === 'f' ? t('FEMALE') : t('MALE');
+    const hText = ch.hand === 'left' ? t('LEFT-HANDED') : t('RIGHT-HANDED');
     const s = ch.stats || {};
     const card = charCard(s);
     info.innerHTML = `
@@ -454,20 +455,20 @@ export function initMenu() {
         </div>
       </div>
       <div class="pl-stats-list">
-        ${statRow('SPEED', s.speed || 6)}
-        ${statRow('POWER', s.power || 6)}
-        ${statRow('CONTROL', s.control || 6)}
-        ${statRow('VOLLEY', s.volley || 6)}
-        ${statRow('SMASH', s.smash || 6)}
-        ${statRow('STAMINA', s.stamina || 6)}
+        ${statRow(t('SPEED'), s.speed || 6)}
+        ${statRow(t('POWER'), s.power || 6)}
+        ${statRow(t('CONTROL'), s.control || 6)}
+        ${statRow(t('VOLLEY'), s.volley || 6)}
+        ${statRow(t('SMASH'), s.smash || 6)}
+        ${statRow(t('STAMINA'), s.stamina || 6)}
       </div>
       <div class="pl-char-tags" style="margin-top:10px;gap:6px;flex-wrap:wrap">
-        <span class="pl-meta-pill">💪 ${card.strengths[0][0].toUpperCase()} ${card.strengths[0][1]}</span>
-        <span class="pl-meta-pill">💪 ${card.strengths[1][0].toUpperCase()} ${card.strengths[1][1]}</span>
-        <span class="pl-meta-pill" style="color:#ff8fa3">⚠ ${card.weakness[0].toUpperCase()} ${card.weakness[1]}</span>
+        <span class="pl-meta-pill">💪 ${t(card.strengths[0][0].toUpperCase())} ${card.strengths[0][1]}</span>
+        <span class="pl-meta-pill">💪 ${t(card.strengths[1][0].toUpperCase())} ${card.strengths[1][1]}</span>
+        <span class="pl-meta-pill" style="color:#ff8fa3">⚠ ${t(card.weakness[0].toUpperCase())} ${card.weakness[1]}</span>
       </div>
       <div class="pl-card-sub" style="margin-top:6px;font-size:12px;line-height:1.4">${escapeHtml(card.tip)}</div>
-      <button type="button" id="pl-to-career-btn" class="pl-card-sub" style="margin-top:8px;background:none;border:none;padding:0;color:var(--acc);font-weight:700;font-size:12px;cursor:pointer;text-align:left;display:inline-block">Build your own player in Career →</button>
+      <button type="button" id="pl-to-career-btn" class="pl-card-sub" style="margin-top:8px;background:none;border:none;padding:0;color:var(--acc);font-weight:700;font-size:12px;cursor:pointer;text-align:left;display:inline-block">${t('Build your own player in Career →')}</button>
     `;
     const toCareerBtn = info.querySelector('#pl-to-career-btn');
     if (toCareerBtn) toCareerBtn.onclick = () => { location.hash = '#career'; };
@@ -485,12 +486,12 @@ export function initMenu() {
   }
 
   function updateSummary() {
-    const m = $('mode')?.value === '2' ? 'Singles' : 'Doubles';
+    const m = $('mode')?.value === '2' ? t('Singles') : t('Doubles');
     const ch = characters[selectedCharIdx]?.name || 'Player';
     const vn = venues[selectedVenueIdx]?.name || 'Venue';
     const rk = rackets[selectedRacketIdx]?.name || 'Racket';
     const stVal = $('sets')?.value;
-    const st = stVal === '1' ? '1 set' : stVal === '3s' ? '2 sets + STB' : '3 sets';
+    const st = stVal === '1' ? t('1 set') : stVal === '3s' ? t('2 sets + STB') : t('3 sets');
     const sumEl = shell.querySelector('#pl-summary');
     if (sumEl) sumEl.textContent = `${m} · ${ch} · ${vn} · ${rk} · ${st}`;
   }
@@ -560,8 +561,8 @@ export function initMenu() {
       card.type = 'button';
       card.className = `pl-card pl-venue-card ${idx === selectedVenueIdx ? 'is-selected' : ''}`;
       card.dataset.idx = idx;
-      const tod = v.timeOfDay === 'sunset' ? 'Sunset' : v.timeOfDay === 'night' ? 'Night' : 'Day';
-      const typeEn = v.type === 'indoor' ? 'Indoor' : v.type === 'beach' ? 'Beach' : v.type === 'rooftop' ? 'Rooftop' : 'Outdoor';
+      const tod = v.timeOfDay === 'sunset' ? t('Sunset') : v.timeOfDay === 'night' ? t('Night') : t('Day');
+      const typeEn = v.type === 'indoor' ? t('Indoor') : v.type === 'beach' ? t('Beach') : v.type === 'rooftop' ? t('Rooftop') : t('Outdoor');
       const surfColor = v.surface.includes('blue') ? '#2f6fb5' : v.surface.includes('green') ? '#2e7d32' : '#c85a17';
       card.innerHTML = `
         <div class="pl-thumb-box pl-venue-box shimmer">
@@ -606,7 +607,7 @@ export function initMenu() {
       card.type = 'button';
       card.className = `pl-card pl-racket-card ${idx === selectedRacketIdx ? 'is-selected' : ''}`;
       card.dataset.idx = idx;
-      const shName = rk.shape === 'round' ? 'Round' : rk.shape === 'teardrop' ? 'Teardrop' : 'Diamond';
+      const shName = rk.shape === 'round' ? t('Round') : rk.shape === 'teardrop' ? t('Teardrop') : t('Diamond');
       card.innerHTML = `
         <div class="pl-racket-top">
           <div class="pl-thumb-box pl-racket-box shimmer">
@@ -621,10 +622,10 @@ export function initMenu() {
           </div>
         </div>
         <div class="pl-racket-stats">
-          <div class="pl-rstat"><span>Power</span><div class="pl-bar"><i style="width:${rk.stats.power * 10}%"></i></div><b>${rk.stats.power}</b></div>
-          <div class="pl-rstat"><span>Control</span><div class="pl-bar"><i style="width:${rk.stats.control * 10}%"></i></div><b>${rk.stats.control}</b></div>
-          <div class="pl-rstat"><span>Spin</span><div class="pl-bar"><i style="width:${rk.stats.spin * 10}%"></i></div><b>${rk.stats.spin}</b></div>
-          <div class="pl-rstat"><span>Sweet Spot</span><div class="pl-bar"><i style="width:${rk.stats.sweetSpot * 10}%"></i></div><b>${rk.stats.sweetSpot}</b></div>
+          <div class="pl-rstat"><span>${t('Power')}</span><div class="pl-bar"><i style="width:${rk.stats.power * 10}%"></i></div><b>${rk.stats.power}</b></div>
+          <div class="pl-rstat"><span>${t('Control')}</span><div class="pl-bar"><i style="width:${rk.stats.control * 10}%"></i></div><b>${rk.stats.control}</b></div>
+          <div class="pl-rstat"><span>${t('Spin')}</span><div class="pl-bar"><i style="width:${rk.stats.spin * 10}%"></i></div><b>${rk.stats.spin}</b></div>
+          <div class="pl-rstat"><span>${t('Sweet Spot')}</span><div class="pl-bar"><i style="width:${rk.stats.sweetSpot * 10}%"></i></div><b>${rk.stats.sweetSpot}</b></div>
         </div>
         <span class="pl-check">✓</span>
       `;
@@ -656,7 +657,7 @@ export function initMenu() {
       p.hidden = i !== curStep;
     });
     const nextBtn = shell.querySelector('#pl-next-btn');
-    if (nextBtn) nextBtn.textContent = curStep === 4 ? 'FIRST TAB ↺' : 'NEXT →';
+    if (nextBtn) nextBtn.textContent = curStep === 4 ? t('FIRST TAB ↺') : t('NEXT →');
   }
 
   shell.querySelectorAll('.pl-tab').forEach(btn => {
@@ -777,11 +778,11 @@ export function initMenu() {
           document.execCommand('copy');
         }
         if (copyStatus) {
-          copyStatus.textContent = '✓ Copied!';
+          copyStatus.textContent = t('✓ Copied!');
           setTimeout(() => { if (copyStatus) copyStatus.textContent = ''; }, 2200);
         }
       } catch {
-        if (copyStatus) copyStatus.textContent = 'Failed to copy';
+        if (copyStatus) copyStatus.textContent = t('Failed to copy');
       }
     };
   }
@@ -795,7 +796,7 @@ export function initMenu() {
         roomJoined = true;
         updateRoomDisplay(val);
         const lobbyStatus = shell.querySelector('#pl-online-lobby-status');
-        if (lobbyStatus) lobbyStatus.innerHTML = `Room code set to <b>${val}</b>. Click START MATCH to connect!`;
+        if (lobbyStatus) lobbyStatus.innerHTML = t('Room code set to <b>{code}</b>. Click START MATCH to connect!', { code: val });
       }
     };
     setRoomBtn.onclick = applyJoin;
@@ -901,7 +902,7 @@ export function initMenu() {
     setCustomPreview,
     restoreQuickMatch() {
       const badge = shell.querySelector('.pl-preview-badge');
-      if (badge) badge.textContent = 'LIVE PREVIEW';
+      if (badge) badge.textContent = t('LIVE PREVIEW');
       delete previewCanvas.parentElement.dataset.custom;
       updateAvatarPreview(selectedCharIdx, selectedRacketIdx, true);
     },
@@ -919,13 +920,13 @@ export function initMenu() {
     }
     const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
     const statusText = gps.length > 0
-      ? `🎮 ${gps.length} controller(s): ${gps[0].id.slice(0, 20)}… · ${padText('A Select · LB/RB Tabs · Start Play · B / Esc: HOME')}`
-      : '🎮 No controller detected';
+      ? t('🎮 {n} controller(s): {id}… · {hints}', { n: gps.length, id: gps[0].id.slice(0, 20), hints: padText(t('A Select · LB/RB Tabs · Start Play · B / Esc: HOME')) })
+      : t('🎮 No controller detected');
 
     const padHint = shell.querySelector('#pl-pad-status');
     const liveHint = shell.querySelector('#pl-gp-live');
     if (padHint) padHint.textContent = statusText;
-    if (liveHint) liveHint.textContent = gps.length > 0 ? padText(`🎮 ${gps.length} controller(s) connected · A to choose`) : '🎮 Checking controller…';
+    if (liveHint) liveHint.textContent = gps.length > 0 ? padText(t('🎮 {n} controller(s) connected · A to choose', { n: gps.length })) : t('🎮 Checking controller…');
 
     if (careerPadHandler) {
       if (gps.length > 0) careerPadHandler(gps[0]);

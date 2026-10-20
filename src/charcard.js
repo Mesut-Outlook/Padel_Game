@@ -1,5 +1,6 @@
 // Friendly character card generator (pure: no DOM or three.js imports).
 // Evaluates character stats to highlight top strengths, main weakness, and actionable play tips.
+import { t } from './i18n.js';
 
 export const STAT_ORDER = ['speed', 'power', 'control', 'volley', 'smash', 'stamina'];
 
@@ -53,12 +54,19 @@ export function charCard(stats = {}) {
     }
   }
 
-  const s1Name = STAT_NAMES[s1[0]] || s1[0];
-  const wName = STAT_NAMES[weakness[0]] || weakness[0];
-  const s1Tip = STRENGTH_TIPS[s1[0]] || 'play to your strengths';
-  const wTip = WEAKNESS_TIPS[weakness[0]] || 'manage your weakness';
+  const s1Name = t(STAT_NAMES[s1[0]] || s1[0]);
+  const wName = t(STAT_NAMES[weakness[0]] || weakness[0]);
+  const s1Tip = t(STRENGTH_TIPS[s1[0]] || 'play to your strengths');
+  const wTip = t(WEAKNESS_TIPS[weakness[0]] || 'manage your weakness');
 
-  const tip = `${s1Name} ${s1[1]} · ${wName} ${weakness[1]} — ${s1Tip}, ${wTip}`;
+  const tip = t('{sName} {sVal} · {wName} {wVal} — {sTip}, {wTip}', {
+    sName: s1Name,
+    sVal: s1[1],
+    wName: wName,
+    wVal: weakness[1],
+    sTip: s1Tip,
+    wTip: wTip,
+  });
 
   return { strengths, weakness, tip };
 }

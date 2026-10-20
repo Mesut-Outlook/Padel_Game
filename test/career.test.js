@@ -324,6 +324,9 @@ test('coachTip: dry, exhausted, volley and smash misses, then the weakest stat; 
   const v = coachTip(tally({ volley: [5, 7] }), p, eco);
   assert.match(v.text, /Your volleys missed 7 of 12 — Train Volley \(\d+ Credits\)/);
   assert.deepEqual(v.action, { train: 'volley' });
+  assert.match(v.text, / or play at the net more$/);
+  assert.deepEqual(v.msg.lead, ['Your volleys missed {x} of {n}', { x: 7, n: 12 }]);  // the UI translates these pieces
+  assert.deepEqual(v.msg.alt, ['or play at the net more']);
   assert.deepEqual(coachTip(tally({ smash: [2, 3] }), p, eco).action, { train: 'smash' });
   assert.match(coachTip(tally({}), p, eco).text, /weakest skill is Control \(5\)/);
   const capped = { ...p, stats: { ...p.stats, volley: 7 } };

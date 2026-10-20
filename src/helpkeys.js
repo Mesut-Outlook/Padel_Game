@@ -21,6 +21,8 @@ const ROWS = [
 // Xbox buttons (standard gamepad indices): drawing [shape, x, y, label] + legend text, coloured like the keyboard
 // groups except A/B/X/Y, which keep their real Xbox colours so they are found at a glance
 import { padText, isPlayStation } from './padstyle.js';
+import { t } from './i18n.js';
+import { isTouch } from './touch.js';
 
 const PAD = [
   [6, 'sys', 'LT', 44, 2, 'eat (food offer)'], [7, 'shot', 'RT', 168, 2, 'contrapared'],
@@ -44,8 +46,8 @@ export function padSvg(kind) {
     ${dpad}${PAD.map(btn).join('')}</svg>`;
 }
 export const padLegend = (kind) => `<div class="hp-legend">
-    <div class="pk" data-b="10"><b class="move">L</b>move · tilt while hitting = aim</div>
-    ${PAD.filter(p => p[5]).map(([b, c, t, , , txt]) => `<div class="pk" data-b="${b}"><b class="${c}">${t ? padText(t, kind) : { 8: '⧉', 9: '≡', 12: '↑', 13: '↓' }[b]}</b>${padText(txt, kind)}</div>`).join('')}
+    <div class="pk" data-b="10"><b class="move">L</b>${t('move · tilt while hitting = aim')}</div>
+    ${PAD.filter(p => p[5]).map(([b, c, tLabel, , , txt]) => `<div class="pk" data-b="${b}"><b class="${c}">${tLabel ? padText(tLabel, kind) : { 8: '⧉', 9: '≡', 12: '↑', 13: '↓' }[b]}</b>${padText(t(txt), kind)}</div>`).join('')}
   </div>`;
 
 const STORE = 'padel.helpHidden', POS_STORE = 'padel.helpPos';
@@ -55,22 +57,24 @@ export function mountKeyHelp(el) {
   const caps = {};
   const cap = (code, cls = '') => {
     const d = K[code];
-    caps[code] = `<div class="hk ${d ? d[1] : ''} ${cls}" data-code="${code}">${d ? d[0] : code.replace('Key', '')}${d?.[2] ? `<small>${d[2]}</small>` : ''}</div>`;
+    caps[code] = `<div class="hk ${d ? d[1] : ''} ${cls}" data-code="${code}">${d ? d[0] : code.replace('Key', '')}${d?.[2] ? `<small>${t(d[2])}</small>` : ''}</div>`;
     return caps[code];
   };
   el.innerHTML = `
-    <div class="hk-pill" title="Show controls (H / D-pad ↑)"><span class="kb-only">⌨ Keys <b>H</b></span><span class="pad-only">🎮 Buttons <b>↑</b></span></div>
+    <div class="hk-pill" title="${t('Show controls (H / D-pad ↑)')}"><span class="kb-only">⌨ ${t('Keys')} <b>H</b></span><span class="pad-only">🎮 ${t('Buttons')} <b>↑</b></span></div>
     <div class="hk-board">
-      <div class="hk-head"><span>Controls <span class="hk-dev"><i data-dev="kb" title="Keyboard">⌨</i><i data-dev="pad" title="Controller (Xbox / PlayStation)">🎮</i></span></span><span class="hk-pos">${Object.entries(CORNERS).map(([p, [a, t]]) => `<i data-pos="${p}" title="${t} (Shift+H)">${a}</i>`).join('')}<span class="hk-x" title="Hide (H)">✕</span></span></div>
+      <div class="hk-head"><span>${t('Controls')} <span class="hk-dev"><i data-dev="kb" title="${t('Keyboard')}">⌨</i><i data-dev="pad" title="${t('Controller (Xbox / PlayStation)')}">🎮</i></span></span><span class="hk-pos">${Object.entries(CORNERS).map(([p, [a, tDesc]]) => `<i data-pos="${p}" title="${t(tDesc)} (Shift+H)">${a}</i>`).join('')}<span class="hk-x" title="${t('Hide (H)')}">✕</span></span></div>
       <div class="hk-main kb-only">
         <div class="hk-rows">${ROWS.map((r, i) => `<div class="hk-row" style="padding-left:${[0, 0, 8, 18, 56][i]}px">${r.map(c => cap(c, c === 'Space' ? 'hk-space' : c === 'Enter' || c === 'Escape' ? 'hk-wide' : '')).join('')}</div>`).join('')}</div>
         <div class="hk-arrows">${cap('ArrowUp', 'up')}${cap('ArrowLeft', 'lf')}${cap('ArrowDown', 'dn')}${cap('ArrowRight', 'rt')}</div>
       </div>
       <div class="hk-main pad-only">${padSvg('xbox')}${padLegend('xbox')}</div>
-      <div class="hk-foot"><span class="kb-only">Hold <b>A</b>/<b>D</b> or <b>←</b>/<b>→</b> while hitting = aim · <b>Esc</b>: pause · ⛶ / <b>F11</b>: fullscreen · </span><span class="pad-only">Phone or tablet: pair an Xbox or PlayStation controller over Bluetooth, then press any button · 2 players: keyboard + a pad, or a pad each · </span><a href="kontroller.html" target="_blank" rel="noopener">all controls →</a></div>
+      <div class="hk-foot"><span class="kb-only">${t('Hold <b>A</b>/<b>D</b> or <b>←</b>/<b>→</b> while hitting = aim · <b>Esc</b>: pause · ⛶ / <b>F11</b>: fullscreen · ')}</span><span class="pad-only">${t('Phone or tablet: pair an Xbox or PlayStation controller over Bluetooth, then press any button · 2 players: keyboard + a pad, or a pad each · ')}</span><a href="kontroller.html" target="_blank" rel="noopener">${t('all controls →')}</a></div>
     </div>`;
-  let hidden = false, pos = 'bl';
-  try { hidden = localStorage.getItem(STORE) === '1'; pos = localStorage.getItem(POS_STORE) || 'bl'; } catch { /* storage blocked: defaults */ }
+  // phones / tablets start top-left: bottom-left is under the thumb, and with a pad the touch buttons up there are hidden
+  const home = isTouch() ? 'tl' : 'bl';
+  let hidden = false, pos = home;
+  try { hidden = localStorage.getItem(STORE) === '1'; pos = localStorage.getItem(POS_STORE) || home; } catch { /* storage blocked: defaults */ }
   const place = (p) => {
     pos = CORNERS[p] ? p : 'bl'; el.dataset.pos = pos;
     el.querySelectorAll('.hk-pos i').forEach(i => i.classList.toggle('cur', i.dataset.pos === pos));

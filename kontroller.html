@@ -69,15 +69,15 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>PADEL <b>LEGENDS</b> · Controls</h1>
-  <div class="sub">Press any key on your keyboard or hover over a key below to see what it does. <a href="./">← Back to game</a></div>
-  <div class="ways"><a href="#keyboard">⌨ Keyboard</a><a href="#controller">🎮 Xbox / PlayStation controller</a><a href="#touch">📱 Tablet &amp; phone (iPad, Android)</a></div>
+  <h1 data-i18n-html="PADEL <b>LEGENDS</b> · Controls">PADEL <b>LEGENDS</b> · Controls</h1>
+  <div class="sub"><span data-i18n="Press any key on your keyboard or hover over a key below to see what it does.">Press any key on your keyboard or hover over a key below to see what it does.</span> <a href="./" data-i18n="← Back to game">← Back to game</a></div>
+  <div class="ways"><a href="#keyboard" data-i18n="⌨ Keyboard">⌨ Keyboard</a><a href="#controller" data-i18n="🎮 Xbox / PlayStation controller">🎮 Xbox / PlayStation controller</a><a href="#touch" data-i18n="📱 Tablet &amp; phone (iPad, Android)">📱 Tablet &amp; phone (iPad, Android)</a></div>
 
   <div class="legend" id="keyboard">
-    <span><i style="background:var(--move)"></i>Movement</span>
-    <span><i style="background:var(--hit)"></i>Strike</span>
-    <span><i style="background:var(--shot)"></i>Special shots</span>
-    <span><i style="background:var(--sys)"></i>Camera &amp; system</span>
+    <span><i style="background:var(--move)"></i><span data-i18n="Movement">Movement</span></span>
+    <span><i style="background:var(--hit)"></i><span data-i18n="Strike">Strike</span></span>
+    <span><i style="background:var(--shot)"></i><span data-i18n="Special shots">Special shots</span></span>
+    <span><i style="background:var(--sys)"></i><span data-i18n="Camera &amp; system">Camera &amp; system</span></span>
   </div>
 
   <div class="kb">
@@ -85,127 +85,131 @@
       <div class="rows" id="rows"></div>
       <div class="arrows" id="arrows"></div>
     </div>
-    <div class="detail" id="detail">Hover over a key or press it on your keyboard.</div>
+    <div class="detail" id="detail" data-i18n="Hover over a key or press it on your keyboard.">Hover over a key or press it on your keyboard.</div>
   </div>
 
-  <h2>During a Match</h2>
+  <h2 data-i18n="During a Match">During a Match</h2>
   <div class="cols">
-    <div class="card"><h3>Movement</h3><table>
-      <tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td>Move: W toward the net, S back, A left, D right</td></tr>
-      <tr><td><kbd>↑</kbd> <kbd>←</kbd> <kbd>↓</kbd> <kbd>→</kbd></td><td>Arrow keys work the same way</td></tr>
+    <div class="card"><h3 data-i18n="Movement">Movement</h3><table>
+      <tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td data-i18n="Move: W toward the net, S back, A left, D right">Move: W toward the net, S back, A left, D right</td></tr>
+      <tr><td><kbd>↑</kbd> <kbd>←</kbd> <kbd>↓</kbd> <kbd>→</kbd></td><td data-i18n="Arrow keys work the same way">Arrow keys work the same way</td></tr>
     </table></div>
-    <div class="card"><h3>Smart Shot</h3><table>
-      <tr><td><kbd>Space</kbd> or <kbd>J</kbd></td><td>Smart shot: automatically selects drive, volley, bandeja, or smash</td></tr>
-      <tr><td><kbd>A</kbd> / <kbd>D</kbd> or <kbd>←</kbd> / <kbd>→</kbd> + shot</td><td>Aim left / right (hold direction while swinging)</td></tr>
+    <div class="card"><h3 data-i18n="Smart Shot">Smart Shot</h3><table>
+      <tr><td><kbd>Space</kbd> <span data-i18n="or">or</span> <kbd>J</kbd></td><td data-i18n="Smart shot: automatically selects drive, volley, bandeja, or smash">Smart shot: automatically selects drive, volley, bandeja, or smash</td></tr>
+      <tr><td><kbd>A</kbd> / <kbd>D</kbd> <span data-i18n="or">or</span> <kbd>←</kbd> / <kbd>→</kbd> + <span data-i18n="shot">shot</span></td><td data-i18n="Aim left / right (hold direction while swinging)">Aim left / right (hold direction while swinging)</td></tr>
     </table></div>
-    <div class="card"><h3>Special Shots</h3><table>
-      <tr><td><kbd>K</kbd></td><td>Lob (globo): high and deep over the opponents</td></tr>
-      <tr><td><kbd>L</kbd></td><td>Smash: powerful overhead strike on high balls</td></tr>
-      <tr><td><kbd>U</kbd></td><td>Chiquita: soft, low ball dropping just over the net</td></tr>
-      <tr><td><kbd>I</kbd></td><td>Víbora: side-spin slicing overhead that skids low</td></tr>
-      <tr><td><kbd>O</kbd></td><td>Contrapared: blast off your own glass wall over the net (hold A/D for side glass)</td></tr>
+    <div class="card"><h3 data-i18n="Special Shots">Special Shots</h3><table>
+      <tr><td><kbd>K</kbd></td><td data-i18n="Lob (globo): high and deep over the opponents">Lob (globo): high and deep over the opponents</td></tr>
+      <tr><td><kbd>L</kbd></td><td data-i18n="Smash: powerful overhead strike on high balls">Smash: powerful overhead strike on high balls</td></tr>
+      <tr><td><kbd>U</kbd></td><td data-i18n="Chiquita: soft, low ball dropping just over the net">Chiquita: soft, low ball dropping just over the net</td></tr>
+      <tr><td><kbd>I</kbd></td><td data-i18n="Víbora: side-spin slicing overhead that skids low">Víbora: side-spin slicing overhead that skids low</td></tr>
+      <tr><td><kbd>O</kbd></td><td data-i18n="Contrapared: blast off your own glass wall over the net (hold A/D for side glass)">Contrapared: blast off your own glass wall over the net (hold A/D for side glass)</td></tr>
     </table></div>
-    <div class="card"><h3>Serve</h3><table>
-      <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> (before serving)</td><td>Slide along the baseline inside your half behind the service line</td></tr>
-      <tr><td><kbd>Space</kbd></td><td>Serve: toss, bounce, and underhand strike into the diagonal box</td></tr>
-      <tr><td><kbd>F</kbd></td><td>Slice serve: stays low and curves sideways</td></tr>
-      <tr><td><kbd>A</kbd> / <kbd>D</kbd> or <kbd>←</kbd> / <kbd>→</kbd> + serve</td><td>Aim left or right inside the service box</td></tr>
+    <div class="card"><h3 data-i18n="Serve">Serve</h3><table>
+      <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <span data-i18n="(before serving)">(before serving)</span></td><td data-i18n="Slide along the baseline inside your half behind the service line">Slide along the baseline inside your half behind the service line</td></tr>
+      <tr><td><kbd>Space</kbd></td><td data-i18n="Serve: toss, bounce, and underhand strike into the diagonal box">Serve: toss, bounce, and underhand strike into the diagonal box</td></tr>
+      <tr><td><kbd>F</kbd></td><td data-i18n="Slice serve: stays low and curves sideways">Slice serve: stays low and curves sideways</td></tr>
+      <tr><td><kbd>A</kbd> / <kbd>D</kbd> <span data-i18n="or">or</span> <kbd>←</kbd> / <kbd>→</kbd> + <span data-i18n="serve">serve</span></td><td data-i18n="Aim left or right inside the service box">Aim left or right inside the service box</td></tr>
     </table></div>
-    <div class="card"><h3>Camera &amp; System</h3><table>
-      <tr><td><kbd>F11</kbd> · <kbd>F</kbd> in menus</td><td>Toggle fullscreen (also the ⛶ button and the pause menu; in a match F is the slice shot)</td></tr>
-      <tr><td><kbd>E</kbd></td><td>Eat: take the food offered at a changeover (energy low)</td></tr>
-      <tr><td><kbd>B</kbd></td><td>Scoreboard: auto (hidden while a point is played) → hidden → always on</td></tr>
-      <tr><td><kbd>C</kbd></td><td>Camera: TV, behind player, side, top, ball, drone, free</td></tr>
-      <tr><td><kbd>R</kbd></td><td>Instant replay of the last point</td></tr>
-      <tr><td><kbd>Esc</kbd></td><td>Pause menu · skip replay</td></tr>
-      <tr><td><kbd>M</kbd></td><td>Mute / unmute sound &amp; music</td></tr>
-      <tr><td><kbd>H</kbd></td><td>Show / hide on-screen key help</td></tr>
-      <tr><td><kbd>Shift</kbd> + <kbd>H</kbd></td><td>Move on-screen key help to another corner (or click ↖ ↗ ↙ ↘)</td></tr>
-      <tr><td><kbd>Enter</kbd></td><td>Main menu after match · skip lesson in training</td></tr>
+    <div class="card"><h3 data-i18n="Camera &amp; System">Camera &amp; System</h3><table>
+      <tr><td><kbd>F11</kbd> · <kbd>F</kbd> <span data-i18n="in menus">in menus</span></td><td data-i18n="Toggle fullscreen (also the ⛶ button and the pause menu; in a match F is the slice shot)">Toggle fullscreen (also the ⛶ button and the pause menu; in a match F is the slice shot)</td></tr>
+      <tr><td><kbd>E</kbd></td><td data-i18n="Eat: take the food offered at a changeover (energy low)">Eat: take the food offered at a changeover (energy low)</td></tr>
+      <tr><td><kbd>B</kbd></td><td data-i18n="Scoreboard: auto (hidden while a point is played) → hidden → always on">Scoreboard: auto (hidden while a point is played) → hidden → always on</td></tr>
+      <tr><td><kbd>C</kbd></td><td data-i18n="Camera: TV, behind player, side, top, ball, drone, free">Camera: TV, behind player, side, top, ball, drone, free</td></tr>
+      <tr><td><kbd>R</kbd></td><td data-i18n="Instant replay of the last point">Instant replay of the last point</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td data-i18n="Pause menu · skip replay">Pause menu · skip replay</td></tr>
+      <tr><td><kbd>M</kbd></td><td data-i18n="Mute / unmute sound &amp; music">Mute / unmute sound &amp; music</td></tr>
+      <tr><td><kbd>H</kbd></td><td data-i18n="Show / hide on-screen key help">Show / hide on-screen key help</td></tr>
+      <tr><td><kbd>Shift</kbd> + <kbd>H</kbd></td><td data-i18n="Move on-screen key help to another corner (or click ↖ ↗ ↙ ↘)">Move on-screen key help to another corner (or click ↖ ↗ ↙ ↘)</td></tr>
+      <tr><td><kbd>Enter</kbd></td><td data-i18n="Main menu after match · skip lesson in training">Main menu after match · skip lesson in training</td></tr>
     </table></div>
-    <div class="card"><h3>Pro Tips</h3><table>
-      <tr><td>Swing early</td><td>Press the shot key slightly before the ball arrives — your player strikes at optimal reach.</td></tr>
-      <tr><td>Plant your feet</td><td>Once you arm a swing, your feet plant so aiming left/right won't pull you away from the ball.</td></tr>
-      <tr><td>Off the glass</td><td>Don't rush balls heading to the back glass — let them rebound first, then strike.</td></tr>
+    <div class="card"><h3 data-i18n="Pro Tips">Pro Tips</h3><table>
+      <tr><td data-i18n="Swing early">Swing early</td><td data-i18n="Press the shot key slightly before the ball arrives — your player strikes at optimal reach.">Press the shot key slightly before the ball arrives — your player strikes at optimal reach.</td></tr>
+      <tr><td data-i18n="Plant your feet">Plant your feet</td><td data-i18n="Once you arm a swing, your feet plant so aiming left/right won't pull you away from the ball.">Once you arm a swing, your feet plant so aiming left/right won't pull you away from the ball.</td></tr>
+      <tr><td data-i18n="Off the glass">Off the glass</td><td data-i18n="Don't rush balls heading to the back glass — let them rebound first, then strike.">Don't rush balls heading to the back glass — let them rebound first, then strike.</td></tr>
     </table></div>
   </div>
 
-  <h2 id="controller">Xbox / PlayStation Controller</h2>
+  <h2 id="controller" data-i18n="Xbox / PlayStation Controller">Xbox / PlayStation Controller</h2>
   <div class="pads">
-    <div class="card pad-card"><h3>Xbox controller</h3><div id="pad-xbox"></div></div>
-    <div class="card pad-card"><h3>PlayStation controller (DualShock 4 / DualSense)</h3><div id="pad-ps"></div></div>
+    <div class="card pad-card"><h3 data-i18n="Xbox controller">Xbox controller</h3><div id="pad-xbox"></div></div>
+    <div class="card pad-card"><h3 data-i18n="PlayStation controller (DualShock 4 / DualSense)">PlayStation controller (DualShock 4 / DualSense)</h3><div id="pad-ps"></div></div>
   </div>
-  <p class="tip"><b>PlayStation (DualShock 4 / DualSense):</b> same layout, the game shows the PlayStation symbols — <kbd>A</kbd> = <kbd>✕</kbd>, <kbd>B</kbd> = <kbd>○</kbd>, <kbd>X</kbd> = <kbd>□</kbd>, <kbd>Y</kbd> = <kbd>△</kbd>, <kbd>LB</kbd>/<kbd>RB</kbd> = <kbd>L1</kbd>/<kbd>R1</kbd>, <kbd>LT</kbd>/<kbd>RT</kbd> = <kbd>L2</kbd>/<kbd>R2</kbd>, View = Share/Create, Start = Options. Connect it by USB or Bluetooth and press a button once the page is open (Chrome / Edge recommended).</p>
+  <p class="tip" data-i18n-html="<b>PlayStation (DualShock 4 / DualSense):</b> same layout, the game shows the PlayStation symbols — <kbd>A</kbd> = <kbd>✕</kbd>, <kbd>B</kbd> = <kbd>○</kbd>, <kbd>X</kbd> = <kbd>□</kbd>, <kbd>Y</kbd> = <kbd>△</kbd>, <kbd>LB</kbd>/<kbd>RB</kbd> = <kbd>L1</kbd>/<kbd>R1</kbd>, <kbd>LT</kbd>/<kbd>RT</kbd> = <kbd>L2</kbd>/<kbd>R2</kbd>, View = Share/Create, Start = Options. Connect it by USB or Bluetooth and press a button once the page is open (Chrome / Edge recommended)."><b>PlayStation (DualShock 4 / DualSense):</b> same layout, the game shows the PlayStation symbols — <kbd>A</kbd> = <kbd>✕</kbd>, <kbd>B</kbd> = <kbd>○</kbd>, <kbd>X</kbd> = <kbd>□</kbd>, <kbd>Y</kbd> = <kbd>△</kbd>, <kbd>LB</kbd>/<kbd>RB</kbd> = <kbd>L1</kbd>/<kbd>R1</kbd>, <kbd>LT</kbd>/<kbd>RT</kbd> = <kbd>L2</kbd>/<kbd>R2</kbd>, View = Share/Create, Start = Options. Connect it by USB or Bluetooth and press a button once the page is open (Chrome / Edge recommended).</p>
   <div class="cols">
-    <div class="card"><h3>Match</h3><table>
-      <tr><td>Left stick</td><td>Move · aim while swinging</td></tr>
-      <tr><td><kbd>A</kbd></td><td>Smart shot · serve</td></tr>
-      <tr><td><kbd>B</kbd></td><td>Lob · skip replay</td></tr>
-      <tr><td><kbd>X</kbd></td><td>Chiquita</td></tr>
-      <tr><td><kbd>Y</kbd></td><td>Smash</td></tr>
-      <tr><td><kbd>RB</kbd></td><td>Víbora</td></tr>
-      <tr><td><kbd>LB</kbd></td><td>Slice serve</td></tr>
-      <tr><td><kbd>RT</kbd></td><td>Contrapared</td></tr>
-      <tr><td><kbd>LT</kbd></td><td>Eat the food offered at a changeover</td></tr>
-      <tr><td><kbd>View</kbd></td><td>Cycle camera</td></tr>
-      <tr><td><kbd>R3</kbd> (press right stick)</td><td>Instant replay</td></tr>
-      <tr><td><kbd>Start</kbd></td><td>Pause menu · main menu after match · skip training lesson</td></tr>
-      <tr><td><kbd>D-pad ↑</kbd></td><td>Show / hide the on-screen controller help</td></tr>
-      <tr><td><kbd>D-pad ↓</kbd></td><td>Scoreboard: auto → hidden → always on</td></tr>
+    <div class="card"><h3 data-i18n="Match">Match</h3><table>
+      <tr><td data-i18n="Left stick">Left stick</td><td data-i18n="Move · aim while swinging">Move · aim while swinging</td></tr>
+      <tr><td><kbd>A</kbd></td><td data-i18n="Smart shot · serve">Smart shot · serve</td></tr>
+      <tr><td><kbd>B</kbd></td><td data-i18n="Lob · skip replay">Lob · skip replay</td></tr>
+      <tr><td><kbd>X</kbd></td><td data-i18n="Chiquita">Chiquita</td></tr>
+      <tr><td><kbd>Y</kbd></td><td data-i18n="Smash">Smash</td></tr>
+      <tr><td><kbd>RB</kbd></td><td data-i18n="Víbora">Víbora</td></tr>
+      <tr><td><kbd>LB</kbd></td><td data-i18n="Slice serve">Slice serve</td></tr>
+      <tr><td><kbd>RT</kbd></td><td data-i18n="Contrapared">Contrapared</td></tr>
+      <tr><td><kbd>LT</kbd></td><td data-i18n="Eat the food offered at a changeover">Eat the food offered at a changeover</td></tr>
+      <tr><td><kbd>View</kbd></td><td data-i18n="Cycle camera">Cycle camera</td></tr>
+      <tr><td><kbd>R3</kbd> <span data-i18n="(press right stick)">(press right stick)</span></td><td data-i18n="Instant replay">Instant replay</td></tr>
+      <tr><td><kbd>Start</kbd></td><td data-i18n="Pause menu · main menu after match · skip training lesson">Pause menu · main menu after match · skip training lesson</td></tr>
+      <tr><td><kbd>D-pad ↑</kbd></td><td data-i18n="Show / hide the on-screen controller help">Show / hide the on-screen controller help</td></tr>
+      <tr><td><kbd>D-pad ↓</kbd></td><td data-i18n="Scoreboard: auto → hidden → always on">Scoreboard: auto → hidden → always on</td></tr>
     </table></div>
-    <div class="card"><h3>Menu</h3><table>
-      <tr><td>D-pad / Left stick</td><td>Navigate cards</td></tr>
-      <tr><td><kbd>A</kbd></td><td>Select</td></tr>
-      <tr><td><kbd>B</kbd></td><td>Previous tab</td></tr>
-      <tr><td><kbd>LB</kbd> / <kbd>RB</kbd></td><td>Switch tabs</td></tr>
-      <tr><td><kbd>Start</kbd></td><td>Start match</td></tr>
+    <div class="card"><h3 data-i18n="Menu">Menu</h3><table>
+      <tr><td data-i18n="D-pad / Left stick">D-pad / Left stick</td><td data-i18n="Navigate cards">Navigate cards</td></tr>
+      <tr><td><kbd>A</kbd></td><td data-i18n="Select">Select</td></tr>
+      <tr><td><kbd>B</kbd></td><td data-i18n="Previous tab">Previous tab</td></tr>
+      <tr><td><kbd>LB</kbd> / <kbd>RB</kbd></td><td data-i18n="Switch tabs">Switch tabs</td></tr>
+      <tr><td><kbd>Start</kbd></td><td data-i18n="Start match">Start match</td></tr>
     </table>
-    <p class="tip">You can select Keyboard, Controller, or Both from the <b>Controls</b> setting in the menu. Test your gamepad on the <a href="tools/padtest.html">controller test</a> page.</p>
-    <p class="tip"><b>Two players on one PC:</b> set <b>Human players</b> to 2. Player 1 plays on the keyboard, player 2 on the first Xbox controller (more controllers = players 3 and 4). In singles you play against each other; in doubles choose <b>Opponents</b> (each of you gets an AI partner) or <b>Same team</b> (you two against 2 AI).</p>
+    <p class="tip" data-i18n-html="You can select Keyboard, Controller, or Both from the <b>Controls</b> setting in the menu. Test your gamepad on the <a href=&quot;tools/padtest.html&quot;>controller test</a> page.">You can select Keyboard, Controller, or Both from the <b>Controls</b> setting in the menu. Test your gamepad on the <a href="tools/padtest.html">controller test</a> page.</p>
+    <p class="tip" data-i18n-html="<b>Two players on one PC:</b> set <b>Human players</b> to 2. Player 1 plays on the keyboard, player 2 on the first Xbox controller (more controllers = players 3 and 4). In singles you play against each other; in doubles choose <b>Opponents</b> (each of you gets an AI partner) or <b>Same team</b> (you two against 2 AI)."><b>Two players on one PC:</b> set <b>Human players</b> to 2. Player 1 plays on the keyboard, player 2 on the first Xbox controller (more controllers = players 3 and 4). In singles you play against each other; in doubles choose <b>Opponents</b> (each of you gets an AI partner) or <b>Same team</b> (you two against 2 AI).</p>
     </div>
   </div>
 
 
-  <h2 id="touch">Tablet &amp; Phone (iPad, Android)</h2>
-  <p class="tip">Turn the device sideways: the game plays in landscape. A tablet is the most comfortable; a phone works too, but the court is small.</p>
+  <h2 id="touch" data-i18n="Tablet &amp; Phone (iPad, Android)">Tablet &amp; Phone (iPad, Android)</h2>
+  <p class="tip" data-i18n="Turn the device sideways: the game plays in landscape. A tablet is the most comfortable; a phone works too, but the court is small.">Turn the device sideways: the game plays in landscape. A tablet is the most comfortable; a phone works too, but the court is small.</p>
   <div class="cols">
-    <div class="card"><h3>Touch screen</h3>
+    <div class="card"><h3 data-i18n="Touch screen">Touch screen</h3>
       <img class="photo" src="assets/howto/tablet-touch.webp" alt="Playing on a tablet with the touch controls" width="640" height="482" loading="lazy">
       <table>
-        <tr><td>Left half of the screen</td><td>Move: put your thumb down anywhere, a stick appears there; drag it the way you want to run</td></tr>
-        <tr><td><kbd>SHOT</kbd> (big button, bottom right)</td><td>Smart shot · serve. Keep the stick left or right while you tap = aim (works for every shot)</td></tr>
-        <tr><td>Inner ring</td><td><kbd>LOB</kbd> high over the opponents · <kbd>VÍBORA</kbd> slicing overhead · <kbd>SMASH</kbd> on high balls — low shot on the left, overheads on top</td></tr>
-        <tr><td>Outer ring (orange)</td><td><kbd>CHIQUITA</kbd> soft ball just over the net · <kbd>CONTRA</kbd> contrapared, off your own glass · <kbd>SLICE</kbd> slice serve</td></tr>
-        <tr><td>🎥 · ⏸ · 🔁 · 🔈 · 📊 · ❔ (top left)</td><td>Camera · pause menu · replay of the last point · sound on / off · scoreboard (auto / hidden / always on) · touch tips</td></tr>
-        <tr><td>Food box</td><td>At a changeover with low energy: tap it to eat</td></tr>
+        <tr><td data-i18n="Left half of the screen">Left half of the screen</td><td data-i18n="Move: put your thumb down anywhere, a stick appears there; drag it the way you want to run">Move: put your thumb down anywhere, a stick appears there; drag it the way you want to run</td></tr>
+        <tr><td><kbd>SHOT</kbd> <span data-i18n="(big button, bottom right)">(big button, bottom right)</span></td><td data-i18n="Smart shot · serve. Keep the stick left or right while you tap = aim (works for every shot)">Smart shot · serve. Keep the stick left or right while you tap = aim (works for every shot)</td></tr>
+        <tr><td data-i18n="Inner ring">Inner ring</td><td data-i18n-html="<kbd>LOB</kbd> high over the opponents · <kbd>VÍBORA</kbd> slicing overhead · <kbd>SMASH</kbd> on high balls — low shot on the left, overheads on top"><kbd>LOB</kbd> high over the opponents · <kbd>VÍBORA</kbd> slicing overhead · <kbd>SMASH</kbd> on high balls — low shot on the left, overheads on top</td></tr>
+        <tr><td data-i18n="Outer ring (orange)">Outer ring (orange)</td><td data-i18n-html="<kbd>CHIQUITA</kbd> soft ball just over the net · <kbd>CONTRA</kbd> contrapared, off your own glass · <kbd>SLICE</kbd> slice serve"><kbd>CHIQUITA</kbd> soft ball just over the net · <kbd>CONTRA</kbd> contrapared, off your own glass · <kbd>SLICE</kbd> slice serve</td></tr>
+        <tr><td>🎥 · ⏸ · 🔁 · 🔈 · 📊 · ❔ <span data-i18n="(top left)">(top left)</span></td><td data-i18n="Camera · pause menu · replay of the last point · sound on / off · scoreboard (auto / hidden / always on) · touch tips">Camera · pause menu · replay of the last point · sound on / off · scoreboard (auto / hidden / always on) · touch tips</td></tr>
+        <tr><td data-i18n="Food box">Food box</td><td data-i18n="At a changeover with low energy: tap it to eat">At a changeover with low energy: tap it to eat</td></tr>
       </table>
     </div>
-    <div class="card"><h3>Getting started on iPad / iPhone</h3>
+    <div class="card"><h3 data-i18n="Getting started on iPad / iPhone">Getting started on iPad / iPhone</h3>
       <ol>
-        <li>Open <b>padellegends.eu</b> in Safari.</li>
-        <li>For full screen: tap <b>Share</b> → <b>Add to Home Screen</b>, then start the game from the new icon. It opens like an app, without the address bar.</li>
-        <li>Turn the device sideways.</li>
-        <li>No sound? Tap the <b>🔇 Tap for sound</b> badge (Safari only plays sound after a touch).</li>
+        <li data-i18n-html="Open <b>padellegends.eu</b> in Safari.">Open <b>padellegends.eu</b> in Safari.</li>
+        <li data-i18n-html="For full screen: tap <b>Share</b> → <b>Add to Home Screen</b>, then start the game from the new icon. It opens like an app, without the address bar.">For full screen: tap <b>Share</b> → <b>Add to Home Screen</b>, then start the game from the new icon. It opens like an app, without the address bar.</li>
+        <li data-i18n="Turn the device sideways.">Turn the device sideways.</li>
+        <li data-i18n-html="No sound? Tap the <b>🔇 Tap for sound</b> badge (Safari only plays sound after a touch).">No sound? Tap the <b>🔇 Tap for sound</b> badge (Safari only plays sound after a touch).</li>
       </ol>
-      <p class="tip"><b>Android:</b> Chrome → ⋮ menu → <b>Add to Home screen</b> works the same way.</p>
+      <p class="tip" data-i18n-html="<b>Android:</b> Chrome → ⋮ menu → <b>Add to Home screen</b> works the same way."><b>Android:</b> Chrome → ⋮ menu → <b>Add to Home screen</b> works the same way.</p>
     </div>
-    <div class="card"><h3>Tablet or phone + controller</h3>
+    <div class="card"><h3 data-i18n="Tablet or phone + controller">Tablet or phone + controller</h3>
       <img class="photo" src="assets/howto/tablet-controller.webp" alt="Playing on a tablet with a controller" width="640" height="482" loading="lazy">
       <ol>
-        <li>Pair the controller over Bluetooth (device <b>Settings → Bluetooth</b>):
+        <li data-i18n-html="Pair the controller over Bluetooth (device <b>Settings → Bluetooth</b>): <b>Xbox</b>: hold the small pair button on top until the Xbox button flashes fast. <b>PlayStation</b>: hold <b>PS</b> + <b>Share/Create</b> until the light bar flashes.">Pair the controller over Bluetooth (device <b>Settings → Bluetooth</b>):
           <b>Xbox</b>: hold the small pair button on top until the Xbox button flashes fast.
           <b>PlayStation</b>: hold <b>PS</b> + <b>Share/Create</b> until the light bar flashes.</li>
-        <li>Open the game and press any button on the controller.</li>
-        <li>The touch buttons hide by themselves and the screen shows the controller's buttons. Touch the screen to bring them back.</li>
-        <li>The buttons are the same as on a computer (see above). The screen stays on during a match.</li>
+        <li data-i18n="Open the game and press any button on the controller.">Open the game and press any button on the controller.</li>
+        <li data-i18n="The touch buttons hide by themselves and the screen shows the controller's buttons. Touch the screen to bring them back.">The touch buttons hide by themselves and the screen shows the controller's buttons. Touch the screen to bring them back.</li>
+        <li data-i18n="The buttons are the same as on a computer (see above). The screen stays on during a match.">The buttons are the same as on a computer (see above). The screen stays on during a match.</li>
       </ol>
     </div>
   </div>
 
-  <footer>Play the <b>🎓 TRAINING</b> mode from the main menu to practice every shot step by step. · Developer: Mesut</footer>
+  <footer data-i18n-html="Play the <b>🎓 TRAINING</b> mode from the main menu to practice every shot step by step. · Developer: Mesut">Play the <b>🎓 TRAINING</b> mode from the main menu to practice every shot step by step. · Developer: Mesut</footer>
 </div>
 
-<script>
+<script type="module">
+import { t, loadLang, pickLang, translateDom } from './src/i18n.js';
+import { loadSettings } from './src/settings.js';
+import { padSvg, padLegend } from './src/helpkeys.js';
+
 // key code -> [label, category, short caption, full description]; mirrors src/input.js and src/main.js
 const K = {
   KeyW: ['W', 'move', 'fwd', 'Run toward the net · adjust position before serving'],
@@ -244,33 +248,39 @@ const els = {};
 function cap(code, extra = '') {
   const d = K[code], el = document.createElement('div');
   el.className = `key ${d ? 'used ' + d[1] : ''} ${extra}`;
-  el.innerHTML = `${label(code)}${d && d[2] ? `<small>${d[2]}</small>` : ''}`;
+  el.innerHTML = `${label(code)}${d && d[2] ? `<small>${t(d[2])}</small>` : ''}`;
   if (d) { el.tabIndex = 0; el.onmouseenter = el.onfocus = () => show(code); }
   els[code] = el; return el;
 }
-const rowsEl = document.getElementById('rows');
-ROWS.forEach((r, i) => {
-  const row = document.createElement('div'); row.className = 'row'; row.style.paddingLeft = (pad[i] || 0) + 'px';
-  r.forEach(c => row.appendChild(cap(c, c === 'Space' ? 'space' : c === 'Enter' ? 'w15' : c === 'Escape' ? 'w15' : '')));
-  rowsEl.appendChild(row);
-});
-const ar = document.getElementById('arrows');
-ar.appendChild(cap('ArrowUp', 'up')); ar.appendChild(cap('ArrowLeft', 'lf')); ar.appendChild(cap('ArrowDown', 'dn')); ar.appendChild(cap('ArrowRight', 'rt'));
 
 const detail = document.getElementById('detail');
 function show(code) {
   const d = K[code];
-  detail.innerHTML = d ? `<b>${d[0]}</b> — ${d[3]}` : `<b>${label(code)}</b> — this key is not used in the game.`;
+  detail.innerHTML = d ? `<b>${d[0]}</b> — ${t(d[3])}` : `<b>${label(code)}</b> — ${t('this key is not used in the game.')}`;
 }
-addEventListener('keydown', (e) => {
-  if (K[e.code] || els[e.code]) e.preventDefault();  // keep Space / arrows from scrolling the page
-  els[e.code]?.classList.add('on'); show(e.code);
+
+loadLang(pickLang(loadSettings().lang, navigator.languages || [navigator.language])).then(() => {
+  translateDom(document);
+  for (const kind of ['xbox', 'ps']) {
+    const el = document.getElementById(`pad-${kind}`);
+    if (el) el.outerHTML = padSvg(kind) + padLegend(kind);
+  }
+
+  const rowsEl = document.getElementById('rows');
+  ROWS.forEach((r, i) => {
+    const row = document.createElement('div'); row.className = 'row'; row.style.paddingLeft = (pad[i] || 0) + 'px';
+    r.forEach(c => row.appendChild(cap(c, c === 'Space' ? 'space' : c === 'Enter' ? 'w15' : c === 'Escape' ? 'w15' : '')));
+    rowsEl.appendChild(row);
+  });
+  const ar = document.getElementById('arrows');
+  ar.appendChild(cap('ArrowUp', 'up')); ar.appendChild(cap('ArrowLeft', 'lf')); ar.appendChild(cap('ArrowDown', 'dn')); ar.appendChild(cap('ArrowRight', 'rt'));
+
+  addEventListener('keydown', (e) => {
+    if (K[e.code] || els[e.code]) e.preventDefault();  // keep Space / arrows from scrolling the page
+    els[e.code]?.classList.add('on'); show(e.code);
+  });
+  addEventListener('keyup', (e) => els[e.code]?.classList.remove('on'));
 });
-addEventListener('keyup', (e) => els[e.code]?.classList.remove('on'));
-</script>
-<script type="module">
-import { padSvg, padLegend } from './src/helpkeys.js';
-for (const kind of ['xbox', 'ps']) document.getElementById(`pad-${kind}`).outerHTML = padSvg(kind) + padLegend(kind);
 </script>
 </body>
 </html>

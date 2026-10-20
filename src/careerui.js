@@ -45,6 +45,7 @@ import {
   setCareerGamepadHandler,
 } from './menu.js';
 import { getPortraitThumb, getVenueThumb, getRacketThumb } from './thumbs.js';
+import { t } from './i18n.js';
 
 const STORAGE_NOTICE = 'Your progress is saved in this browser only. Clearing browser data deletes it. Accounts are coming later.';
 const BLOCKED_BANNER = 'Storage is blocked in this browser — progress lasts only while this tab stays open. Use Profile → Export to keep it.';
@@ -248,19 +249,21 @@ function buildEquippedPlayer(p = profile) {
   };
 }
 
-const levelText = (p) => `Level ${(p.level ?? 1.5).toFixed(2)} · ${tierAt(p.level ?? 1.5).name}`;
+const levelText = (p) => t('Level {level} · {tier}', { level: (p.level ?? 1.5).toFixed(2), tier: tierAt(p.level ?? 1.5).name });
 const relPct = (p) => Math.round((p.reliability ?? 0.2) * 100);
 const tierByIndex = (i) => TIERS.find(t => t.index === i) || TIERS[0];
 const LEVEL_NOTE = 'Padel Legends level — Playtomic-style, not synced';
-const formText = (p) => { const f = formNow(p, eco); return f < 0 ? `Rusty (${Math.round(f * 100)}%)` : 'Sharp'; };
+const formText = (p) => { const f = formNow(p, eco); return f < 0 ? t('Rusty ({pct}%)', { pct: Math.round(f * 100) }) : t('Sharp'); };
 
 function renderTopCreditsHtml(p = profile) {
   if (!p) return '';
+  const tier = tierAt(p.level ?? 1.5).name;
+  const num = (p.level ?? 1.5).toFixed(2);
   return `
-    <div class="cr-top-currencies" aria-label="Player currencies">
-      <div class="cr-top-curr"><span>Credits</span><b class="tabular">${p.credits}</b></div>
-      <div class="cr-top-curr is-rp"><span>Ranking pts</span><b class="tabular">${p.rankingPoints}</b></div>
-      <div class="cr-top-curr is-tier"><span>Level</span><b>${escapeHtml(levelText(p).replace('Level ', ''))} · ${relPct(p)}%</b></div>
+    <div class="cr-top-currencies" aria-label="${t('Player currencies')}">
+      <div class="cr-top-curr"><span>${t('Credits')}</span><b class="tabular">${p.credits}</b></div>
+      <div class="cr-top-curr is-rp"><span>${t('Ranking pts')}</span><b class="tabular">${p.rankingPoints}</b></div>
+      <div class="cr-top-curr is-tier"><span>${t('Level')}</span><b>${num} · ${escapeHtml(tier)} · ${relPct(p)}%</b></div>
     </div>
   `;
 }
@@ -278,15 +281,15 @@ function statBarHtml(name, val) {
 
 function buildLeftPanelHtml(ch, stats, p = null) {
   const flag = countryFlag(ch.countryCode);
-  const gText = ch.gender === 'f' ? 'FEMALE' : 'MALE';
-  const hText = ch.hand === 'left' ? 'LEFT-HANDED' : 'RIGHT-HANDED';
+  const gText = ch.gender === 'f' ? t('FEMALE') : t('MALE');
+  const hText = ch.hand === 'left' ? t('LEFT-HANDED') : t('RIGHT-HANDED');
   const s = stats || ch.stats || START_STATS;
   const currencyRow = p
     ? `
       <div class="cr-left-currencies">
-        <div class="cr-left-curr"><span>Credits</span><b class="tabular">${p.credits}</b></div>
-        <div class="cr-left-curr rp"><span>Ranking points</span><b class="tabular">${p.rankingPoints}</b></div>
-        <div class="cr-left-curr wr"><span>World rank</span><b class="tabular">${p ? "#" + myWorldRank(p) : "—"}</b></div>
+        <div class="cr-left-curr"><span>${t('Credits')}</span><b class="tabular">${p.credits}</b></div>
+        <div class="cr-left-curr rp"><span>${t('Ranking points')}</span><b class="tabular">${p.rankingPoints}</b></div>
+        <div class="cr-left-curr wr"><span>${t('World rank')}</span><b class="tabular">${p ? '#' + myWorldRank(p) : '—'}</b></div>
       </div>
     `
     : '';
@@ -302,16 +305,23 @@ function buildLeftPanelHtml(ch, stats, p = null) {
       </div>
     </div>
     ${currencyRow}
-    ${p ? `<div class="cr-left-level"><b>${escapeHtml(levelText(p))} · ${relPct(p)}%</b><span>Form: ${formText(p)}</span><span>${LEVEL_NOTE}</span></div>` : ''}
+    ${p ? `<div class="cr-left-level"><b>${escapeHtml(levelText(p))} · ${relPct(p)}%</b><span>${t('Form: {form}', { form: formText(p) })}</span><span>${escapeHtml(t(LEVEL_NOTE))}</span></div>` : ''}
     <div class="pl-stats-list">
-      ${statBarHtml('SPEED', s.speed ?? 4)}
-      ${statBarHtml('POWER', s.power ?? 4)}
-      ${statBarHtml('CONTROL', s.control ?? 4)}
-      ${statBarHtml('VOLLEY', s.volley ?? 4)}
-      ${statBarHtml('SMASH', s.smash ?? 4)}
-      ${statBarHtml('STAMINA', s.stamina ?? 4)}
+      ${statBarHtml(t('SPEED'), s.speed ?? 4)}
+      ${statBarHtml(t('POWER'), s.power ?? 4)}
+      ${statBarHtml(t('CONTROL'), s.control ?? 4)}
+      ${statBarHtml(t('VOLLEY'), s.volley ?? 4)}
+      ${statBarHtml(t('SMASH'), s.smash ?? 4)}
+      ${statBarHtml(t('STAMINA'), s.stamina ?? 4)}
     </div>
   `;
+}
+
+// coach tip in the UI language: career.js gives [template, vars] pieces; stat / tier names are translated too
+function coachLine(c) {
+  if (!c.msg) return t(c.text);
+  const tr = ([s, v = {}]) => t(s, { ...v, ...(v.stat && { stat: t(v.stat) }), ...(v.tier && { tier: t(v.tier) }) });
+  return `${tr(c.msg.lead)} — ${tr(c.msg.rest)}${c.msg.alt ? ' ' + tr(c.msg.alt) : ''}`;
 }
 
 function escapeHtml(str) {
@@ -418,7 +428,7 @@ function scheduleCreatorPreview(immediate = false) {
     });
     const rk = equippedRacket(profile);
     const stats = creatorMode === 'edit' && profile ? profile.stats : START_STATS;
-    setCareerPreview(previewChar, rk, buildLeftPanelHtml(previewChar, stats, creatorMode === 'edit' ? profile : null), 'CAREER CREATOR');
+    setCareerPreview(previewChar, rk, buildLeftPanelHtml(previewChar, stats, creatorMode === 'edit' ? profile : null), t('CAREER CREATOR'));
   };
   if (immediate) run();
   else previewDebounceTimer = setTimeout(run, 150);
@@ -471,17 +481,17 @@ function renderBannersHtml() {
   if (storageBlocked) {
     html += `
       <div class="cr-banner cr-banner-warn" role="alert">
-        <span>⚠️ ${BLOCKED_BANNER}</span>
+        <span>⚠️ ${escapeHtml(t(BLOCKED_BANNER))}</span>
       </div>
     `;
   }
   if (corruptState) {
     html += `
       <div class="cr-banner cr-banner-err" role="alert">
-        <span>⚠️ ${CORRUPT_BANNER}</span>
+        <span>⚠️ ${escapeHtml(t(CORRUPT_BANNER))}</span>
         <div class="cr-banner-actions">
-          <button type="button" class="cr-btn cr-btn-acc" id="cr-corrupt-new">Start new</button>
-          <button type="button" class="cr-btn" id="cr-corrupt-import">Import</button>
+          <button type="button" class="cr-btn cr-btn-acc" id="cr-corrupt-new">${t('Start new')}</button>
+          <button type="button" class="cr-btn" id="cr-corrupt-import">${t('Import')}</button>
         </div>
       </div>
     `;
@@ -522,16 +532,16 @@ function handleImportFile(file) {
     try {
       const imported = importProfile(String(reader.result || ''));
       corruptState = false;
-      flashMsg = { type: 'ok', text: 'Profile imported successfully.' };
+      flashMsg = { type: 'ok', text: t('Profile imported successfully.') };
       persistProfile(imported);
       showScreen(curScreen === 'profile' ? 'profile' : 'hub');
     } catch {
-      flashMsg = { type: 'error', text: 'Invalid profile file — could not import.' };
+      flashMsg = { type: 'error', text: t('Invalid profile file — could not import.') };
       renderCurrentScreen();
     }
   };
   reader.onerror = () => {
-    flashMsg = { type: 'error', text: 'Could not read the selected file.' };
+    flashMsg = { type: 'error', text: t('Could not read the selected file.') };
     renderCurrentScreen();
   };
   reader.readAsText(file);
@@ -571,31 +581,31 @@ function renderTemplatesScreen() {
     previewCh,
     rackets[0],
     buildLeftPanelHtml(previewCh, START_STATS, null),
-    'CHOOSE TEMPLATE'
+    t('CHOOSE TEMPLATE')
   );
 
   careerPanel.innerHTML = `
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">NEW CAREER · <span>CHOOSE A TEMPLATE</span></h2>
-        <div class="cr-sub">Pick any of the 26 players as your starting template, then customize your look.</div>
+        <h2 class="cr-title">${t('NEW CAREER · <span>CHOOSE A TEMPLATE</span>')}</h2>
+        <div class="cr-sub">${t('Pick any of the 26 players as your starting template, then customize your look.')}</div>
       </div>
       <div class="cr-banner-actions">
-        <button type="button" class="cr-btn" id="cr-tpl-import">Import Profile</button>
-        <button type="button" class="cr-btn" id="cr-tpl-back">← Back to menu</button>
+        <button type="button" class="cr-btn" id="cr-tpl-import">${t('Import Profile')}</button>
+        <button type="button" class="cr-btn" id="cr-tpl-back">${t('← Back to menu')}</button>
       </div>
     </div>
     <div class="pl-filter-row" id="cr-tpl-filters">
-      <button type="button" class="pl-chip ${templateFilter === 'all' ? 'is-active' : ''}" data-filter="all">All (26)</button>
-      <button type="button" class="pl-chip ${templateFilter === 'f' ? 'is-active' : ''}" data-filter="f">Women</button>
-      <button type="button" class="pl-chip ${templateFilter === 'm' ? 'is-active' : ''}" data-filter="m">Men</button>
+      <button type="button" class="pl-chip ${templateFilter === 'all' ? 'is-active' : ''}" data-filter="all">${t('All (26)')}</button>
+      <button type="button" class="pl-chip ${templateFilter === 'f' ? 'is-active' : ''}" data-filter="f">${t('Women')}</button>
+      <button type="button" class="pl-chip ${templateFilter === 'm' ? 'is-active' : ''}" data-filter="m">${t('Men')}</button>
     </div>
     <div class="cr-body">
       <div class="pl-char-grid" id="cr-tpl-grid"></div>
     </div>
     <div class="cr-foot">
-      <div class="cr-storage-note">${STORAGE_NOTICE}</div>
+      <div class="cr-storage-note">${escapeHtml(t(STORAGE_NOTICE))}</div>
     </div>
   `;
 
@@ -640,7 +650,7 @@ function renderTemplatesScreen() {
         ch,
         rackets[0],
         buildLeftPanelHtml(ch, START_STATS, null),
-        'CHOOSE TEMPLATE'
+        t('CHOOSE TEMPLATE')
       );
     };
     card.onmouseenter = previewThis;
@@ -667,23 +677,23 @@ function renderCreatorScreen() {
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">${isEdit ? 'PROFILE · <span>EDIT LOOK</span>' : 'CREATE <span>YOUR PLAYER</span>'}</h2>
-        <div class="cr-sub">${isEdit ? 'Free appearance editor — stats and career progress are unaffected.' : 'Customize every detail. Starting career stats are all 4.'}</div>
+        <h2 class="cr-title">${isEdit ? t('PROFILE · <span>EDIT LOOK</span>') : t('CREATE <span>YOUR PLAYER</span>')}</h2>
+        <div class="cr-sub">${isEdit ? t('Free appearance editor — stats and career progress are unaffected.') : t('Customize every detail. Starting career stats are all 4.')}</div>
       </div>
-      <button type="button" class="cr-btn" id="cr-creator-back">${isEdit ? '← Back to Profile' : '← Templates'}</button>
+      <button type="button" class="cr-btn" id="cr-creator-back">${isEdit ? t('← Back to Profile') : t('← Templates')}</button>
     </div>
 
     <div class="cr-body">
       <div class="cr-form-grid">
         <!-- Name -->
         <div class="cr-field">
-          <div class="cr-field-head"><span>Player Name (1–16)</span><b id="cr-name-len">${s.name.trim().length}/16</b></div>
-          <input type="text" class="cr-input" id="cr-name-input" maxlength="16" value="${escapeHtml(s.name)}" placeholder="Enter player name" />
+          <div class="cr-field-head"><span>${t('Player Name (1–16)')}</span><b id="cr-name-len">${s.name.trim().length}/16</b></div>
+          <input type="text" class="cr-input" id="cr-name-input" maxlength="16" value="${escapeHtml(s.name)}" placeholder="${t('Enter player name')}" />
         </div>
 
         <!-- Country -->
         <div class="cr-field">
-          <div class="cr-field-head"><span>Country</span><b>${countryFlag(s.countryCode)} ${escapeHtml(s.countryCode)}</b></div>
+          <div class="cr-field-head"><span>${t('Country')}</span><b>${countryFlag(s.countryCode)} ${escapeHtml(s.countryCode)}</b></div>
           <select class="cr-select" id="cr-country-select">
             ${COUNTRIES.map(c => `<option value="${c.code}" ${c.code === s.countryCode ? 'selected' : ''}>${countryFlag(c.code)} ${escapeHtml(c.name)} (${c.code})</option>`).join('')}
           </select>
@@ -691,131 +701,131 @@ function renderCreatorScreen() {
 
         <!-- Gender (from template, read-only) & Dominant Hand -->
         <div class="cr-field">
-          <div class="cr-field-head"><span>Gender (Template)</span><b>${s.gender === 'f' ? 'FEMALE' : 'MALE'}</b></div>
+          <div class="cr-field-head"><span>${t('Gender (Template)')}</span><b>${s.gender === 'f' ? t('FEMALE') : t('MALE')}</b></div>
           <div class="cr-opt-wrap">
-            <span class="pl-meta-pill">Locked to template (${s.gender === 'f' ? 'Female' : 'Male'})</span>
+            <span class="pl-meta-pill">${t('Locked to template ({gender})', { gender: s.gender === 'f' ? t('Female') : t('Male') })}</span>
           </div>
         </div>
 
         <div class="cr-field">
-          <div class="cr-field-head"><span>Hand</span><b>${s.hand.toUpperCase()}</b></div>
+          <div class="cr-field-head"><span>${t('Hand')}</span><b>${s.hand === 'left' ? t('LEFT-HANDED') : t('RIGHT-HANDED')}</b></div>
           <div class="pl-seg-row" id="cr-hand-seg">
-            <button type="button" class="pl-seg-btn ${s.hand === 'right' ? 'is-selected' : ''}" data-hand="right">Right-handed</button>
-            <button type="button" class="pl-seg-btn ${s.hand === 'left' ? 'is-selected' : ''}" data-hand="left">Left-handed</button>
+            <button type="button" class="pl-seg-btn ${s.hand === 'right' ? 'is-selected' : ''}" data-hand="right">${t('Right-handed')}</button>
+            <button type="button" class="pl-seg-btn ${s.hand === 'left' ? 'is-selected' : ''}" data-hand="left">${t('Left-handed')}</button>
           </div>
         </div>
 
         <!-- Skin Tone -->
         <div class="cr-field is-full">
-          <div class="cr-field-head"><span>Skin Tone</span><b>${s.skinTone.toUpperCase()}</b></div>
+          <div class="cr-field-head"><span>${t('Skin Tone')}</span><b>${s.skinTone.toUpperCase()}</b></div>
           <div class="cr-swatches" id="cr-skin-swatches">
             ${SKIN_PRESETS.map(([hex, label]) => `
-              <button type="button" class="cr-swatch ${s.skinTone.toLowerCase() === hex.toLowerCase() ? 'is-selected' : ''}" style="background:${hex}" data-hex="${hex}" title="${label}"></button>
+              <button type="button" class="cr-swatch ${s.skinTone.toLowerCase() === hex.toLowerCase() ? 'is-selected' : ''}" style="background:${hex}" data-hex="${hex}" title="${t(label)}"></button>
             `).join('')}
-            <input type="color" class="cr-color-input" id="cr-skin-picker" value="${s.skinTone}" title="Custom skin tone" />
+            <input type="color" class="cr-color-input" id="cr-skin-picker" value="${s.skinTone}" title="${t('Custom skin tone')}" />
           </div>
         </div>
 
         <!-- Body Type -->
         <div class="cr-field is-full">
-          <div class="cr-field-head"><span>Body Type</span><b>${s.bodyType.toUpperCase()}</b></div>
+          <div class="cr-field-head"><span>${t('Body Type')}</span><b>${t(BODY_TYPES.find(b => b.id === s.bodyType)?.label || s.bodyType).toUpperCase()}</b></div>
           <div class="cr-opt-wrap" id="cr-body-types">
-            ${BODY_TYPES.map(t => `
-              <button type="button" class="cr-opt-btn ${s.bodyType === t.id ? 'is-selected' : ''}" data-btype="${t.id}">${t.label}</button>
+            ${BODY_TYPES.map(tb => `
+              <button type="button" class="cr-opt-btn ${s.bodyType === tb.id ? 'is-selected' : ''}" data-btype="${tb.id}">${t(tb.label)}</button>
             `).join('')}
           </div>
         </div>
 
         <!-- Body Height & Face Width -->
         <div class="cr-field">
-          <div class="cr-field-head"><span>Body Height</span><b id="cr-height-val">${s.bodyHeight.toFixed(2)}×</b></div>
+          <div class="cr-field-head"><span>${t('Body Height')}</span><b id="cr-height-val">${s.bodyHeight.toFixed(2)}×</b></div>
           <input type="range" class="cr-range" id="cr-height-range" min="0.9" max="1.1" step="0.01" value="${s.bodyHeight}" />
         </div>
 
         <div class="cr-field">
-          <div class="cr-field-head"><span>Face Width</span><b id="cr-face-val">${s.faceWidth.toFixed(2)}×</b></div>
+          <div class="cr-field-head"><span>${t('Face Width')}</span><b id="cr-face-val">${s.faceWidth.toFixed(2)}×</b></div>
           <input type="range" class="cr-range" id="cr-face-range" min="0.9" max="1.12" step="0.01" value="${s.faceWidth}" />
         </div>
 
         <!-- Hair Style -->
         <div class="cr-field is-full">
-          <div class="cr-field-head"><span>Hair Style</span><b>${HAIR_STYLES.find(h => h.id === s.hair)?.label || s.hair}</b></div>
+          <div class="cr-field-head"><span>${t('Hair Style')}</span><b>${t(HAIR_STYLES.find(h => h.id === s.hair)?.label || s.hair)}</b></div>
           <div class="cr-opt-wrap" id="cr-hair-styles">
             ${HAIR_STYLES.map(h => `
-              <button type="button" class="cr-opt-btn ${s.hair === h.id ? 'is-selected' : ''}" data-hair="${h.id}">${h.label}</button>
+              <button type="button" class="cr-opt-btn ${s.hair === h.id ? 'is-selected' : ''}" data-hair="${h.id}">${t(h.label)}</button>
             `).join('')}
-            <button type="button" class="cr-opt-btn ${s.ponytail ? 'is-selected' : ''}" id="cr-ponytail-btn">Ponytail: ${s.ponytail ? 'ON' : 'OFF'}</button>
-            <button type="button" class="cr-opt-btn ${s.topknot ? 'is-selected' : ''}" id="cr-topknot-btn">Topknot: ${s.topknot ? 'ON' : 'OFF'}</button>
+            <button type="button" class="cr-opt-btn ${s.ponytail ? 'is-selected' : ''}" id="cr-ponytail-btn">${t('Ponytail: {state}', { state: s.ponytail ? t('ON') : t('OFF') })}</button>
+            <button type="button" class="cr-opt-btn ${s.topknot ? 'is-selected' : ''}" id="cr-topknot-btn">${t('Topknot: {state}', { state: s.topknot ? t('ON') : t('OFF') })}</button>
           </div>
           ${s.hair === 'Hair_Long' ? `
             <div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap">
-              <button type="button" class="cr-opt-btn ${!s.hairCutEnabled ? 'is-selected' : ''}" id="cr-haircut-full">Full Long</button>
-              <button type="button" class="cr-opt-btn ${s.hairCutEnabled ? 'is-selected' : ''}" id="cr-haircut-bob">Bob Cut</button>
+              <button type="button" class="cr-opt-btn ${!s.hairCutEnabled ? 'is-selected' : ''}" id="cr-haircut-full">${t('Full Long')}</button>
+              <button type="button" class="cr-opt-btn ${s.hairCutEnabled ? 'is-selected' : ''}" id="cr-haircut-bob">${t('Bob Cut')}</button>
               <input type="range" class="cr-range" id="cr-haircut-range" min="1.47" max="1.62" step="0.01" value="${s.hairCutEnabled ? s.hairCut : 1.47}" style="flex:1;min-width:120px" />
-              <span class="pl-meta-pill" id="cr-haircut-val">${s.hairCutEnabled ? `Cut ${s.hairCut.toFixed(2)}m` : 'Full Long'}</span>
+              <span class="pl-meta-pill" id="cr-haircut-val">${s.hairCutEnabled ? t('Cut {cut}m', { cut: s.hairCut.toFixed(2) }) : t('Full Long')}</span>
             </div>
           ` : ''}
         </div>
 
         <!-- Hair Color -->
         <div class="cr-field">
-          <div class="cr-field-head"><span>Hair Color</span><b>${s.hairColor.toUpperCase()}</b></div>
+          <div class="cr-field-head"><span>${t('Hair Color')}</span><b>${s.hairColor.toUpperCase()}</b></div>
           <div class="cr-swatches" id="cr-hair-swatches">
             ${HAIR_PRESETS.map(([hex, label]) => `
-              <button type="button" class="cr-swatch ${s.hairColor.toLowerCase() === hex.toLowerCase() ? 'is-selected' : ''}" style="background:${hex}" data-hex="${hex}" title="${label}"></button>
+              <button type="button" class="cr-swatch ${s.hairColor.toLowerCase() === hex.toLowerCase() ? 'is-selected' : ''}" style="background:${hex}" data-hex="${hex}" title="${t(label)}"></button>
             `).join('')}
-            <input type="color" class="cr-color-input" id="cr-hair-picker" value="${s.hairColor}" title="Custom hair color" />
+            <input type="color" class="cr-color-input" id="cr-hair-picker" value="${s.hairColor}" title="${t('Custom hair color')}" />
           </div>
         </div>
 
         <!-- Beard & Beard Color -->
         <div class="cr-field">
-          <div class="cr-field-head"><span>Beard</span><b>${s.beard.toUpperCase()}</b></div>
+          <div class="cr-field-head"><span>${t('Beard')}</span><b>${t(BEARD_STYLES.find(b => b.id === s.beard)?.label || s.beard).toUpperCase()}</b></div>
           <div class="cr-opt-wrap" id="cr-beard-styles">
             ${BEARD_STYLES.map(b => `
-              <button type="button" class="cr-opt-btn ${s.beard === b.id ? 'is-selected' : ''}" data-beard="${b.id}">${b.label}</button>
+              <button type="button" class="cr-opt-btn ${s.beard === b.id ? 'is-selected' : ''}" data-beard="${b.id}">${t(b.label)}</button>
             `).join('')}
           </div>
           <div class="cr-swatches" id="cr-beard-swatches" style="margin-top:4px">
             ${HAIR_PRESETS.map(([hex, label]) => `
-              <button type="button" class="cr-swatch ${s.beardColor.toLowerCase() === hex.toLowerCase() ? 'is-selected' : ''}" style="background:${hex}" data-hex="${hex}" title="${label}"></button>
+              <button type="button" class="cr-swatch ${s.beardColor.toLowerCase() === hex.toLowerCase() ? 'is-selected' : ''}" style="background:${hex}" data-hex="${hex}" title="${t(label)}"></button>
             `).join('')}
-            <input type="color" class="cr-color-input" id="cr-beard-picker" value="${s.beardColor}" title="Custom beard color" />
+            <input type="color" class="cr-color-input" id="cr-beard-picker" value="${s.beardColor}" title="${t('Custom beard color')}" />
           </div>
         </div>
 
         <!-- Glasses & Makeup -->
         <div class="cr-field">
-          <div class="cr-field-head"><span>Glasses & Makeup</span></div>
+          <div class="cr-field-head"><span>${t('Glasses & Makeup')}</span></div>
           <div class="cr-opt-wrap">
-            <button type="button" class="cr-opt-btn ${!s.glassesOn ? 'is-selected' : ''}" id="cr-glasses-off">No Glasses</button>
-            <button type="button" class="cr-opt-btn ${s.glassesOn ? 'is-selected' : ''}" id="cr-glasses-on">Glasses</button>
-            <button type="button" class="cr-opt-btn ${s.makeup ? 'is-selected' : ''}" id="cr-makeup-btn">Makeup: ${s.makeup ? 'ON' : 'OFF'}</button>
+            <button type="button" class="cr-opt-btn ${!s.glassesOn ? 'is-selected' : ''}" id="cr-glasses-off">${t('No Glasses')}</button>
+            <button type="button" class="cr-opt-btn ${s.glassesOn ? 'is-selected' : ''}" id="cr-glasses-on">${t('Glasses')}</button>
+            <button type="button" class="cr-opt-btn ${s.makeup ? 'is-selected' : ''}" id="cr-makeup-btn">${t('Makeup: {state}', { state: s.makeup ? t('ON') : t('OFF') })}</button>
           </div>
           ${s.glassesOn ? `
             <div class="cr-swatches" id="cr-glasses-swatches" style="margin-top:4px">
               ${ACCENT_PRESETS.map(hex => `
                 <button type="button" class="cr-swatch ${s.glassesColor.toLowerCase() === hex.toLowerCase() ? 'is-selected' : ''}" style="background:${hex}" data-hex="${hex}"></button>
               `).join('')}
-              <input type="color" class="cr-color-input" id="cr-glasses-picker" value="${s.glassesColor}" title="Glasses frame color" />
+              <input type="color" class="cr-color-input" id="cr-glasses-picker" value="${s.glassesColor}" title="${t('Glasses frame color')}" />
             </div>
           ` : ''}
         </div>
 
         <!-- Headwear -->
         <div class="cr-field">
-          <div class="cr-field-head"><span>Headwear</span><b>${s.headwearType.toUpperCase()}</b></div>
+          <div class="cr-field-head"><span>${t('Headwear')}</span><b>${s.headwearType === 'none' ? t('NONE') : s.headwearType === 'headband' ? t('HEADBAND') : t('VISOR')}</b></div>
           <div class="cr-opt-wrap" id="cr-hw-types">
-            <button type="button" class="cr-opt-btn ${s.headwearType === 'none' ? 'is-selected' : ''}" data-hw="none">None</button>
-            <button type="button" class="cr-opt-btn ${s.headwearType === 'headband' ? 'is-selected' : ''}" data-hw="headband">Headband</button>
-            <button type="button" class="cr-opt-btn ${s.headwearType === 'visor' ? 'is-selected' : ''}" data-hw="visor">Visor</button>
+            <button type="button" class="cr-opt-btn ${s.headwearType === 'none' ? 'is-selected' : ''}" data-hw="none">${t('None')}</button>
+            <button type="button" class="cr-opt-btn ${s.headwearType === 'headband' ? 'is-selected' : ''}" data-hw="headband">${t('Headband')}</button>
+            <button type="button" class="cr-opt-btn ${s.headwearType === 'visor' ? 'is-selected' : ''}" data-hw="visor">${t('Visor')}</button>
           </div>
           ${s.headwearType !== 'none' ? `
             <div class="cr-swatches" id="cr-hw-swatches" style="margin-top:4px">
               ${ACCENT_PRESETS.map(hex => `
                 <button type="button" class="cr-swatch ${s.headwearColor.toLowerCase() === hex.toLowerCase() ? 'is-selected' : ''}" style="background:${hex}" data-hex="${hex}"></button>
               `).join('')}
-              <input type="color" class="cr-color-input" id="cr-hw-picker" value="${s.headwearColor}" title="Headwear color" />
+              <input type="color" class="cr-color-input" id="cr-hw-picker" value="${s.headwearColor}" title="${t('Headwear color')}" />
             </div>
           ` : ''}
         </div>
@@ -824,10 +834,10 @@ function renderCreatorScreen() {
 
     <div class="cr-foot">
       <div class="cr-foot-row">
-        <span class="cr-sub">${isEdit ? 'Look edits are free and never alter your stats.' : 'Template: ' + escapeHtml(creatorTemplate?.name || '')}</span>
-        <button type="button" class="cr-btn cr-btn-acc" id="cr-create-submit" ${validName ? '' : 'disabled'}>${isEdit ? 'Save Look' : 'Create'}</button>
+        <span class="cr-sub">${isEdit ? t('Look edits are free and never alter your stats.') : t('Template: {name}', { name: creatorTemplate?.name || '' })}</span>
+        <button type="button" class="cr-btn cr-btn-acc" id="cr-create-submit" ${validName ? '' : 'disabled'}>${isEdit ? t('Save Look') : t('Create')}</button>
       </div>
-      <div class="cr-storage-note">${STORAGE_NOTICE}</div>
+      <div class="cr-storage-note">${escapeHtml(t(STORAGE_NOTICE))}</div>
     </div>
   `;
 
@@ -926,11 +936,11 @@ function renderCreatorScreen() {
       const v = parseFloat(hairCutRange.value);
       if (v <= 1.47) {
         s.hairCutEnabled = false;
-        if (hairCutVal) hairCutVal.textContent = 'Full Long';
+        if (hairCutVal) hairCutVal.textContent = t('Full Long');
       } else {
         s.hairCutEnabled = true;
         s.hairCut = v;
-        if (hairCutVal) hairCutVal.textContent = `Cut ${s.hairCut.toFixed(2)}m`;
+        if (hairCutVal) hairCutVal.textContent = t('Cut {cut}m', { cut: s.hairCut.toFixed(2) });
       }
       if (hairFullBtn) hairFullBtn.classList.toggle('is-selected', !s.hairCutEnabled);
       if (hairBobBtn) hairBobBtn.classList.toggle('is-selected', s.hairCutEnabled);
@@ -991,7 +1001,7 @@ function renderCreatorScreen() {
     if (isEdit && profile) {
       const updatedPlayer = cleanCharacterLook({ ...profile.player, ...look, id: 'me' });
       persistProfile({ ...profile, player: updatedPlayer });
-      flashMsg = { type: 'ok', text: 'Appearance updated.' };
+      flashMsg = { type: 'ok', text: t('Appearance updated.') };
       showScreen('profile');
     } else {
       pendingLook = look;
@@ -1015,38 +1025,38 @@ function renderLevelStartScreen() {
   if (!pendingLook) { showScreen('templates'); return; }
   const tpl = creatorTemplate || characters[0];
   const pl = { ...tpl, ...pendingLook, id: 'me' };
-  setCareerPreview(pl, rackets[0], buildLeftPanelHtml(pl, START_STATS, null), 'YOUR LEVEL');
+  setCareerPreview(pl, rackets[0], buildLeftPanelHtml(pl, START_STATS, null), t('YOUR LEVEL'));
 
   let body = '';
   if (lvl.mode === 'choose') {
     body = `
       <div class="cr-lvl-choices">
-        <button type="button" class="pl-card cr-lvl-choice" id="cr-lvl-quiz"><div class="pl-card-title">Answer 5 quick questions</div><div class="pl-card-sub">We estimate your level (up to 4.00).</div></button>
-        <button type="button" class="pl-card cr-lvl-choice" id="cr-lvl-ptm"><div class="pl-card-title">I have a Playtomic level</div><div class="pl-card-sub">Type the level shown in the app.</div></button>
-        <button type="button" class="pl-card cr-lvl-choice" id="cr-lvl-skip"><div class="pl-card-title">Skip — start at 1.50</div><div class="pl-card-sub">Climb from Club level.</div></button>
+        <button type="button" class="pl-card cr-lvl-choice" id="cr-lvl-quiz"><div class="pl-card-title">${t('Answer 5 quick questions')}</div><div class="pl-card-sub">${t('We estimate your level (up to 4.00).')}</div></button>
+        <button type="button" class="pl-card cr-lvl-choice" id="cr-lvl-ptm"><div class="pl-card-title">${t('I have a Playtomic level')}</div><div class="pl-card-sub">${t('Type the level shown in the app.')}</div></button>
+        <button type="button" class="pl-card cr-lvl-choice" id="cr-lvl-skip"><div class="pl-card-title">${t('Skip — start at 1.50')}</div><div class="pl-card-sub">${t('Climb from Club level.')}</div></button>
       </div>`;
   } else if (lvl.mode === 'quiz') {
     body = LEVEL_QUESTIONS.map(([q, opts], qi) => `
-      <div class="cr-lvl-q"><div class="pl-section-label">${qi + 1}. ${escapeHtml(q)}</div>
-        <div class="pl-seg-row">${opts.map((o, oi) => `<button type="button" class="pl-seg-btn ${lvl.answers[qi] === oi ? 'is-selected' : ''}" data-q="${qi}" data-a="${oi}">${escapeHtml(o)}</button>`).join('')}</div>
+      <div class="cr-lvl-q"><div class="pl-section-label">${qi + 1}. ${escapeHtml(t(q))}</div>
+        <div class="pl-seg-row">${opts.map((o, oi) => `<button type="button" class="pl-seg-btn ${lvl.answers[qi] === oi ? 'is-selected' : ''}" data-q="${qi}" data-a="${oi}">${escapeHtml(t(o))}</button>`).join('')}</div>
       </div>`).join('') + `
-      <div class="cr-lvl-actions"><button type="button" class="cr-btn cr-btn-acc" id="cr-lvl-quiz-go" ${lvl.answers.includes(null) ? 'disabled' : ''}>See my level</button></div>`;
+      <div class="cr-lvl-actions"><button type="button" class="cr-btn cr-btn-acc" id="cr-lvl-quiz-go" ${lvl.answers.includes(null) ? 'disabled' : ''}>${t('See my level')}</button></div>`;
   } else if (lvl.mode === 'playtomic') {
     body = `
       <div class="cr-lvl-ptm">
-        <div class="cr-sub">We can't read your Playtomic account; type the level shown in the app.</div>
-        <input type="text" inputmode="decimal" id="cr-lvl-input" class="cr-lvl-input" placeholder="e.g. 2.75" maxlength="6" value="${escapeHtml(lvl.input)}" autocomplete="off" />
+        <div class="cr-sub">${t("We can't read your Playtomic account; type the level shown in the app.")}</div>
+        <input type="text" inputmode="decimal" id="cr-lvl-input" class="cr-lvl-input" placeholder="${t('e.g. 2.75')}" maxlength="6" value="${escapeHtml(lvl.input)}" autocomplete="off" />
         ${lvl.error ? `<div class="cr-card-error" role="alert">${escapeHtml(lvl.error)}</div>` : ''}
-        <div class="cr-lvl-actions"><button type="button" class="cr-btn cr-btn-acc" id="cr-lvl-ptm-go">Use this level</button></div>
+        <div class="cr-lvl-actions"><button type="button" class="cr-btn cr-btn-acc" id="cr-lvl-ptm-go">${t('Use this level')}</button></div>
       </div>`;
   } else {
     const st = lvl.start, bonus = startCredits(st.level);
     body = `
       <div class="cr-lvl-result">
-        <div class="cr-lvl-big">Level ${st.level.toFixed(2)} · ${escapeHtml(tierAt(st.level).name)}</div>
-        ${bonus > 0 ? `<div class="cr-sub">Starting bonus: ${bonus} Credits</div>` : ''}
-        <div class="cr-sub">${LEVEL_NOTE}</div>
-        <div class="cr-lvl-actions"><button type="button" class="cr-btn cr-btn-acc" id="cr-lvl-continue">Continue</button></div>
+        <div class="cr-lvl-big">${t('Level {level} · {tier}', { level: st.level.toFixed(2), tier: tierAt(st.level).name })}</div>
+        ${bonus > 0 ? `<div class="cr-sub">${t('Starting bonus: {bonus} Credits', { bonus })}</div>` : ''}
+        <div class="cr-sub">${escapeHtml(t(LEVEL_NOTE))}</div>
+        <div class="cr-lvl-actions"><button type="button" class="cr-btn cr-btn-acc" id="cr-lvl-continue">${t('Continue')}</button></div>
       </div>`;
   }
 
@@ -1054,10 +1064,10 @@ function renderLevelStartScreen() {
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">NEW CAREER · <span>WHAT'S YOUR PADEL LEVEL?</span></h2>
-        <div class="cr-sub">Sets your starting level, tier and bonus Credits. It keeps changing as you play.</div>
+        <h2 class="cr-title">${t("NEW CAREER · <span>WHAT'S YOUR PADEL LEVEL?</span>")}</h2>
+        <div class="cr-sub">${t('Sets your starting level, tier and bonus Credits. It keeps changing as you play.')}</div>
       </div>
-      <div class="cr-banner-actions"><button type="button" class="cr-btn" id="cr-lvl-back">← Back</button></div>
+      <div class="cr-banner-actions"><button type="button" class="cr-btn" id="cr-lvl-back">${t('← Back')}</button></div>
     </div>
     <div class="cr-body">${body}</div>
   `;
@@ -1080,7 +1090,7 @@ function renderLevelStartScreen() {
     q('#cr-lvl-ptm-go').onclick = () => {
       const st = playtomicStart(lvl.input);
       if (st) go('result', st);
-      else { lvl.error = 'Enter a level between 0.5 and 7, like 2.75.'; renderLevelStartScreen(); q('#cr-lvl-input')?.focus(); }
+      else { lvl.error = t('Enter a level between 0.5 and 7, like 2.75.'); renderLevelStartScreen(); q('#cr-lvl-input')?.focus(); }
     };
   }
   if (q('#cr-lvl-continue')) q('#cr-lvl-continue').onclick = () => {
@@ -1099,9 +1109,9 @@ function renderLevelStartScreen() {
 // soft nudges back to play: rusty form, tournament points about to drop out (spec §7)
 function hubHintsHtml() {
   const f = formNow(profile, eco), soon = expiringSoon(profile, eco);
-  return (f < 0 ? `<div class="cr-banner" role="status"><span>🏃 Form: ${formText(profile)} — play a match to shake off the rust.</span></div>` : '')
-    + (soon > 0 ? `<div class="cr-banner" role="status"><span>⏳ Points expiring in 7 days: ${soon} — play a tournament to keep your rank.</span></div>` : '')
-    + (needsRestock(profile) ? `<div class="cr-banner" role="status"><span>🎒 Your bag is running low.</span>${restockBtn()}</div>` : '');
+  return (f < 0 ? `<div class="cr-banner" role="status"><span>🏃 ${t('Form: {form} — play a match to shake off the rust.', { form: formText(profile) })}</span></div>` : '')
+    + (soon > 0 ? `<div class="cr-banner" role="status"><span>⏳ ${t('Points expiring in 7 days: {soon} — play a tournament to keep your rank.', { soon })}</span></div>` : '')
+    + (needsRestock(profile) ? `<div class="cr-banner" role="status"><span>🎒 ${t('Your bag is running low.')}</span>${restockBtn()}</div>` : '');
 }
 
 function renderHubScreen() {
@@ -1122,7 +1132,7 @@ function renderHubScreen() {
 
   const pl = buildEquippedPlayer(profile);
   const rk = equippedRacket(profile);
-  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'CAREER HUB');
+  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), t('CAREER HUB'));
 
   const h = profile.history || { played: 0, won: 0, pointsWon: 0 };
 
@@ -1134,20 +1144,20 @@ function renderHubScreen() {
         <span class="cr-prof-flag">${countryFlag(pl.countryCode)}</span>
         <div>
           <div class="cr-prof-name" lang="en">${escapeHtml(pl.name)}</div>
-          <div class="cr-prof-rank">World rank: #${myWorldRank(profile)} · ${escapeHtml(levelText(profile))} · ${relPct(profile)}% reliability · Record: ${h.won}W – ${Math.max(0, h.played - h.won)}L (${h.played} played)</div>
+          <div class="cr-prof-rank">${t('World rank: #{rank} · {level} · {rel}% reliability · Record: {won}W – {lost}L ({played} played)', { rank: myWorldRank(profile), level: levelText(profile), rel: relPct(profile), won: h.won, lost: Math.max(0, h.played - h.won), played: h.played })}</div>
         </div>
       </div>
       <div class="cr-currencies">
         <div class="cr-curr-box">
-          <span class="cr-curr-label">Credits</span>
+          <span class="cr-curr-label">${t('Credits')}</span>
           <span class="cr-curr-val tabular">${profile.credits}</span>
         </div>
         <div class="cr-curr-box is-rp">
-          <span class="cr-curr-label">Ranking points</span>
+          <span class="cr-curr-label">${t('Ranking points')}</span>
           <span class="cr-curr-val tabular">${profile.rankingPoints}</span>
         </div>
         <div class="cr-curr-box is-wr">
-          <span class="cr-curr-label">World rank</span>
+          <span class="cr-curr-label">${t('World rank')}</span>
           <span class="cr-curr-val tabular">#${myWorldRank(profile)}</span>
         </div>
       </div>
@@ -1157,73 +1167,73 @@ function renderHubScreen() {
       <div class="cr-hub-grid">
         <button type="button" class="pl-card cr-hub-card is-primary" id="cr-hub-play">
           <div class="cr-hub-card-top">
-            <div class="pl-card-title">🎾 Play</div>
-            <span class="pl-meta-pill" style="color:var(--acc);border-color:var(--acc)">1 Set · Career</span>
+            <div class="pl-card-title">${t('🎾 Play')}</div>
+            <span class="pl-meta-pill" style="color:var(--acc);border-color:var(--acc)">${t('1 Set · Career')}</span>
           </div>
-          <div class="pl-card-sub">Play Singles or Doubles against AI to earn Credits.</div>
+          <div class="pl-card-sub">${t('Play Singles or Doubles against AI to earn Credits.')}</div>
         </button>
 
         <button type="button" class="pl-card cr-hub-card" id="cr-hub-tournaments">
           <div class="cr-hub-card-top">
-            <div class="pl-card-title">🏆 Tournaments</div>
-            <span class="pl-meta-pill">${profile.tournament ? 'In progress' : 'Circuit'}</span>
+            <div class="pl-card-title">${t('🏆 Tournaments')}</div>
+            <span class="pl-meta-pill">${profile.tournament ? t('In progress') : t('Circuit')}</span>
           </div>
-          <div class="pl-card-sub">Americano, Mexicano, Knockout & League ladder.</div>
+          <div class="pl-card-sub">${t('Americano, Mexicano, Knockout & League ladder.')}</div>
         </button>
 
         <button type="button" class="pl-card cr-hub-card" id="cr-hub-online">
           <div class="cr-hub-card-top">
-            <div class="pl-card-title">🌐 Play Online</div>
-            <span class="pl-meta-pill">×${eco.mult.online ?? 1} Credits</span>
+            <div class="pl-card-title">${t('🌐 Play Online')}</div>
+            <span class="pl-meta-pill">${t('×{mult} Credits', { mult: eco.mult.online ?? 1 })}</span>
           </div>
-          <div class="pl-card-sub">Join a public room, create one, or enter a room code.</div>
+          <div class="pl-card-sub">${t('Join a public room, create one, or enter a room code.')}</div>
         </button>
 
         <button type="button" class="pl-card cr-hub-card" id="cr-hub-training">
           <div class="cr-hub-card-top">
-            <div class="pl-card-title">💪 Training</div>
-            <span class="pl-meta-pill">6 Stats · Max 10</span>
+            <div class="pl-card-title">${t('💪 Training')}</div>
+            <span class="pl-meta-pill">${t('6 Stats · Max 10')}</span>
           </div>
-          <div class="pl-card-sub">Spend Credits to upgrade your 6 player attributes.</div>
+          <div class="pl-card-sub">${t('Spend Credits to upgrade your 6 player attributes.')}</div>
         </button>
 
         <button type="button" class="pl-card cr-hub-card" id="cr-hub-shop">
           <div class="cr-hub-card-top">
-            <div class="pl-card-title">🛒 Shop</div>
-            <span class="pl-meta-pill">${escapeHtml(tierAt(profile.level).name)} Tier</span>
+            <div class="pl-card-title">${t('🛒 Shop')}</div>
+            <span class="pl-meta-pill">${t('{tier} Tier', { tier: tierAt(profile.level).name })}</span>
           </div>
-          <div class="pl-card-sub">Unlock pro rackets, shoes, kits, headwear & match balls.</div>
+          <div class="pl-card-sub">${t('Unlock pro rackets, shoes, kits, headwear & match balls.')}</div>
         </button>
 
         <button type="button" class="pl-card cr-hub-card" id="cr-hub-locker">
           <div class="cr-hub-card-top">
-            <div class="pl-card-title">🎒 Locker</div>
-            <span class="pl-meta-pill">${profile.inventory.length} Owned</span>
+            <div class="pl-card-title">${t('🎒 Locker')}</div>
+            <span class="pl-meta-pill">${t('{count} Owned', { count: profile.inventory.length })}</span>
           </div>
-          <div class="pl-card-sub">Equip your owned rackets, shoes, kit, headwear and ball.</div>
+          <div class="pl-card-sub">${t('Equip your owned rackets, shoes, kit, headwear and ball.')}</div>
         </button>
 
         <button type="button" class="pl-card cr-hub-card" id="cr-hub-ranking">
           <div class="cr-hub-card-top">
-            <div class="pl-card-title">🌍 Ranking</div>
+            <div class="pl-card-title">${t('🌍 Ranking')}</div>
             <span class="pl-meta-pill">#${myWorldRank(profile)}</span>
           </div>
-          <div class="pl-card-sub">World Padel Tour standings and tier milestones.</div>
+          <div class="pl-card-sub">${t('World Padel Tour standings and tier milestones.')}</div>
         </button>
 
         <button type="button" class="pl-card cr-hub-card" id="cr-hub-profile">
           <div class="cr-hub-card-top">
-            <div class="pl-card-title">👤 Profile</div>
-            <span class="pl-meta-pill">Look & Save</span>
+            <div class="pl-card-title">${t('👤 Profile')}</div>
+            <span class="pl-meta-pill">${t('Look & Save')}</span>
           </div>
-          <div class="pl-card-sub">Edit appearance for free, export/import backup, or reset.</div>
+          <div class="pl-card-sub">${t('Edit appearance for free, export/import backup, or reset.')}</div>
         </button>
 
         <button type="button" class="pl-card cr-hub-card" id="cr-hub-back">
           <div class="cr-hub-card-top">
-            <div class="pl-card-title">← Back to menu</div>
+            <div class="pl-card-title">${t('← Back to menu')}</div>
           </div>
-          <div class="pl-card-sub">Exit Career and return to Quick Match menu.</div>
+          <div class="pl-card-sub">${t('Exit Career and return to Quick Match menu.')}</div>
         </button>
       </div>
     </div>
@@ -1257,7 +1267,7 @@ function renderPlayScreen() {
   const shoeItem = equippedShoes(profile);
   const ballItem = equippedBall(profile);
   const kitItem = equippedKit(profile);
-  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'CAREER MATCH');
+  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), t('CAREER MATCH'));
 
   const curVenue = venues[playState.venueIdx] || venues[0];
   const partnerList = availablePartners(profile);
@@ -1269,34 +1279,34 @@ function renderPlayScreen() {
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">CAREER · <span>PLAY MATCH</span></h2>
-        <div class="cr-sub">Format: 1 Set (to 6 games) · Golden Point · Equipped: ${escapeHtml(rk.name)} · ${escapeHtml(shoeItem.name)} · ${escapeHtml(ballItem.name)} · ${escapeHtml(kitItem.name)}</div>
+        <h2 class="cr-title">${t('CAREER · <span>PLAY MATCH</span>')}</h2>
+        <div class="cr-sub">${t('Format: 1 Set (to 6 games) · Golden Point · Equipped: {racket} · {shoes} · {ball} · {kit}', { racket: rk.name, shoes: shoeItem.name, ball: ballItem.name, kit: kitItem.name })}</div>
       </div>
       <div class="cr-head-right">
         ${renderTopCreditsHtml(profile)}
-        <button type="button" class="cr-btn" id="cr-play-locker">🎒 Locker</button>
-        <button type="button" class="cr-btn" id="cr-play-back">← Back to Hub</button>
+        <button type="button" class="cr-btn" id="cr-play-locker">🎒 ${t('Locker')}</button>
+        <button type="button" class="cr-btn" id="cr-play-back">${t('← Back to Hub')}</button>
       </div>
     </div>
 
     <div class="cr-body">
-      <div class="pl-section-label">MATCH MODE</div>
+      <div class="pl-section-label">${t('MATCH MODE')}</div>
       <div class="pl-seg-row" id="cr-play-mode">
-        <button type="button" class="pl-seg-btn ${playState.players === 4 ? 'is-selected' : ''}" data-players="4">Doubles (2v2)</button>
-        <button type="button" class="pl-seg-btn ${playState.players === 2 ? 'is-selected' : ''}" data-players="2">Singles (1v1)</button>
+        <button type="button" class="pl-seg-btn ${playState.players === 4 ? 'is-selected' : ''}" data-players="4">${t('Doubles (2v2)')}</button>
+        <button type="button" class="pl-seg-btn ${playState.players === 2 ? 'is-selected' : ''}" data-players="2">${t('Singles (1v1)')}</button>
       </div>
 
-      <div class="pl-section-label">AI LEVEL & REWARD MULTIPLIER</div>
+      <div class="pl-section-label">${t('AI LEVEL & REWARD MULTIPLIER')}</div>
       <div class="pl-seg-row" id="cr-play-ai">
         ${AI_LEVELS.map(lv => `
           <button type="button" class="pl-seg-btn ${playState.ai === lv.id ? 'is-selected' : ''}" data-ai="${lv.id}">
-            ${lv.label} ${lv.stars} (×${eco.mult[lv.id]})${lv.id === tierAt(profile.level ?? 1.5).ai ? ' <span class="cr-rec">Recommended</span>' : ''}
+            ${t(lv.label)} ${lv.stars} (×${eco.mult[lv.id]})${lv.id === tierAt(profile.level ?? 1.5).ai ? ` <span class="cr-rec">${t('Recommended')}</span>` : ''}
           </button>
         `).join('')}
       </div>
 
       ${playState.players === 4 ? `
-        <div class="pl-section-label">CHOOSE PARTNER (${countryFlag(curPartner.countryCode)} ${escapeHtml(curPartner.name)})</div>
+        <div class="pl-section-label">${t('CHOOSE PARTNER')} (${countryFlag(curPartner.countryCode)} ${escapeHtml(curPartner.name)})</div>
         <div class="cr-partner-grid" id="cr-partner-grid">
           ${partnerList.map((c, idx) => `
             <button type="button" class="pl-card cr-partner-card ${idx === playState.partnerIdx ? 'is-selected' : ''}" data-pidx="${idx}">
@@ -1308,16 +1318,16 @@ function renderPlayScreen() {
         </div>
       ` : ''}
 
-      <div class="pl-section-label">VENUE (${escapeHtml(curVenue.name)})</div>
+      <div class="pl-section-label">${t('VENUE')} (${escapeHtml(curVenue.name)})</div>
       <div class="pl-venue-grid" id="cr-play-venues"></div>
     </div>
 
     <div class="cr-foot">
       <div class="cr-foot-row">
         <div class="pl-summary">
-          ${playState.players === 2 ? 'Singles' : `Doubles (w/ ${curPartner.name})`} · AI: ${playState.ai.toUpperCase()} (×${mult}) · ${curVenue.name} · 1 Set · Golden Point
+          ${playState.players === 2 ? t('Singles') : t('Doubles (w/ {partner})', { partner: curPartner.name })} · ${t('AI: {ai} (×{mult})', { ai: playState.ai.toUpperCase(), mult })} · ${curVenue.name} · ${t('1 Set · Golden Point')}
         </div>
-        <button type="button" class="pl-start-btn" id="cr-play-start">START MATCH</button>
+        <button type="button" class="pl-start-btn" id="cr-play-start">${t('START MATCH')}</button>
       </div>
     </div>
   `;
@@ -1352,7 +1362,7 @@ function renderPlayScreen() {
     const card = document.createElement('button');
     card.type = 'button';
     card.className = `pl-card pl-venue-card ${idx === playState.venueIdx ? 'is-selected' : ''}`;
-    const tod = v.timeOfDay === 'sunset' ? 'Sunset' : v.timeOfDay === 'night' ? 'Night' : 'Day';
+    const tod = v.timeOfDay === 'sunset' ? t('Sunset') : v.timeOfDay === 'night' ? t('Night') : t('Day');
     const surfColor = v.surface.includes('blue') ? '#2f6fb5' : v.surface.includes('green') ? '#2e7d32' : '#c85a17';
     card.innerHTML = `
       <div class="pl-thumb-box pl-venue-box shimmer">
@@ -1478,7 +1488,7 @@ function renderTrainingScreen() {
   if (!profile) { showScreen('templates'); return; }
   const pl = buildEquippedPlayer(profile);
   const rk = equippedRacket(profile);
-  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'TRAINING');
+  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), t('TRAINING'));
 
   const maxLevel = eco.training.max;
 
@@ -1486,12 +1496,12 @@ function renderTrainingScreen() {
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">CAREER · <span>TRAINING</span></h2>
-        <div class="cr-sub">Upgrade your 6 player attributes with Credits. Each level raises on-court performance.</div>
+        <h2 class="cr-title">${t('CAREER · <span>TRAINING</span>')}</h2>
+        <div class="cr-sub">${t('Upgrade your 6 player attributes with Credits. Each level raises on-court performance.')}</div>
       </div>
       <div class="cr-head-right">
         ${renderTopCreditsHtml(profile)}
-        <button type="button" class="cr-btn" id="cr-train-back">← Back to Hub</button>
+        <button type="button" class="cr-btn" id="cr-train-back">${t('← Back to Hub')}</button>
       </div>
     </div>
 
@@ -1504,25 +1514,25 @@ function renderTrainingScreen() {
           const deficit = Math.max(0, cost - profile.credits);
           const canBuy = !isMax && deficit === 0;
           const pct = Math.min(100, (level / maxLevel) * 100);
-          const reasonText = isMax ? (level >= maxLevel || !nextTier ? 'Maxed' : `Reach ${nextTier.name} to train beyond ${cap}`) : deficit > 0 ? `Need ${deficit} more Credits` : '';
+          const reasonText = isMax ? (level >= maxLevel || !nextTier ? t('Maxed') : t('Reach {tier} to train beyond {cap}', { tier: nextTier.name, cap })) : deficit > 0 ? t('Need {deficit} more Credits', { deficit }) : '';
 
           return `
             <div class="cr-train-card" data-stat-card="${st.key}">
               <div class="cr-train-top">
                 <div class="cr-train-title-group">
-                  <span class="cr-train-name">${escapeHtml(st.label)}</span>
+                  <span class="cr-train-name">${escapeHtml(t(st.label))}</span>
                   <span class="cr-train-lvl tabular">${level}/${Math.max(level, Math.min(cap, maxLevel))}</span>
                 </div>
                 <div class="cr-train-actions">
-                  <span class="cr-train-cost tabular">${isMax ? (level >= maxLevel ? 'Maxed' : 'Tier cap') : `Next: ${cost} Credits`}</span>
+                  <span class="cr-train-cost tabular">${isMax ? (level >= maxLevel ? t('Maxed') : t('Tier cap')) : t('Next: {cost} Credits', { cost })}</span>
                   ${reasonText ? `<span class="cr-train-reason">${escapeHtml(reasonText)}</span>` : ''}
-                  <button type="button" class="cr-btn cr-btn-acc cr-train-buy" data-train="${st.key}" ${canBuy ? '' : 'disabled'}>Buy</button>
+                  <button type="button" class="cr-btn cr-btn-acc cr-train-buy" data-train="${st.key}" ${canBuy ? '' : 'disabled'}>${t('Buy')}</button>
                 </div>
               </div>
               <div class="pl-stat-track cr-train-track">
                 <div class="pl-stat-fill" style="width:${pct}%"></div>
               </div>
-              <div class="cr-train-desc">${escapeHtml(st.desc)}</div>
+              <div class="cr-train-desc">${escapeHtml(t(st.desc))}</div>
             </div>
           `;
         }).join('')}
@@ -1544,18 +1554,18 @@ function renderTrainingScreen() {
       if (res.ok) {
         track(`career-training/${statKey}`);
         persistProfile(res.profile);
-        flashMsg = { type: 'ok', text: `${st ? st.label : statKey} upgraded to ${res.profile.stats[statKey]}/${maxLevel}!` };
+        flashMsg = { type: 'ok', text: t('{stat} upgraded to {level}/{max}!', { stat: st ? t(st.label) : statKey, level: res.profile.stats[statKey], max: maxLevel }) };
         renderTrainingScreen();
       } else {
         const level = profile.stats[statKey] ?? 4;
         const cost = level >= maxLevel ? 0 : trainCost(level, eco);
         const msg = res.reason === 'max'
-          ? 'Maxed'
+          ? t('Maxed')
           : res.reason === 'cap'
-          ? `Tier cap: reach ${TIERS.find(t => t.cap > statCap(profile))?.name || 'the next tier'} to train beyond ${statCap(profile)}`
+          ? t('Tier cap: reach {tier} to train beyond {cap}', { tier: TIERS.find(t => t.cap > statCap(profile))?.name || 'the next tier', cap: statCap(profile) })
           : res.reason === 'credits'
-          ? `Need ${Math.max(1, cost - profile.credits)} more Credits`
-          : 'Cannot train this stat.';
+          ? t('Need {deficit} more Credits', { deficit: Math.max(1, cost - profile.credits) })
+          : t('Cannot train this stat.');
         flashMsg = { type: 'error', text: msg };
         renderTrainingScreen();
       }
@@ -1574,11 +1584,11 @@ const bagFill = (p, id) => {
 const needsRestock = (p) => DRINK_IDS.reduce((n, k) => n + (p.bag?.[k] || 0), 0) <= 2 || FOOD_IDS.every(k => !p.bag?.[k]);
 function bagSpecHtml(item) {
   return `
-      <div class="cr-shop-spec">${item.upgrade ? 'Upgrade' : `Pack of ${item.pack} · ${bagKind(item.id) === 'drinks' ? 'Drinks' : 'Food'} ${bagFill(profile, item.id)}`}</div>
-      <div class="pl-card-sub">${escapeHtml(item.desc || '')}</div>
+      <div class="cr-shop-spec">${item.upgrade ? t('Upgrade') : t('Pack of {pack} · {kind} {fill}', { pack: item.pack, kind: bagKind(item.id) === 'drinks' ? t('Drinks') : t('Food'), fill: bagFill(profile, item.id) })}</div>
+      <div class="pl-card-sub">${escapeHtml(t(item.desc || ''))}</div>
     `;
 }
-const restockBtn = () => needsRestock(profile) ? '<button type="button" class="cr-btn cr-btn-acc" id="cr-restock">🎒 Restock</button>' : '';
+const restockBtn = () => needsRestock(profile) ? `<button type="button" class="cr-btn cr-btn-acc" id="cr-restock">🎒 ${t('Restock')}</button>` : '';
 const wireRestock = () => {
   const b = careerPanel.querySelector('#cr-restock');
   if (b) b.onclick = () => { shopTab = 'bag'; flashMsg = null; shopErrors = {}; showScreen('shop'); };
@@ -1589,10 +1599,10 @@ function renderShopItemSpecHtml(item, tabId) {
     return `
       <div class="cr-shop-spec">${escapeHtml(item.core)} · ${escapeHtml(item.face)} · ${escapeHtml(item.shape)} · ${item.weightG} g</div>
       <div class="pl-racket-stats">
-        <div class="pl-rstat"><span>Power</span><div class="pl-bar"><i style="width:${item.stats.power * 10}%"></i></div><b>${item.stats.power}</b></div>
-        <div class="pl-rstat"><span>Control</span><div class="pl-bar"><i style="width:${item.stats.control * 10}%"></i></div><b>${item.stats.control}</b></div>
-        <div class="pl-rstat"><span>Spin</span><div class="pl-bar"><i style="width:${item.stats.spin * 10}%"></i></div><b>${item.stats.spin}</b></div>
-        <div class="pl-rstat"><span>Sweet Spot</span><div class="pl-bar"><i style="width:${item.stats.sweetSpot * 10}%"></i></div><b>${item.stats.sweetSpot}</b></div>
+        <div class="pl-rstat"><span>${t('Power')}</span><div class="pl-bar"><i style="width:${item.stats.power * 10}%"></i></div><b>${item.stats.power}</b></div>
+        <div class="pl-rstat"><span>${t('Control')}</span><div class="pl-bar"><i style="width:${item.stats.control * 10}%"></i></div><b>${item.stats.control}</b></div>
+        <div class="pl-rstat"><span>${t('Spin')}</span><div class="pl-bar"><i style="width:${item.stats.spin * 10}%"></i></div><b>${item.stats.spin}</b></div>
+        <div class="pl-rstat"><span>${t('Sweet Spot')}</span><div class="pl-bar"><i style="width:${item.stats.sweetSpot * 10}%"></i></div><b>${item.stats.sweetSpot}</b></div>
       </div>
     `;
   }
@@ -1601,29 +1611,29 @@ function renderShopItemSpecHtml(item, tabId) {
     const agiVal = Math.round((item.agility || 0) * 100);
     return `
       <div class="cr-kit-swatches">
-        <span class="cr-kit-chip"><i style="background:${item.color}"></i>Shoe color</span>
+        <span class="cr-kit-chip"><i style="background:${item.color}"></i>${t('Shoe color')}</span>
       </div>
-      <div class="cr-shop-spec">+${spdPct}% speed · agility ${agiVal}</div>
+      <div class="cr-shop-spec">${t('+{spd}% speed · agility {agi}', { spd: spdPct, agi: agiVal })}</div>
     `;
   }
   if (tabId === 'ball') {
     return `
       <div class="cr-kit-swatches">
-        <span class="cr-kit-chip"><i style="background:#d8f53a"></i>Match ball</span>
+        <span class="cr-kit-chip"><i style="background:#d8f53a"></i>${t('Match ball')}</span>
       </div>
-      <div class="cr-shop-spec">Speed ×${item.speed} · Bounce ×${item.bounce}</div>
+      <div class="cr-shop-spec">${t('Speed ×{speed} · Bounce ×{bounce}', { speed: item.speed, bounce: item.bounce })}</div>
     `;
   }
   if (tabId === 'kit') {
-    const styleName = { crew: 'Crew neck', polo: 'Polo', vneck: 'V-neck', tank: 'Tank top' }[item.style || 'crew'] || 'Crew neck';
-    const patternName = { none: 'Solid', chest: 'Chest stripe', sash: 'Diagonal sash', side: 'Side panels', stripes: 'Vertical stripes', split: 'Split halves' }[item.pattern || 'none'] || 'Solid';
-    const label = `${styleName} · ${patternName.toLowerCase()}`;
+    const styleName = { crew: t('Crew neck'), polo: t('Polo'), vneck: t('V-neck'), tank: t('Tank top') }[item.style || 'crew'] || t('Crew neck');
+    const patternName = { none: t('Solid'), chest: t('Chest stripe'), sash: t('Diagonal sash'), side: t('Side panels'), stripes: t('Vertical stripes'), split: t('Split halves') }[item.pattern || 'none'] || t('Solid');
+    const label = t('{style} · {pattern}', { style: styleName, pattern: patternName.toLowerCase() });
     return `
       <div class="cr-kit-swatches">
-        <span class="cr-kit-chip"><i style="background:${item.shirt}"></i>Shirt</span>
-        <span class="cr-kit-chip"><i style="background:${item.shorts}"></i>Shorts</span>
-        <span class="cr-kit-chip"><i style="background:${item.shoes}"></i>Shoes</span>
-        ${item.accent ? `<span class="cr-kit-chip"><i style="background:${item.accent}"></i>Accent</span>` : ''}
+        <span class="cr-kit-chip"><i style="background:${item.shirt}"></i>${t('Shirt')}</span>
+        <span class="cr-kit-chip"><i style="background:${item.shorts}"></i>${t('Shorts')}</span>
+        <span class="cr-kit-chip"><i style="background:${item.shoes}"></i>${t('Shoes')}</span>
+        ${item.accent ? `<span class="cr-kit-chip"><i style="background:${item.accent}"></i>${t('Accent')}</span>` : ''}
       </div>
       <div class="cr-shop-spec">${escapeHtml(label)}</div>
     `;
@@ -1633,9 +1643,9 @@ function renderShopItemSpecHtml(item, tabId) {
     const hw = item.headwear || { type: 'headband', color: '#ffffff' };
     return `
       <div class="cr-kit-swatches">
-        <span class="cr-kit-chip"><i style="background:${hw.color}"></i>${hw.type === 'visor' ? 'Visor' : 'Headband'}</span>
+        <span class="cr-kit-chip"><i style="background:${hw.color}"></i>${hw.type === 'visor' ? t('Visor') : t('Headband')}</span>
       </div>
-      <div class="cr-shop-spec">${hw.type === 'visor' ? 'Sun Visor' : 'Sweat Headband'} · ${escapeHtml(hw.color)}</div>
+      <div class="cr-shop-spec">${t('{type} · {color}', { type: hw.type === 'visor' ? t('Sun Visor') : t('Sweat Headband'), color: hw.color })}</div>
     `;
   }
   return '';
@@ -1645,7 +1655,7 @@ function renderShopScreen() {
   if (!profile) { showScreen('templates'); return; }
   const pl = buildEquippedPlayer(profile);
   const rk = equippedRacket(profile);
-  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'PRO SHOP');
+  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), t('PRO SHOP'));
 
   const items = shopTab === 'racket'
     ? rackets
@@ -1655,20 +1665,20 @@ function renderShopScreen() {
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">CAREER · <span>SHOP</span></h2>
-        <div class="cr-sub">Unlock pro rackets, court shoes, match balls, kits, headwear and energy products.</div>
+        <h2 class="cr-title">${t('CAREER · <span>SHOP</span>')}</h2>
+        <div class="cr-sub">${t('Unlock pro rackets, court shoes, match balls, kits, headwear and energy products.')}</div>
       </div>
       <div class="cr-head-right">
         ${renderTopCreditsHtml(profile)}
-        <button type="button" class="cr-btn" id="cr-shop-locker">🎒 Locker</button>
-        <button type="button" class="cr-btn" id="cr-shop-back">← Back to Hub</button>
+        <button type="button" class="cr-btn" id="cr-shop-locker">🎒 ${t('Locker')}</button>
+        <button type="button" class="cr-btn" id="cr-shop-back">${t('← Back to Hub')}</button>
       </div>
     </div>
 
     <div class="pl-tabs cr-shop-tabs" id="cr-shop-tabs" role="tablist">
-      ${SHOP_TABS.map(t => `
-        <button type="button" class="pl-tab ${shopTab === t.id ? 'is-active' : ''}" data-shop-tab="${t.id}">
-          ${escapeHtml(t.label)}
+      ${SHOP_TABS.map(tab => `
+        <button type="button" class="pl-tab ${shopTab === tab.id ? 'is-active' : ''}" data-shop-tab="${tab.id}">
+          ${escapeHtml(t(tab.label))}
         </button>
       `).join('')}
     </div>
@@ -1711,6 +1721,7 @@ function renderShopScreen() {
     const isTierLocked = (profile.bestTier || 1) < minTier;
     const canAfford = profile.credits >= price;
     const errText = shopErrors[item.id] || '';
+    const itemName = shopTab === 'racket' ? item.name : t(item.name);
 
     const card = document.createElement('div');
     card.className = `pl-card cr-shop-card ${isEquipped ? 'is-selected' : ''} ${isTierLocked && !isOwned ? 'is-locked' : ''}`;
@@ -1725,16 +1736,16 @@ function renderShopScreen() {
         ${thumbHtml}
         <div class="cr-shop-card-head">
           <div class="cr-shop-title-row">
-            <div class="pl-card-title" lang="en">${escapeHtml(item.name)}</div>
+            <div class="pl-card-title" lang="en">${escapeHtml(itemName)}</div>
             <div class="cr-badges">
-              ${isOwned ? `<span class="cr-badge is-owned">${stack ? `In bag ×${left}` : 'Owned'}</span>` : ''}
-              ${isEquipped ? '<span class="cr-badge is-equipped">Equipped</span>' : ''}
+              ${isOwned ? `<span class="cr-badge is-owned">${stack ? t('In bag ×{left}', { left }) : t('Owned')}</span>` : ''}
+              ${isEquipped ? `<span class="cr-badge is-equipped">${t('Equipped')}</span>` : ''}
             </div>
           </div>
           <div class="cr-shop-meta-row">
-            <span class="cr-shop-price tabular">${item.price} Credits${stack ? ` / ${item.pack}` : ''}</span>
+            <span class="cr-shop-price tabular">${item.price} ${t('Credits')}${stack ? ` / ${item.pack}` : ''}</span>
             <span class="cr-tier-pill ${isTierLocked ? 'is-locked' : ''}">
-              ${minTier > 1 ? `Unlocks at ${escapeHtml(tierName)}` : 'Available to everyone'}
+              ${minTier > 1 ? t('Unlocks at {tier}', { tier: tierName }) : t('Available to everyone')}
             </span>
           </div>
         </div>
@@ -1746,9 +1757,9 @@ function renderShopScreen() {
 
       <div class="cr-shop-foot">
         <button type="button" class="cr-btn ${(stack ? room : !isOwned) && !isTierLocked && canAfford ? 'cr-btn-acc' : 'cr-btn-muted'} cr-shop-buy" data-buy="${item.id}">
-          ${stack ? (!room ? 'Bag full' : room < item.pack ? `Buy ${room} · ${price} Credits` : `Buy ${item.pack}`) : isOwned && item.upgrade ? 'Owned' : 'Buy'}
+          ${stack ? (!room ? t('Bag full') : room < item.pack ? t('Buy {room} · {price} Credits', { room, price }) : t('Buy {pack}', { pack: item.pack })) : isOwned && item.upgrade ? t('Owned') : t('Buy')}
         </button>
-        ${isOwned && !isEquipped && !item.type?.startsWith('bag') ? `<button type="button" class="cr-btn cr-shop-equip" data-equip-shop="${item.id}">Equip</button>` : ''}
+        ${isOwned && !isEquipped && !item.type?.startsWith('bag') ? `<button type="button" class="cr-btn cr-shop-equip" data-equip-shop="${item.id}">${t('Equip')}</button>` : ''}
       </div>
     `;
 
@@ -1768,18 +1779,18 @@ function renderShopScreen() {
         track(`career-shop-buy/${item.type || 'racket'}`);
         delete shopErrors[item.id];
         persistProfile(res.profile);
-        flashMsg = { type: 'ok', text: `Purchased ${item.name}!` };
+        flashMsg = { type: 'ok', text: t('Purchased {name}!', { name: itemName }) };
         renderShopScreen();
       } else {
-        let msg = 'Cannot purchase item.';
+        let msg = t('Cannot purchase item.');
         if (res.reason === 'owned') {
-          msg = 'Already owned.';
+          msg = t('Already owned.');
         } else if (res.reason === 'tier') {
-          msg = `Locked: Unlocks at ${tierName}`;
+          msg = t('Locked: Unlocks at {tier}', { tier: tierName });
         } else if (res.reason === 'credits') {
-          msg = `Not enough Credits: Need ${Math.max(1, price - profile.credits)} more Credits`;
+          msg = t('Not enough Credits: Need {deficit} more Credits', { deficit: Math.max(1, price - profile.credits) });
         } else if (res.reason === 'bagfull') {
-          msg = `Bag full: ${bagFill(profile, item.id)} ${bagKind(item.id)}`;
+          msg = t('Bag full: {fill} {kind}', { fill: bagFill(profile, item.id), kind: bagKind(item.id) === 'drinks' ? t('drinks') : t('food') });
         }
         shopErrors[item.id] = msg;
         renderShopScreen();
@@ -1791,7 +1802,7 @@ function renderShopScreen() {
       eqBtn.onclick = () => {
         const next = equip(profile, shopTab, item.id);
         persistProfile(next);
-        flashMsg = { type: 'ok', text: `Equipped ${item.name}.` };
+        flashMsg = { type: 'ok', text: t('Equipped {name}.', { name: itemName }) };
         renderShopScreen();
       };
     }
@@ -1805,7 +1816,7 @@ function renderLockerScreen() {
   if (!profile) { showScreen('templates'); return; }
   const pl = buildEquippedPlayer(profile);
   const rk = equippedRacket(profile);
-  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'LOCKER');
+  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), t('LOCKER'));
 
   const ownedRackets = rackets.filter(r => profile.inventory.includes(r.id));
   const ownedShoes = shop.items.filter(i => i.type === 'shoes' && profile.inventory.includes(i.id));
@@ -1818,18 +1829,18 @@ function renderLockerScreen() {
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">CAREER · <span>LOCKER</span></h2>
-        <div class="cr-sub">Select from your owned equipment per slot. The 3D preview updates immediately.</div>
+        <h2 class="cr-title">${t('CAREER · <span>LOCKER</span>')}</h2>
+        <div class="cr-sub">${t('Select from your owned equipment per slot. The 3D preview updates immediately.')}</div>
       </div>
       <div class="cr-head-right">
         ${renderTopCreditsHtml(profile)}
-        <button type="button" class="cr-btn" id="cr-locker-shop">🛒 Shop</button>
-        <button type="button" class="cr-btn" id="cr-locker-back">← Back to Hub</button>
+        <button type="button" class="cr-btn" id="cr-locker-shop">🎒 ${t('Shop')}</button>
+        <button type="button" class="cr-btn" id="cr-locker-back">${t('← Back to Hub')}</button>
       </div>
     </div>
 
     <div class="cr-body">
-      <div class="pl-section-label">RACKET (${ownedRackets.length} OWNED)</div>
+      <div class="pl-section-label">${t('RACKET ({count} OWNED)', { count: ownedRackets.length })}</div>
       <div class="cr-locker-grid" id="cr-locker-racket">
         ${ownedRackets.map(r => {
           const isEq = profile.equipped?.racket === r.id;
@@ -1838,7 +1849,7 @@ function renderLockerScreen() {
               <div class="cr-locker-card-head">
                 <span class="cr-swatch-dot" style="background:${r.color}"></span>
                 <div class="pl-card-title" lang="en">${escapeHtml(r.name)}</div>
-                ${isEq ? '<span class="cr-badge is-equipped">Equipped</span>' : '<span class="cr-badge is-owned">Owned</span>'}
+                ${isEq ? `<span class="cr-badge is-equipped">${t('Equipped')}</span>` : `<span class="cr-badge is-owned">${t('Owned')}</span>`}
               </div>
               <div class="cr-shop-spec">${escapeHtml(r.core)} · ${escapeHtml(r.face)} · ${escapeHtml(r.shape)} · ${r.weightG} g</div>
               <div class="pl-card-sub">P${r.stats.power} · C${r.stats.control} · Spin ${r.stats.spin} · Sweet ${r.stats.sweetSpot}</div>
@@ -1848,7 +1859,7 @@ function renderLockerScreen() {
         }).join('')}
       </div>
 
-      <div class="pl-section-label">SHOES (${ownedShoes.length} OWNED)</div>
+      <div class="pl-section-label">${t('SHOES ({count} OWNED)', { count: ownedShoes.length })}</div>
       <div class="cr-locker-grid" id="cr-locker-shoes">
         ${ownedShoes.map(s => {
           const isEq = profile.equipped?.shoes === s.id;
@@ -1856,17 +1867,17 @@ function renderLockerScreen() {
             <button type="button" class="pl-card cr-locker-card ${isEq ? 'is-selected' : ''}" data-slot="shoes" data-id="${s.id}">
               <div class="cr-locker-card-head">
                 <span class="cr-swatch-dot" style="background:${s.color}"></span>
-                <div class="pl-card-title" lang="en">${escapeHtml(s.name)}</div>
-                ${isEq ? '<span class="cr-badge is-equipped">Equipped</span>' : '<span class="cr-badge is-owned">Owned</span>'}
+                <div class="pl-card-title" lang="en">${escapeHtml(t(s.name))}</div>
+                ${isEq ? `<span class="cr-badge is-equipped">${t('Equipped')}</span>` : `<span class="cr-badge is-owned">${t('Owned')}</span>`}
               </div>
-              <div class="cr-shop-spec">+${Math.round(s.speed * 100)}% speed · agility ${Math.round(s.agility * 100)}</div>
+              <div class="cr-shop-spec">${t('+{spd}% speed · agility {agi}', { spd: Math.round(s.speed * 100), agi: Math.round(s.agility * 100) })}</div>
               <span class="pl-check">✓</span>
             </button>
           `;
         }).join('')}
       </div>
 
-      <div class="pl-section-label">MATCH BALL (${ownedBalls.length} OWNED)</div>
+      <div class="pl-section-label">${t('MATCH BALL ({count} OWNED)', { count: ownedBalls.length })}</div>
       <div class="cr-locker-grid" id="cr-locker-ball">
         ${ownedBalls.map(b => {
           const isEq = profile.equipped?.ball === b.id;
@@ -1874,42 +1885,42 @@ function renderLockerScreen() {
             <button type="button" class="pl-card cr-locker-card ${isEq ? 'is-selected' : ''}" data-slot="ball" data-id="${b.id}">
               <div class="cr-locker-card-head">
                 <span class="cr-swatch-dot" style="background:#d8f53a"></span>
-                <div class="pl-card-title" lang="en">${escapeHtml(b.name)}</div>
-                ${isEq ? '<span class="cr-badge is-equipped">Equipped</span>' : '<span class="cr-badge is-owned">Owned</span>'}
+                <div class="pl-card-title" lang="en">${escapeHtml(t(b.name))}</div>
+                ${isEq ? `<span class="cr-badge is-equipped">${t('Equipped')}</span>` : `<span class="cr-badge is-owned">${t('Owned')}</span>`}
               </div>
-              <div class="cr-shop-spec">Speed ×${b.speed} · Bounce ×${b.bounce}</div>
+              <div class="cr-shop-spec">${t('Speed ×{speed} · Bounce ×{bounce}', { speed: b.speed, bounce: b.bounce })}</div>
               <span class="pl-check">✓</span>
             </button>
           `;
         }).join('')}
       </div>
 
-      <div class="pl-section-label">KIT (${ownedKits.length} OWNED)</div>
+      <div class="pl-section-label">${t('KIT ({count} OWNED)', { count: ownedKits.length })}</div>
       <div class="cr-locker-grid" id="cr-locker-kit">
         ${ownedKits.map(k => {
           const isEq = profile.equipped?.kit === k.id;
-          const kStyle = { crew: 'Crew neck', polo: 'Polo', vneck: 'V-neck', tank: 'Tank top' }[k.style || 'crew'] || 'Crew neck';
-          const kPattern = ({ none: 'Solid', chest: 'Chest stripe', sash: 'Diagonal sash', side: 'Side panels', stripes: 'Vertical stripes', split: 'Split halves' }[k.pattern || 'none'] || 'Solid').toLowerCase();
+          const kStyle = { crew: t('Crew neck'), polo: t('Polo'), vneck: t('V-neck'), tank: t('Tank top') }[k.style || 'crew'] || t('Crew neck');
+          const kPattern = ({ none: t('Solid'), chest: t('Chest stripe'), sash: t('Diagonal sash'), side: t('Side panels'), stripes: t('Vertical stripes'), split: t('Split halves') }[k.pattern || 'none'] || t('Solid')).toLowerCase();
           return `
             <button type="button" class="pl-card cr-locker-card ${isEq ? 'is-selected' : ''}" data-slot="kit" data-id="${k.id}">
               <div class="cr-locker-card-head">
-                <div class="pl-card-title" lang="en">${escapeHtml(k.name)}</div>
-                ${isEq ? '<span class="cr-badge is-equipped">Equipped</span>' : '<span class="cr-badge is-owned">Owned</span>'}
+                <div class="pl-card-title" lang="en">${escapeHtml(t(k.name))}</div>
+                ${isEq ? `<span class="cr-badge is-equipped">${t('Equipped')}</span>` : `<span class="cr-badge is-owned">${t('Owned')}</span>`}
               </div>
               <div class="cr-kit-swatches">
-                <span class="cr-kit-chip"><i style="background:${k.shirt}"></i>Shirt</span>
-                <span class="cr-kit-chip"><i style="background:${k.shorts}"></i>Shorts</span>
-                <span class="cr-kit-chip"><i style="background:${k.shoes}"></i>Shoes</span>
-                ${k.accent ? `<span class="cr-kit-chip"><i style="background:${k.accent}"></i>Accent</span>` : ''}
+                <span class="cr-kit-chip"><i style="background:${k.shirt}"></i>${t('Shirt')}</span>
+                <span class="cr-kit-chip"><i style="background:${k.shorts}"></i>${t('Shorts')}</span>
+                <span class="cr-kit-chip"><i style="background:${k.shoes}"></i>${t('Shoes')}</span>
+                ${k.accent ? `<span class="cr-kit-chip"><i style="background:${k.accent}"></i>${t('Accent')}</span>` : ''}
               </div>
-              <div class="cr-shop-spec">${escapeHtml(`${kStyle} · ${kPattern}`)}</div>
+              <div class="cr-shop-spec">${escapeHtml(t('{style} · {pattern}', { style: kStyle, pattern: kPattern }))}</div>
               <span class="pl-check">✓</span>
             </button>
           `;
         }).join('')}
       </div>
 
-      <div class="pl-section-label">HEADWEAR (${ownedHeadwear.length} OWNED)</div>
+      <div class="pl-section-label">${t('HEADWEAR ({count} OWNED)', { count: ownedHeadwear.length })}</div>
       ${ownedHeadwear.length > 0 ? `
         <div class="cr-locker-grid" id="cr-locker-headwear">
           ${ownedHeadwear.map(h => {
@@ -1918,10 +1929,10 @@ function renderLockerScreen() {
               <button type="button" class="pl-card cr-locker-card ${isEq ? 'is-selected' : ''}" data-slot="headwear" data-id="${h.id}">
                 <div class="cr-locker-card-head">
                   <span class="cr-swatch-dot" style="background:${h.headwear.color}"></span>
-                  <div class="pl-card-title" lang="en">${escapeHtml(h.name)}</div>
-                  ${isEq ? '<span class="cr-badge is-equipped">Equipped</span>' : '<span class="cr-badge is-owned">Owned</span>'}
+                  <div class="pl-card-title" lang="en">${escapeHtml(t(h.name))}</div>
+                  ${isEq ? `<span class="cr-badge is-equipped">${t('Equipped')}</span>` : `<span class="cr-badge is-owned">${t('Owned')}</span>`}
                 </div>
-                <div class="cr-shop-spec">${h.headwear.type === 'visor' ? 'Visor' : 'Headband'} · ${escapeHtml(h.headwear.color)}</div>
+                <div class="cr-shop-spec">${t('{type} · {color}', { type: h.headwear.type === 'visor' ? t('Visor') : t('Headband'), color: h.headwear.color })}</div>
                 <span class="pl-check">✓</span>
               </button>
             `;
@@ -1929,15 +1940,15 @@ function renderLockerScreen() {
         </div>
       ` : `
         <div class="cr-empty-slot">
-          <span>No headwear unlocked yet. Visit the Shop to unlock headbands and visors.</span>
-          <button type="button" class="cr-btn" id="cr-locker-buy-hw">Shop Headwear →</button>
+          <span>${t('No headwear unlocked yet. Visit the Shop to unlock headbands and visors.')}</span>
+          <button type="button" class="cr-btn" id="cr-locker-buy-hw">${t('Shop Headwear →')}</button>
         </div>
       `}
 
-      <div class="pl-section-label">BAG · DRINKS ${bagFill(profile, 'bag_water')} · FOOD ${bagFill(profile, 'bag_banana')}</div>
+      <div class="pl-section-label">${t('BAG · DRINKS {drinks} · FOOD {food}', { drinks: bagFill(profile, 'bag_water'), food: bagFill(profile, 'bag_banana') })}</div>
       <div class="cr-empty-slot">
-        <span>${bagItems.map(i => `${escapeHtml(i.name)} ×${profile.bag?.[i.id] || 0}`).join(' · ')}</span>
-        <button type="button" class="cr-btn" id="cr-restock">Restock →</button>
+        <span>${bagItems.map(i => `${escapeHtml(t(i.name))} ×${profile.bag?.[i.id] || 0}`).join(' · ')}</span>
+        <button type="button" class="cr-btn" id="cr-restock">${t('Restock →')}</button>
       </div>
     </div>
   `;
@@ -1982,7 +1993,7 @@ function renderRewardScreen() {
   const r = profile.lastReward;
   const pl = buildEquippedPlayer(profile);
   const rk = equippedRacket(profile);
-  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), r.won ? 'VICTORY' : 'MATCH COMPLETE');
+  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), r.won ? t('VICTORY') : t('MATCH COMPLETE'));
 
   const aiKey = r.ai || playState.ai || 'club';
   const aiName = aiKey.charAt(0).toUpperCase() + aiKey.slice(1);
@@ -1992,8 +2003,8 @@ function renderRewardScreen() {
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">MATCH <span>REWARDS</span></h2>
-        <div class="cr-sub">Career match summary and Credits breakdown</div>
+        <h2 class="cr-title">${t('MATCH <span>REWARDS</span>')}</h2>
+        <div class="cr-sub">${t('Career match summary and Credits breakdown')}</div>
       </div>
       <div class="cr-head-right">
         ${renderTopCreditsHtml(profile)}
@@ -2003,43 +2014,43 @@ function renderRewardScreen() {
     <div class="cr-body">
       <div class="cr-reward-box">
         <div class="cr-reward-head">
-          <div class="cr-reward-outcome ${r.won ? '' : 'is-loss'}">${r.won ? '🏆 WIN' : 'LOSS'}</div>
-          <div class="cr-reward-score">Score: ${escapeHtml(r.score || '—')}</div>
+          <div class="cr-reward-outcome ${r.won ? '' : 'is-loss'}">${r.won ? t('🏆 WIN') : t('LOSS')}</div>
+          <div class="cr-reward-score">${t('Score: {score}', { score: r.score || '—' })}</div>
         </div>
 
         <div class="cr-reward-lines">
           ${(r.lines || []).map(line => `
             <div class="cr-reward-row">
-              <span>${escapeHtml(line.label)}</span>
+              <span>${escapeHtml(t(line.label))}</span>
               <b class="tabular">+${line.credits}</b>
             </div>
           `).join('')}
           <div class="cr-reward-row is-mult">
-            <span>${escapeHtml(aiName)} ×${multVal}</span>
+            <span>${escapeHtml(t(aiName))} ×${multVal}</span>
             <b class="tabular">×${multVal}</b>
           </div>
           ${r.level ? `<div class="cr-reward-row">
-            <span>Level ${r.level.from.toFixed(2)} → ${r.level.to.toFixed(2)}</span>
+            <span>${t('Level {from} → {to}', { from: r.level.from.toFixed(2), to: r.level.to.toFixed(2) })}</span>
             <b class="tabular">${r.level.delta >= 0 ? '+' : ''}${r.level.delta.toFixed(2)}</b>
           </div>` : ''}
-          ${r.level?.tierUp ? `<div class="cr-reward-row is-mult"><span>TIER UP: ${escapeHtml(r.level.tierUp)}</span><b>⬆</b></div>` : ''}
-          ${r.level?.bonus ? `<div class="cr-reward-row"><span>Tier up bonus</span><b class="tabular">+${r.level.bonus}</b></div>` : ''}
-          ${(r.ups || []).map(([k, from, to]) => `<div class="cr-reward-row is-mult"><span>📈 ${escapeHtml(TRAINING_STATS.find(x => x.key === k)?.label || k)} ${from} → ${to} (match play)</span><b>⬆</b></div>`).join('')}
+          ${r.level?.tierUp ? `<div class="cr-reward-row is-mult"><span>${t('TIER UP: {tier}', { tier: r.level.tierUp })}</span><b>⬆</b></div>` : ''}
+          ${r.level?.bonus ? `<div class="cr-reward-row"><span>${t('Tier up bonus')}</span><b class="tabular">+${r.level.bonus}</b></div>` : ''}
+          ${(r.ups || []).map(([k, from, to]) => `<div class="cr-reward-row is-mult"><span>📈 ${escapeHtml(t('{stat} {from} → {to} (match play)', { stat: TRAINING_STATS.find(x => x.key === k)?.label ? t(TRAINING_STATS.find(x => x.key === k).label) : k, from, to }))}</span><b>⬆</b></div>`).join('')}
         </div>
 
         <div class="cr-reward-total">
-          <span>Total Reward</span>
-          <b class="tabular">+${r.credits + (r.level?.bonus || 0)} Credits</b>
+          <span>${t('Total Reward')}</span>
+          <b class="tabular">+${r.credits + (r.level?.bonus || 0)} ${t('Credits')}</b>
         </div>
 
         <div class="cr-reward-balance">
-          <span>New Balance</span>
-          <b class="tabular">${profile.credits} Credits</b>
+          <span>${t('New Balance')}</span>
+          <b class="tabular">${profile.credits} ${t('Credits')}</b>
         </div>
 
-        ${r.coach ? `<div class="cr-reward-balance"><span>💡 ${escapeHtml(r.coach.text)}</span>${r.coach.action ? `<button type="button" class="cr-btn cr-btn-acc" id="cr-coach-go">${r.coach.action.train ? 'Train' : 'Restock'}</button>` : ''}</div>` : ''}
-        ${needsRestock(profile) && !r.coach?.action?.restock ? '<div class="cr-reward-balance"><span>Bag running low</span>' + restockBtn() + '</div>' : ''}
-        <button type="button" class="pl-start-btn" id="cr-reward-continue" style="width:100%;margin-top:4px">Continue</button>
+        ${r.coach ? `<div class="cr-reward-balance"><span>💡 ${escapeHtml(coachLine(r.coach))}</span>${r.coach.action ? `<button type="button" class="cr-btn cr-btn-acc" id="cr-coach-go">${r.coach.action.train ? t('Train') : t('Restock')}</button>` : ''}</div>` : ''}
+        ${needsRestock(profile) && !r.coach?.action?.restock ? '<div class="cr-reward-balance"><span>' + t('Bag running low') + '</span>' + restockBtn() + '</div>' : ''}
+        <button type="button" class="pl-start-btn" id="cr-reward-continue" style="width:100%;margin-top:4px">${t('Continue')}</button>
       </div>
     </div>
   `;
@@ -2067,19 +2078,19 @@ function renderProfileScreen() {
   if (!profile) { showScreen('templates'); return; }
   const pl = buildEquippedPlayer(profile);
   const rk = equippedRacket(profile);
-  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), 'PLAYER PROFILE');
+  setCareerPreview(pl, rk, buildLeftPanelHtml(pl, profile.stats, profile), t('PLAYER PROFILE'));
   const h = profile.history || { played: 0, won: 0, pointsWon: 0 };
 
   careerPanel.innerHTML = `
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">CAREER · <span>PROFILE</span></h2>
-        <div class="cr-sub">Manage appearance, backup save file, or reset career</div>
+        <h2 class="cr-title">${t('CAREER · <span>PROFILE</span>')}</h2>
+        <div class="cr-sub">${t('Manage appearance, backup save file, or reset career')}</div>
       </div>
       <div class="cr-head-right">
         ${renderTopCreditsHtml(profile)}
-        <button type="button" class="cr-btn" id="cr-prof-back">← Back to Hub</button>
+        <button type="button" class="cr-btn" id="cr-prof-back">${t('← Back to Hub')}</button>
       </div>
     </div>
 
@@ -2089,18 +2100,18 @@ function renderProfileScreen() {
           <span class="cr-prof-flag">${countryFlag(pl.countryCode)}</span>
           <div>
             <div class="cr-prof-name" lang="en">${escapeHtml(pl.name)}</div>
-            <div class="cr-prof-rank">${escapeHtml(pl.country || '')} · ${pl.hand === 'left' ? 'Left-handed' : 'Right-handed'} · World rank: #${myWorldRank(profile)}</div>
-            <div class="cr-prof-rank">${escapeHtml(levelText(profile))} · ${relPct(profile)}% reliability</div>
-            <div class="cr-prof-rank">${LEVEL_NOTE}</div>
+            <div class="cr-prof-rank">${t('{country} · {hand} · World rank: #{rank}', { country: pl.country || '', hand: pl.hand === 'left' ? t('Left-handed') : t('Right-handed'), rank: myWorldRank(profile) })}</div>
+            <div class="cr-prof-rank">${t('{level} · {rel}% reliability', { level: levelText(profile), rel: relPct(profile) })}</div>
+            <div class="cr-prof-rank">${escapeHtml(t(LEVEL_NOTE))}</div>
           </div>
         </div>
         <div class="cr-currencies">
           <div class="cr-curr-box">
-            <span class="cr-curr-label">Credits</span>
+            <span class="cr-curr-label">${t('Credits')}</span>
             <span class="cr-curr-val tabular">${profile.credits}</span>
           </div>
           <div class="cr-curr-box is-rp">
-            <span class="cr-curr-label">Ranking points</span>
+            <span class="cr-curr-label">${t('Ranking points')}</span>
             <span class="cr-curr-val tabular">${profile.rankingPoints}</span>
           </div>
         </div>
@@ -2108,39 +2119,39 @@ function renderProfileScreen() {
 
       <div class="cr-form-grid">
         <div class="cr-field">
-          <div class="cr-field-head"><span>Matches Played</span><b>${h.played}</b></div>
-          <div class="cr-field-head"><span>Matches Won</span><b>${h.won}</b></div>
-          <div class="cr-field-head"><span>Total Points Won</span><b>${h.pointsWon}</b></div>
+          <div class="cr-field-head"><span>${t('Matches Played')}</span><b>${h.played}</b></div>
+          <div class="cr-field-head"><span>${t('Matches Won')}</span><b>${h.won}</b></div>
+          <div class="cr-field-head"><span>${t('Total Points Won')}</span><b>${h.pointsWon}</b></div>
         </div>
 
         <div class="cr-field">
-          <div class="cr-field-head"><span>Appearance</span><b>Free</b></div>
-          <div class="pl-card-sub">Customize hair, beard, skin tone, body, glasses and headwear anytime.</div>
-          <button type="button" class="cr-btn cr-btn-acc" id="cr-prof-edit" style="margin-top:4px">Edit look</button>
+          <div class="cr-field-head"><span>${t('Appearance')}</span><b>${t('Free')}</b></div>
+          <div class="pl-card-sub">${t('Customize hair, beard, skin tone, body, glasses and headwear anytime.')}</div>
+          <button type="button" class="cr-btn cr-btn-acc" id="cr-prof-edit" style="margin-top:4px">${t('Edit look')}</button>
         </div>
 
         <div class="cr-field is-full">
-          <div class="cr-field-head"><span>Backup & Transfer Save</span><b>padel-career.json</b></div>
-          <div class="pl-card-sub">Export your career to a JSON file or restore a previously exported profile.</div>
+          <div class="cr-field-head"><span>${t('Backup & Transfer Save')}</span><b>padel-career.json</b></div>
+          <div class="pl-card-sub">${t('Export your career to a JSON file or restore a previously exported profile.')}</div>
           <div class="cr-banner-actions" style="margin-top:4px">
-            <button type="button" class="cr-btn" id="cr-prof-export">Export</button>
-            <button type="button" class="cr-btn" id="cr-prof-import">Import</button>
+            <button type="button" class="cr-btn" id="cr-prof-export">${t('Export')}</button>
+            <button type="button" class="cr-btn" id="cr-prof-import">${t('Import')}</button>
           </div>
         </div>
 
         <div class="cr-field is-full">
-          <div class="cr-field-head"><span>Danger Zone</span></div>
+          <div class="cr-field-head"><span>${t('Danger Zone')}</span></div>
           ${!deleteConfirmOpen ? `
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-              <span class="pl-card-sub">Permanently delete this profile from this browser and start fresh.</span>
-              <button type="button" class="cr-btn cr-btn-danger" id="cr-prof-delete">Delete profile</button>
+              <span class="pl-card-sub">${t('Permanently delete this profile from this browser and start fresh.')}</span>
+              <button type="button" class="cr-btn cr-btn-danger" id="cr-prof-delete">${t('Delete profile')}</button>
             </div>
           ` : `
             <div class="cr-delete-box">
-              <span>Are you sure you want to permanently delete <b>${escapeHtml(pl.name)}</b>?</span>
+              <span>${t('Are you sure you want to permanently delete <b>{name}</b>?', { name: escapeHtml(pl.name) })}</span>
               <div class="cr-banner-actions">
-                <button type="button" class="cr-btn cr-btn-danger" id="cr-prof-delete-confirm">Confirm delete</button>
-                <button type="button" class="cr-btn" id="cr-prof-delete-cancel">Cancel</button>
+                <button type="button" class="cr-btn cr-btn-danger" id="cr-prof-delete-confirm">${t('Confirm delete')}</button>
+                <button type="button" class="cr-btn" id="cr-prof-delete-cancel">${t('Cancel')}</button>
               </div>
             </div>
           `}
@@ -2149,7 +2160,7 @@ function renderProfileScreen() {
     </div>
 
     <div class="cr-foot">
-      <div class="cr-storage-note">${STORAGE_NOTICE}</div>
+      <div class="cr-storage-note">${escapeHtml(t(STORAGE_NOTICE))}</div>
     </div>
   `;
 
@@ -2227,9 +2238,9 @@ let tState = { entry: null, partnerId: null };
 
 const totalRoundsOf = (T) => ({ americano: 7, mexicano: 5, knockout: Math.log2(T.entrants.length), league: T.entrants.length - (T.entrants.length % 2 ? 0 : 1) })[T.format];
 const roundName = (T, r) => {
-  if (T.format !== 'knockout') return `Round ${r + 1} / ${totalRoundsOf(T)}`;
+  if (T.format !== 'knockout') return t('Round {r} / {total}', { r: r + 1, total: totalRoundsOf(T) });
   const left = totalRoundsOf(T) - r;
-  return left === 1 ? 'Final' : left === 2 ? 'Semi-finals' : left === 3 ? 'Quarter-finals' : `Round of ${2 ** left}`;
+  return left === 1 ? t('Final') : left === 2 ? t('Semi-finals') : left === 3 ? t('Quarter-finals') : t('Round of {n}', { n: 2 ** left });
 };
 const sideIds = (x) => [].concat(x);
 const nameOfId = (T, id) => T.entrants.find(e => e.id === id)?.name || id;
@@ -2238,10 +2249,10 @@ const sideName = (T, x) => sideIds(x).map(id => nameOfId(T, id)).join(' / ');
 function lockReason(entry, rank) {
   const c = canEnter(profile, entry, rank);
   if (c.ok) return '';
-  if (c.reason === 'invite') return `Invitation: world top ${entry.inviteTop}`;
-  if (c.reason === 'tier') return `Requires ${tierByIndex(entry.minTier).name}`;
-  if (c.reason === 'ranking') return `Needs ${entry.minRankingPoints} ranking pts`;
-  return `Needs ${entry.entryFee} Credits`;
+  if (c.reason === 'invite') return t('Invitation: world top {top}', { top: entry.inviteTop });
+  if (c.reason === 'tier') return t('Requires {tier}', { tier: t(tierByIndex(entry.minTier).name) });
+  if (c.reason === 'ranking') return t('Needs {pts} ranking pts', { pts: entry.minRankingPoints });
+  return t('Needs {fee} Credits', { fee: entry.entryFee });
 }
 
 // pays the placement reward and clears the run once the tournament is over (called after every state change)
@@ -2265,20 +2276,20 @@ function settleTournament(p) {
 function renderTournamentsScreen() {
   if (!profile) { showScreen('templates'); return; }
   const pl = buildEquippedPlayer(profile);
-  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), 'TOURNAMENTS');
+  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), t('TOURNAMENTS'));
   const rank = myWorldRank();
-  const best = (id) => profile.circuit?.[id] ? `Best: #${profile.circuit[id]}` : 'Best: —';
+  const best = (id) => profile.circuit?.[id] ? t('Best: #{rank}', { rank: profile.circuit[id] }) : t('Best: —');
 
   careerPanel.innerHTML = `
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">CAREER · <span>TOURNAMENTS</span></h2>
-        <div class="cr-sub">Climb the circuit. Entry fees are paid in Credits; places pay Credits and ranking points. World rank: #${rank}</div>
+        <h2 class="cr-title">${t('CAREER')} · <span>${t('TOURNAMENTS')}</span></h2>
+        <div class="cr-sub">${t('Climb the circuit. Entry fees are paid in Credits; places pay Credits and ranking points. World rank: #{rank}', { rank })}</div>
       </div>
       <div class="cr-head-right">
         ${renderTopCreditsHtml(profile)}
-        <button type="button" class="cr-btn" id="cr-tour-back">← Back to Hub</button>
+        <button type="button" class="cr-btn" id="cr-tour-back">← ${t('Back to Hub')}</button>
       </div>
     </div>
     <div class="cr-body">
@@ -2289,12 +2300,12 @@ function renderTournamentsScreen() {
           return `
             <div class="cr-tour-row ${lock ? 'is-locked' : ''}">
               <div class="cr-tour-main">
-                <div class="cr-tour-name">${escapeHtml(e.name)} <span class="pl-meta-pill">${capitalize(e.format)} · ${e.drawSize} ${isPairFormat(e.format) ? 'pairs' : 'players'}</span> <span class="pl-meta-pill">${capitalize(e.ai)}</span></div>
-                <div class="cr-tour-info">${escapeHtml(FORMAT_INFO[e.format])}</div>
-                <div class="cr-tour-info">Entry ${e.entryFee} Credits · Champion +${rw.rankingPoints} pts, +${rw.credits} Credits · ${best(e.id)}</div>
+                <div class="cr-tour-name">${escapeHtml(t(e.name))} <span class="pl-meta-pill">${capitalize(t(e.format))} · ${e.drawSize} ${isPairFormat(e.format) ? t('pairs') : t('players')}</span> <span class="pl-meta-pill">${capitalize(t(e.ai))}</span></div>
+                <div class="cr-tour-info">${escapeHtml(t(FORMAT_INFO[e.format]))}</div>
+                <div class="cr-tour-info">${t('Entry {fee} Credits · Champion +{pts} pts, +{credits} Credits · {best}', { fee: e.entryFee, pts: rw.rankingPoints, credits: rw.credits, best: best(e.id) })}</div>
                 ${lock ? `<div class="cr-train-reason" style="align-self:flex-start">${escapeHtml(lock)}</div>` : ''}
               </div>
-              <button type="button" class="cr-btn cr-btn-acc" data-enter="${e.id}" ${lock ? 'disabled' : ''}>Enter</button>
+              <button type="button" class="cr-btn cr-btn-acc" data-enter="${e.id}" ${lock ? 'disabled' : ''}>${t('Enter')}</button>
             </div>`;
         }).join('')}
       </div>
@@ -2372,7 +2383,7 @@ function renderTournamentPartnerScreen() {
   if (!profile || !tState.entry) { showScreen('tournaments'); return; }
   const entry = tState.entry;
   const pl = buildEquippedPlayer(profile);
-  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), 'CHOOSE PARTNER');
+  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), t('CHOOSE PARTNER'));
   const partnerList = availablePartners(profile);
   if (!partnerList.some(c => c.id === tState.partnerId)) {
     tState.partnerId = partnerList[0]?.id || characters[0].id;
@@ -2382,16 +2393,16 @@ function renderTournamentPartnerScreen() {
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">${escapeHtml(entry.name.toUpperCase())} · <span>PARTNER</span></h2>
-        <div class="cr-sub">${escapeHtml(FORMAT_INFO[entry.format])} Entry fee ${entry.entryFee} Credits.</div>
+        <h2 class="cr-title">${escapeHtml(t(entry.name).toUpperCase())} · <span>${t('PARTNER')}</span></h2>
+        <div class="cr-sub">${escapeHtml(t(FORMAT_INFO[entry.format]))} ${t('Entry fee {fee} Credits.', { fee: entry.entryFee })}</div>
       </div>
       <div class="cr-head-right">
         ${renderTopCreditsHtml(profile)}
-        <button type="button" class="cr-btn" id="cr-tp-back">← Back</button>
+        <button type="button" class="cr-btn" id="cr-tp-back">← ${t('Back')}</button>
       </div>
     </div>
     <div class="cr-body">
-      <div class="pl-section-label">CHOOSE PARTNER (${countryFlag(cur.countryCode)} ${escapeHtml(cur.name)} · rating ${avgStats(cur.stats).toFixed(1)})</div>
+      <div class="pl-section-label">${t('CHOOSE PARTNER')} (${countryFlag(cur.countryCode)} ${escapeHtml(cur.name)} · ${t('rating')} ${avgStats(cur.stats).toFixed(1)})</div>
       <div class="cr-partner-grid" id="cr-tp-grid">
         ${partnerList.map(c => `
           <button type="button" class="pl-card cr-partner-card ${c.id === tState.partnerId ? 'is-selected' : ''}" data-pid="${c.id}">
@@ -2403,8 +2414,8 @@ function renderTournamentPartnerScreen() {
     </div>
     <div class="cr-foot">
       <div class="cr-foot-row">
-        <div class="pl-summary">${escapeHtml(entry.name)} · ${capitalize(entry.format)} · w/ ${escapeHtml(cur.name)}</div>
-        <button type="button" class="pl-start-btn" id="cr-tp-go">PAY ${entry.entryFee} &amp; ENTER</button>
+        <div class="pl-summary">${escapeHtml(t(entry.name))} · ${capitalize(t(entry.format))} · ${t('w/ {name}', { name: cur.name })}</div>
+        <button type="button" class="pl-start-btn" id="cr-tp-go">${t('PAY {fee} &amp; ENTER', { fee: entry.entryFee })}</button>
       </div>
     </div>
   `;
@@ -2418,10 +2429,10 @@ function renderTournamentPartnerScreen() {
 
 function standingsTableHtml(T) {
   const rows = standings(T);
-  const key = T.format === 'league' ? 'Wins' : 'Points';
+  const key = T.format === 'league' ? t('Wins') : t('Points');
   return `
     <table class="cr-tour-table">
-      <tr><th>#</th><th>Name</th><th>${key}</th><th>+/-</th></tr>
+      <tr><th>#</th><th>${t('Name')}</th><th>${key}</th><th>+/-</th></tr>
       ${rows.map((r, i) => `<tr class="${r.id === 'me' ? 'is-me' : ''}"><td>${i + 1}</td><td>${escapeHtml(nameOfId(T, r.id))}</td><td>${T.format === 'league' ? r.wins : r.points}</td><td>${r.diff > 0 ? '+' : ''}${r.diff}</td></tr>`).join('')}
     </table>`;
 }
@@ -2446,7 +2457,7 @@ function renderTournamentScreen() {
   const T = tour.T, entry = entryById(tour.entryId);
   if (!entry || !T?.rounds) { persistProfile({ ...profile, tournament: null }); showScreen('tournaments'); return; }  // circuit entry removed in an update
   const pl = buildEquippedPlayer(profile);
-  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), 'TOURNAMENT');
+  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), t('TOURNAMENT'));
   const mine = myMatch(T);
   const round = T.rounds[T.round];
 
@@ -2454,27 +2465,27 @@ function renderTournamentScreen() {
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">${escapeHtml(entry.name.toUpperCase())} · <span>${roundName(T, T.round).toUpperCase()}</span></h2>
-        <div class="cr-sub">${capitalize(T.format)} · ${escapeHtml(FORMAT_INFO[T.format])} Progress saves automatically.</div>
+        <h2 class="cr-title">${escapeHtml(t(entry.name).toUpperCase())} · <span>${roundName(T, T.round).toUpperCase()}</span></h2>
+        <div class="cr-sub">${capitalize(t(T.format))} · ${escapeHtml(t(FORMAT_INFO[T.format]))} ${t('Progress saves automatically.')}</div>
       </div>
       <div class="cr-head-right">
         ${renderTopCreditsHtml(profile)}
-        <button type="button" class="cr-btn" id="cr-t-back">← Back to Hub</button>
+        <button type="button" class="cr-btn" id="cr-t-back">← ${t('Back to Hub')}</button>
       </div>
     </div>
     <div class="cr-body">
       ${T.format === 'knockout' ? bracketHtml(T) : `
         <div class="pl-section-label">${roundName(T, T.round).toUpperCase()}</div>
         <div class="cr-tour-matches">${round.map(m => matchRowHtml(T, m)).join('')}</div>
-        <div class="pl-section-label">TABLE</div>
+        <div class="pl-section-label">${t('TABLE')}</div>
         ${standingsTableHtml(T)}`}
     </div>
     <div class="cr-foot">
       <div class="cr-foot-row">
-        <div class="pl-summary">${mine ? `Your match: ${escapeHtml(sideName(T, mine.a))} vs ${escapeHtml(sideName(T, mine.b))}` : 'No match for you this round.'}</div>
+        <div class="pl-summary">${mine ? t('Your match: {a} vs {b}', { a: sideName(T, mine.a), b: sideName(T, mine.b) }) : t('No match for you this round.')}</div>
         ${mine
-          ? '<button type="button" class="pl-start-btn" id="cr-t-play">PLAY YOUR MATCH</button>'
-          : '<button type="button" class="cr-btn" id="cr-t-end">Skip to my next match</button> <button type="button" class="pl-start-btn" id="cr-t-sim">SIMULATE ROUND</button>'}
+          ? `<button type="button" class="pl-start-btn" id="cr-t-play">${t('PLAY YOUR MATCH')}</button>`
+          : `<button type="button" class="cr-btn" id="cr-t-end">${t('Skip to my next match')}</button> <button type="button" class="pl-start-btn" id="cr-t-sim">${t('SIMULATE ROUND')}</button>`}
       </div>
     </div>
   `;
@@ -2548,28 +2559,28 @@ function renderTournamentResultScreen() {
   const r = profile?.tournamentResult;
   if (!r) { showScreen('hub'); return; }
   const pl = buildEquippedPlayer(profile);
-  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), r.place === 1 ? 'CHAMPION' : 'TOURNAMENT OVER');
+  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), r.place === 1 ? t('CHAMPION') : t('TOURNAMENT OVER'));
   careerPanel.innerHTML = `
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">TOURNAMENT <span>RESULT</span></h2>
-        <div class="cr-sub">${escapeHtml(r.name)}</div>
+        <h2 class="cr-title">${t('TOURNAMENT')} <span>${t('RESULT')}</span></h2>
+        <div class="cr-sub">${escapeHtml(t(r.name))}</div>
       </div>
       <div class="cr-head-right">${renderTopCreditsHtml(profile)}</div>
     </div>
     <div class="cr-body">
       <div class="cr-reward-box">
         <div class="cr-reward-head">
-          <div class="cr-reward-outcome ${r.place === 1 ? '' : 'is-loss'}">${r.place === 1 ? '🏆 CHAMPION' : `PLACE #${r.place}`}</div>
-          <div class="cr-reward-score">${escapeHtml(r.name)}</div>
+          <div class="cr-reward-outcome ${r.place === 1 ? '' : 'is-loss'}">${r.place === 1 ? t('🏆 CHAMPION') : t('PLACE #{place}', { place: r.place })}</div>
+          <div class="cr-reward-score">${escapeHtml(t(r.name))}</div>
         </div>
         <div class="cr-reward-lines">
-          <div class="cr-reward-row"><span>Credits</span><b class="tabular">+${r.credits}</b></div>
-          <div class="cr-reward-row"><span>Ranking points</span><b class="tabular">+${r.rankingPoints}</b></div>
+          <div class="cr-reward-row"><span>${t('Credits')}</span><b class="tabular">+${r.credits}</b></div>
+          <div class="cr-reward-row"><span>${t('Ranking points')}</span><b class="tabular">+${r.rankingPoints}</b></div>
         </div>
-        <div class="cr-reward-balance"><span>New world rank</span><b class="tabular">#${myWorldRank()}</b></div>
-        <button type="button" class="pl-start-btn" id="cr-tr-continue" style="width:100%;margin-top:4px">Continue</button>
+        <div class="cr-reward-balance"><span>${t('New world rank')}</span><b class="tabular">#${myWorldRank()}</b></div>
+        <button type="button" class="pl-start-btn" id="cr-tr-continue" style="width:100%;margin-top:4px">${t('Continue')}</button>
       </div>
     </div>
   `;
@@ -2586,23 +2597,23 @@ function renderTournamentResultScreen() {
 function renderRankingScreen() {
   if (!profile) { showScreen('templates'); return; }
   const pl = buildEquippedPlayer(profile);
-  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), 'WORLD RANKING');
+  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), t('WORLD RANKING'));
   const table = worldRanking(profile, aiTable);
   careerPanel.innerHTML = `
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">CAREER · <span>WORLD RANKING</span></h2>
-        <div class="cr-sub">Your rank: #${myWorldRank()} of ${table.length}. Win tournaments to climb.</div>
+        <h2 class="cr-title">${t('CAREER')} · <span>${t('WORLD RANKING')}</span></h2>
+        <div class="cr-sub">${t('Your rank: #{rank} of {total}. Win tournaments to climb.', { rank: myWorldRank(), total: table.length })}</div>
       </div>
       <div class="cr-head-right">
         ${renderTopCreditsHtml(profile)}
-        <button type="button" class="cr-btn" id="cr-rank-back">← Back to Hub</button>
+        <button type="button" class="cr-btn" id="cr-rank-back">← ${t('Back to Hub')}</button>
       </div>
     </div>
     <div class="cr-body">
       <table class="cr-tour-table">
-        <tr><th>#</th><th>Name</th><th>Points</th></tr>
+        <tr><th>#</th><th>${t('Name')}</th><th>${t('Points')}</th></tr>
         ${table.map((r, i) => `<tr class="${r.id === 'me' ? 'is-me' : ''}" ${r.id === 'me' ? 'id="cr-rank-me"' : ''}><td>${i + 1}</td><td>${escapeHtml(r.name)}</td><td>${r.points}</td></tr>`).join('')}
       </table>
     </div>
@@ -2647,9 +2658,9 @@ function leaveOnline() {
 
 async function refreshRooms() {
   const url = onlineUrl();
-  if (!url) { onlineState.rooms = []; setOnlineStatus(NO_SERVER, null, true); return; }
+  if (!url) { onlineState.rooms = []; setOnlineStatus(t(NO_SERVER), null, true); return; }
   onlineState.busy = true;
-  setOnlineStatus('Looking for rooms…');
+  setOnlineStatus(t('Looking for rooms…'));
   try { onlineState.rooms = await listRooms(url); onlineState.status = ''; }
   catch (e) { onlineState.rooms = []; onlineState.status = escapeHtml(e.message); }
   onlineState.busy = false;
@@ -2658,7 +2669,7 @@ async function refreshRooms() {
 
 function joinOnlineRoom(code, create) {
   code = String(code || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-  if (!code) { setOnlineStatus('Enter a room code first.', null, true); return; }
+  if (!code) { setOnlineStatus(t('Enter a room code first.'), null, true); return; }
   if (!profile || onlineState.net) return;
   track(create ? 'online-create' : 'online-join');
   const { stats: _s, ...look } = { ...buildEquippedPlayer(profile), level: profile.level };  // level: rivals rate against it
@@ -2698,7 +2709,7 @@ function joinOnlineRoom(code, create) {
 function renderOnlineScreen() {
   if (!profile) { showScreen('templates'); return; }
   const pl = buildEquippedPlayer(profile);
-  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), 'PLAY ONLINE');
+  setCareerPreview(pl, equippedRacket(profile), buildLeftPanelHtml(pl, profile.stats, profile), t('PLAY ONLINE'));
   if (onlineState.rooms === null && !onlineState.busy && !onlineState.net) refreshRooms();
   const joined = !!onlineState.net;
   const balls = shop.items.filter(i => i.type === 'ball' && profile.inventory.includes(i.id));
@@ -2709,51 +2720,51 @@ function renderOnlineScreen() {
     ${renderBannersHtml()}
     <div class="cr-head">
       <div>
-        <h2 class="cr-title">CAREER · <span>PLAY ONLINE</span></h2>
-        <div class="cr-sub">1 Set · Golden Point · empty seats are filled by AI · Credits ×${eco.mult.online ?? 1}</div>
+        <h2 class="cr-title">${t('CAREER')} · <span>${t('PLAY ONLINE')}</span></h2>
+        <div class="cr-sub">${t('1 Set · Golden Point · empty seats are filled by AI · Credits ×{mult}', { mult: eco.mult.online ?? 1 })}</div>
       </div>
       <div class="cr-head-right">
         ${renderTopCreditsHtml(profile)}
-        <button type="button" class="cr-btn" id="cr-on-back">← ${joined ? 'Leave room' : 'Back to Hub'}</button>
+        <button type="button" class="cr-btn" id="cr-on-back">← ${joined ? t('Leave room') : t('Back to Hub')}</button>
       </div>
     </div>
     <div class="cr-body">
       <div class="cr-msg cr-msg-ok" id="cr-on-status" style="${onlineState.status ? '' : 'display:none'}">${onlineState.status}</div>
-      <button type="button" class="pl-start-btn" id="cr-on-start" ${onlineState.lobby && !onlineState.lobby.started ? '' : 'hidden'}>START MATCH</button>
+      <button type="button" class="pl-start-btn" id="cr-on-start" ${onlineState.lobby && !onlineState.lobby.started ? '' : 'hidden'}>${t('START MATCH')}</button>
       ${joined ? '' : `
-      <div class="pl-section-label">PUBLIC ROOMS <button type="button" class="cr-btn" id="cr-on-refresh" ${onlineState.busy ? 'disabled' : ''}>Refresh</button></div>
+      <div class="pl-section-label">${t('PUBLIC ROOMS')} <button type="button" class="cr-btn" id="cr-on-refresh" ${onlineState.busy ? 'disabled' : ''}>${t('Refresh')}</button></div>
       <div class="cr-tour-list">
         ${rooms.length ? rooms.map(r => `
           <div class="cr-tour-row">
             <div class="cr-tour-main">
-              <div class="cr-tour-name">${escapeHtml(r.host || 'Player')}'s room <span class="pl-meta-pill">${r.players - r.free}/${r.players} players</span></div>
-              <div class="cr-tour-info">${escapeHtml(venues[r.venue]?.name || '—')} · ${r.free} free seat${r.free === 1 ? '' : 's'} · ${escapeHtml(r.code)}</div>
+              <div class="cr-tour-name">${t("{host}'s room", { host: escapeHtml(r.host || 'Player') })} <span class="pl-meta-pill">${t('{taken}/{total} players', { taken: r.players - r.free, total: r.players })}</span></div>
+              <div class="cr-tour-info">${escapeHtml(venues[r.venue]?.name || '—')} · ${r.free === 1 ? t('1 free seat') : t('{count} free seats', { count: r.free })} · ${escapeHtml(r.code)}</div>
             </div>
-            <button type="button" class="cr-btn cr-btn-acc" data-join="${escapeHtml(r.code)}">Join</button>
-          </div>`).join('') : `<div class="cr-tour-info">${onlineState.busy ? 'Loading…' : 'No public rooms right now.'}</div>`}
+            <button type="button" class="cr-btn cr-btn-acc" data-join="${escapeHtml(r.code)}">${t('Join')}</button>
+          </div>`).join('') : `<div class="cr-tour-info">${onlineState.busy ? t('Loading…') : t('No public rooms right now.')}</div>`}
       </div>
 
-      <div class="pl-section-label">CREATE ROOM</div>
+      <div class="pl-section-label">${t('CREATE ROOM')}</div>
       <div class="pl-seg-row" id="cr-on-mode">
-        <button type="button" class="pl-seg-btn ${onlineState.players === 4 ? 'is-selected' : ''}" data-players="4">Doubles (2v2)</button>
-        <button type="button" class="pl-seg-btn ${onlineState.players === 2 ? 'is-selected' : ''}" data-players="2">Singles (1v1)</button>
+        <button type="button" class="pl-seg-btn ${onlineState.players === 4 ? 'is-selected' : ''}" data-players="4">${t('Doubles (2v2)')}</button>
+        <button type="button" class="pl-seg-btn ${onlineState.players === 2 ? 'is-selected' : ''}" data-players="2">${t('Singles (1v1)')}</button>
       </div>
       <div class="pl-seg-row" id="cr-on-vis">
-        <button type="button" class="pl-seg-btn ${onlineState.isPublic ? 'is-selected' : ''}" data-public="1">Public</button>
-        <button type="button" class="pl-seg-btn ${onlineState.isPublic ? '' : 'is-selected'}" data-public="0">Private</button>
+        <button type="button" class="pl-seg-btn ${onlineState.isPublic ? 'is-selected' : ''}" data-public="1">${t('Public')}</button>
+        <button type="button" class="pl-seg-btn ${onlineState.isPublic ? '' : 'is-selected'}" data-public="0">${t('Private')}</button>
       </div>
       <div class="cr-form-grid">
-        <label class="cr-field"><span class="cr-field-head">Venue</span>
+        <label class="cr-field"><span class="cr-field-head">${t('Venue')}</span>
           <select class="cr-select" id="cr-on-venue">${venues.map((v, i) => `<option value="${i}" ${i === onlineState.venueIdx ? 'selected' : ''}>${escapeHtml(v.name)} — ${escapeHtml(v.city)}</option>`).join('')}</select></label>
-        <label class="cr-field"><span class="cr-field-head">Match ball</span>
-          <select class="cr-select" id="cr-on-ball">${balls.map(b => `<option value="${b.id}" ${b.id === onlineState.ballId ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('')}</select></label>
+        <label class="cr-field"><span class="cr-field-head">${t('Match ball')}</span>
+          <select class="cr-select" id="cr-on-ball">${balls.map(b => `<option value="${b.id}" ${b.id === onlineState.ballId ? 'selected' : ''}>${escapeHtml(t(b.name))}</option>`).join('')}</select></label>
       </div>
-      <button type="button" class="cr-btn cr-btn-acc" id="cr-on-create">Create room</button>
+      <button type="button" class="cr-btn cr-btn-acc" id="cr-on-create">${t('Create room')}</button>
 
-      <div class="pl-section-label">JOIN BY CODE</div>
+      <div class="pl-section-label">${t('JOIN BY CODE')}</div>
       <div class="cr-foot-row" style="justify-content:flex-start;gap:8px">
-        <input type="text" class="cr-input" id="cr-on-code" maxlength="6" placeholder="ROOM CODE" value="${escapeHtml(onlineState.code)}" style="max-width:180px;text-transform:uppercase" />
-        <button type="button" class="cr-btn cr-btn-acc" id="cr-on-join">Join</button>
+        <input type="text" class="cr-input" id="cr-on-code" maxlength="6" placeholder="${t('ROOM CODE')}" value="${escapeHtml(onlineState.code)}" style="max-width:180px;text-transform:uppercase" />
+        <button type="button" class="cr-btn cr-btn-acc" id="cr-on-join">${t('Join')}</button>
       </div>`}
     </div>
   `;

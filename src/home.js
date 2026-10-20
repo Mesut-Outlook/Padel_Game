@@ -5,15 +5,16 @@ import { padText } from './padstyle.js';
 import { padDir, spatialFocus } from './padnav.js';
 import { loadProfile } from './career.js';
 import { toggleFullscreen } from './fullscreen.js';
+import { t } from './i18n.js';
 
 // ways to play, pictured on HOME (public/assets/howto/), each linking to its part of kontroller.html; ready = shown.
 const HOWTO = [
-  { img: 'pc-keyboard', to: 'keyboard', label: 'Computer + keyboard', ready: true },
-  { img: 'pc-controller', to: 'controller', label: 'Computer + Xbox / PlayStation controller', ready: true },
-  { img: 'tablet-touch', to: 'touch', label: 'Tablet touch screen', ready: true },
-  { img: 'phone-touch', to: 'touch', label: 'Phone touch screen', ready: true },
-  { img: 'tablet-controller', to: 'touch', label: 'Tablet + controller', ready: true },
-  { img: 'phone-controller', to: 'touch', label: 'Phone + controller', ready: true },
+  { img: 'pc-keyboard', to: 'keyboard', label: () => t('Computer + keyboard'), ready: true },
+  { img: 'pc-controller', to: 'controller', label: () => t('Computer + Xbox / PlayStation controller'), ready: true },
+  { img: 'tablet-touch', to: 'touch', label: () => t('Tablet touch screen'), ready: true },
+  { img: 'phone-touch', to: 'touch', label: () => t('Phone touch screen'), ready: true },
+  { img: 'tablet-controller', to: 'touch', label: () => t('Tablet + controller'), ready: true },
+  { img: 'phone-controller', to: 'touch', label: () => t('Phone + controller'), ready: true },
 ];
 
 let homeEl = null;
@@ -54,8 +55,8 @@ export function refreshHomeHints() {
   if (statusEl) {
     const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
     statusEl.textContent = gps.length > 0
-      ? `🎮 ${gps.length} controller(s) connected`
-      : '🎮 No controller detected';
+      ? t('🎮 {n} controller(s) connected', { n: gps.length })
+      : t('🎮 No controller detected');
   }
 }
 
@@ -63,8 +64,8 @@ export function renderHome() {
   if (!homeEl) return;
   const profile = safeLoadProfile();
   const careerSub = profile
-    ? `Continue — ${String(profile.player?.name || 'Player').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}`  // name is shown as text, never markup
-    : 'Your player, your road from club courts to the Premier Finals.';
+    ? t('Continue — {name}', { name: String(profile.player?.name || 'Player').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`) })  // name is shown as text, never markup
+    : t('Your player, your road from club courts to the Premier Finals.');
 
   homeEl.innerHTML = `
     <!-- Top-down court lines decoration -->
@@ -82,63 +83,63 @@ export function renderHome() {
         <div class="hm-tour-tag">MESUT PADEL TOUR</div>
       </div>
       <div class="hm-top-right">
-        <span class="hm-pad-hint" id="hm-pad-status">🎮 Checking controller…</span>
-        <span class="hm-dev">Developer: <b>Mesut</b></span>
+        <span class="hm-pad-hint" id="hm-pad-status">${t('🎮 Checking controller…')}</span>
+        <span class="hm-dev">${t('Developer: <b>Mesut</b>')}</span>
       </div>
     </header>
 
     <main class="hm-main">
-      <div class="hm-hero-title">SELECT GAME MODE</div>
-      <div class="hm-cards" role="region" aria-label="Game Modes">
+      <div class="hm-hero-title">${t('SELECT GAME MODE')}</div>
+      <div class="hm-cards" role="region" aria-label="${t('Game Modes')}">
         <!-- Card 1: FRIENDLY MATCH -->
         <button type="button" class="hm-card" id="hm-card-friendly" tabindex="0">
-          <div class="hm-card-badge">INSTANT PLAY</div>
+          <div class="hm-card-badge">${t('INSTANT PLAY')}</div>
           <div class="hm-card-icon">🎾</div>
-          <div class="hm-card-title">FRIENDLY MATCH</div>
-          <div class="hm-card-sub">Play now — solo vs AI, with friends on this computer, or online with a friend.</div>
-          <div class="hm-card-action">ENTER LOBBY →</div>
+          <div class="hm-card-title">${t('FRIENDLY MATCH')}</div>
+          <div class="hm-card-sub">${t('Play now — solo vs AI, with friends on this computer, or online with a friend.')}</div>
+          <div class="hm-card-action">${t('ENTER LOBBY →')}</div>
         </button>
 
         <!-- Card 2: CAREER -->
         <button type="button" class="hm-card is-primary" id="hm-card-career" tabindex="0">
-          <div class="hm-card-badge">${profile ? 'ACTIVE CAREER' : 'SINGLE PLAYER'}</div>
+          <div class="hm-card-badge">${profile ? t('ACTIVE CAREER') : t('SINGLE PLAYER')}</div>
           <div class="hm-card-icon">🏆</div>
-          <div class="hm-card-title">CAREER</div>
+          <div class="hm-card-title">${t('CAREER')}</div>
           <div class="hm-card-sub">${careerSub}</div>
-          <div class="hm-card-action">${profile ? 'CONTINUE CAREER →' : 'START CAREER →'}</div>
+          <div class="hm-card-action">${profile ? t('CONTINUE CAREER →') : t('START CAREER →')}</div>
         </button>
 
         <!-- Card 3: FRIENDS CUP -->
         <button type="button" class="hm-card is-passive" id="hm-card-cup" tabindex="0">
-          <div class="hm-card-badge is-notice">COMING SOON</div>
+          <div class="hm-card-badge is-notice">${t('COMING SOON')}</div>
           <div class="hm-card-icon">🌐</div>
-          <div class="hm-card-title">FRIENDS CUP</div>
-          <div class="hm-card-sub">Create a tournament, invite your friends, play at set times. Missing players? AI steps in.</div>
-          <div class="hm-card-action is-passive">Needs an online server — coming soon</div>
+          <div class="hm-card-title">${t('FRIENDS CUP')}</div>
+          <div class="hm-card-sub">${t('Create a tournament, invite your friends, play at set times. Missing players? AI steps in.')}</div>
+          <div class="hm-card-action is-passive">${t('Needs an online server — coming soon')}</div>
         </button>
       </div>
 
-      <div class="hm-howto" aria-label="Ways to play">
-        ${HOWTO.filter(h => h.ready).map(h => `<a class="hm-howto-item" href="kontroller.html#${h.to}" target="_blank" rel="noopener"><img src="assets/howto/${h.img}.webp" alt="${h.label}" width="640" height="482" loading="lazy"><span>${h.label}</span></a>`).join('')}
+      <div class="hm-howto" aria-label="${t('Ways to play')}">
+        ${HOWTO.filter(h => h.ready).map(h => `<a class="hm-howto-item" href="kontroller.html#${h.to}" target="_blank" rel="noopener"><img src="assets/howto/${h.img}.webp" alt="${h.label()}" width="640" height="482" loading="lazy"><span>${h.label()}</span></a>`).join('')}
       </div>
 
       <div class="hm-notice-toast" id="hm-cup-toast" hidden>
-        <span>Friends Cup requires an online tournament server. Coming soon in an upcoming update!</span>
+        <span>${t('Friends Cup requires an online tournament server. Coming soon in an upcoming update!')}</span>
       </div>
     </main>
 
     <footer class="hm-bottom-bar">
       <div class="hm-actions-row">
-        <button type="button" class="hm-btn" id="hm-btn-training" tabindex="0">🎓 Training</button>
-        <button type="button" class="hm-btn" id="hm-btn-settings" tabindex="0">⚙️ Settings</button>
-        <button type="button" class="hm-btn" id="hm-btn-controls" tabindex="0">⌨️ Controls</button>
-        <button type="button" class="hm-btn fs-btn-sync" id="hm-btn-fullscreen" tabindex="0" title="Fullscreen">⛶ Fullscreen</button>
-        ${profile ? '<button type="button" class="hm-btn" id="hm-btn-profile" tabindex="0">👤 Profile</button>' : ''}
+        <button type="button" class="hm-btn" id="hm-btn-training" tabindex="0">🎓 ${t('Training')}</button>
+        <button type="button" class="hm-btn" id="hm-btn-settings" tabindex="0">⚙️ ${t('Settings')}</button>
+        <button type="button" class="hm-btn" id="hm-btn-controls" tabindex="0">⌨️ ${t('Controls')}</button>
+        <button type="button" class="hm-btn fs-btn-sync" id="hm-btn-fullscreen" tabindex="0" title="${t('Fullscreen')}">⛶ ${t('Fullscreen')}</button>
+        ${profile ? `<button type="button" class="hm-btn" id="hm-btn-profile" tabindex="0">👤 ${t('Profile')}</button>` : ''}
         <a class="hm-privacy" href="privacy.html" target="_blank" rel="noopener">Privacy</a>
         <a class="hm-privacy" href="mailto:contact@padellegends.eu">✉ contact@padellegends.eu</a>
       </div>
-      <div class="hm-footer-hint" data-pad-hint="←/→ Move · A Select · Start Settings">
-        ${padText('←/→ Move · A Select · Start Settings')}
+      <div class="hm-footer-hint" data-pad-hint="${t('←/→ Move · A Select · Start Settings')}">
+        ${padText(t('←/→ Move · A Select · Start Settings'))}
       </div>
     </footer>
   `;
