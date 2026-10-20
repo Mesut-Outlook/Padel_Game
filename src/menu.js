@@ -15,6 +15,7 @@ import { loadSettings, saveSettings } from './settings.js';
 import { toggleFullscreen } from './fullscreen.js';
 import { charCard } from './charcard.js';
 import { t, N_ } from './i18n.js';
+import { loadPicks, savePicks } from './friendlypicks.js';
 
 // the stat pills below call t(name.toUpperCase()); these make the keys findable
 const STAT_PILL_NAMES = [N_('SPEED'), N_('POWER'), N_('CONTROL'), N_('VOLLEY'), N_('SMASH'), N_('STAMINA')];
@@ -53,6 +54,21 @@ export const disposeMenu = () => disposeFn?.();
 export function initMenu() {
   const menuEl = $('menu');
   if (!menuEl) return;
+
+  // Restore friendly picks before building wizard
+  const savedPicks = loadPicks(typeof window !== 'undefined' ? window.localStorage : null, {
+    charCount: characters.length,
+    venueCount: venues.length,
+    racketCount: rackets.length,
+  });
+  if (savedPicks.char != null && $('char')) $('char').value = String(savedPicks.char);
+  if (savedPicks.venue != null && $('venue')) $('venue').value = String(savedPicks.venue);
+  if (savedPicks.racket != null && $('racket')) $('racket').value = String(savedPicks.racket);
+  if (savedPicks.sets != null && $('sets')) $('sets').value = savedPicks.sets;
+  if (savedPicks.golden != null && $('golden')) $('golden').value = savedPicks.golden;
+  if (savedPicks.ai != null && $('ai')) $('ai').value = savedPicks.ai;
+  if (savedPicks.players != null && $('mode')) $('mode').value = String(savedPicks.players);
+  if (savedPicks.humans != null && $('humans')) $('humans').value = String(savedPicks.humans);
 
   // Keep the legacy .card hidden so original form controls stay in DOM as single source of truth
   const oldCard = menuEl.querySelector('.card');
@@ -262,6 +278,55 @@ export function initMenu() {
   let selectedCharIdx = parseInt($('char')?.value) || 0;
   let selectedVenueIdx = parseInt($('venue')?.value) || 0;
   let selectedRacketIdx = parseInt($('racket')?.value) || 0;
+
+  // Friendly match selections persistence (padel.friendly.v1)
+  function persistFriendly(patch = {}) {
+    const current = {
+      char: selectedCharIdx,
+      venue: selectedVenueIdx,
+      racket: selectedRacketIdx,
+      sets: $('sets')?.value || '3',
+      golden: $('golden')?.value || '1',
+      ai: $('ai')?.value || 'club',
+      humans: parseInt($('humans')?.value, 10) || 1,
+      players: parseInt($('mode')?.value, 10) || 4,
+      ...patch,
+    };
+    savePicks(current, typeof window !== 'undefined' ? window.localStorage : null);
+  }
+
+  function syncFriendlySegments() {
+    const modeVal = $('mode')?.value || '4';
+    shell.querySelectorAll('#pl-mode-seg [data-mode]').forEach(b => {
+      b.classList.toggle('is-selected', b.dataset.mode === modeVal);
+    });
+    const btn3 = shell.querySelector('#pl-humans-seg [data-val="3"]');
+    const btn4 = shell.querySelector('#pl-humans-seg [data-val="4"]');
+    if (btn3 && btn4) {
+      btn3.disabled = modeVal === '2';
+      btn4.disabled = modeVal === '2';
+    }
+
+    const humansVal = $('humans')?.value || '1';
+    shell.querySelectorAll('#pl-humans-seg .pl-seg-btn').forEach(b => {
+      b.classList.toggle('is-selected', b.dataset.val === humansVal);
+    });
+
+    const setsVal = $('sets')?.value || '3';
+    shell.querySelectorAll('#pl-sets-seg .pl-seg-btn').forEach(b => {
+      b.classList.toggle('is-selected', b.dataset.val === setsVal);
+    });
+
+    const goldenVal = $('golden')?.value || '1';
+    shell.querySelectorAll('#pl-golden-seg .pl-seg-btn').forEach(b => {
+      b.classList.toggle('is-selected', b.dataset.val === goldenVal);
+    });
+
+    const aiVal = $('ai')?.value || 'club';
+    shell.querySelectorAll('#pl-ai-seg .pl-seg-btn').forEach(b => {
+      b.classList.toggle('is-selected', b.dataset.val === aiVal);
+    });
+  }
 
   // 3D Preview Engine
   const previewCanvas = shell.querySelector('#pl-preview-canvas');
@@ -503,6 +568,7 @@ export function initMenu() {
         card.classList.add('is-selected');
         updateAvatarPreview(idx, selectedRacketIdx);
         updateSummary();
+        persistFriendly({ char: idx });
       };
       grid.appendChild(card);
     });
@@ -561,6 +627,7 @@ export function initMenu() {
         shell.querySelectorAll('.pl-venue-card').forEach(c => c.classList.remove('is-selected'));
         card.classList.add('is-selected');
         updateSummary();
+        persistFriendly({ venue: idx });
       };
       grid.appendChild(card);
     });
@@ -613,6 +680,7 @@ export function initMenu() {
         card.classList.add('is-selected');
         updateAvatarPreview(selectedCharIdx, idx);
         updateSummary();
+        persistFriendly({ racket: idx });
       };
       grid.appendChild(card);
     });
@@ -651,10 +719,12 @@ export function initMenu() {
       // In singles mode, disable 3 and 4 players
       const btn3 = shell.querySelector('#pl-humans-seg [data-val="3"]');
       const btn4 = shell.querySelector('#pl-humans-seg [data-val="4"]');
+      let humansVal = parseInt($('humans')?.value, 10) || 1;
       if (btn3 && btn4) {
         btn3.disabled = mode === '2';
         btn4.disabled = mode === '2';
-        if (mode === '2' && parseInt($('humans')?.value) > 2) {
+        if (mode === '2' && humansVal > 2) {
+          humansVal = 1;
           $('humans').value = '1';
           $('humans').dispatchEvent(new Event('change'));
           shell.querySelectorAll('#pl-humans-seg .pl-seg-btn').forEach(b => b.classList.toggle('is-selected', b.dataset.val === '1'));
@@ -662,6 +732,7 @@ export function initMenu() {
       }
       syncSides();
       updateSummary();
+      persistFriendly({ players: parseInt(mode, 10), humans: humansVal });
     };
   });
 
@@ -672,6 +743,7 @@ export function initMenu() {
       shell.querySelectorAll('#pl-humans-seg .pl-seg-btn').forEach(b => b.classList.remove('is-selected'));
       btn.classList.add('is-selected');
       syncSides();
+      persistFriendly({ humans: parseInt(val, 10) });
     };
   });
 
@@ -815,6 +887,7 @@ export function initMenu() {
         shell.querySelectorAll(`#${containerId} .pl-seg-btn`).forEach(b => b.classList.remove('is-selected'));
         btn.classList.add('is-selected');
         if (inputId === 'speed') saveSettings({ speed: parseFloat(val) });
+        else if (['sets', 'golden', 'ai'].includes(inputId)) persistFriendly({ [inputId]: val });
         updateSummary();
       };
     });
@@ -853,6 +926,8 @@ export function initMenu() {
   populateCharGrid('all');
   populateVenueGrid('all');
   populateRacketGrid();
+  syncFriendlySegments();
+  syncSides();
   updateAvatarPreview(selectedCharIdx, selectedRacketIdx);
   updateSummary();
 

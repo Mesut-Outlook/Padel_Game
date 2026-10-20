@@ -50,7 +50,7 @@ export const padLegend = (kind) => `<div class="hp-legend">
     ${PAD.filter(p => p[5]).map(([b, c, tLabel, , , txt]) => `<div class="pk" data-b="${b}"><b class="${c}">${tLabel ? padText(tLabel, kind) : { 8: '⧉', 9: '≡', 12: '↑', 13: '↓' }[b]}</b>${padText(t(txt), kind)}</div>`).join('')}
   </div>`;
 
-const STORE = 'padel.helpHidden', POS_STORE = 'padel.helpPos';
+const STORE = 'padel.helpHidden', POS_STORE = 'padel.helpPos.v2';  // v2 (2026-10-21): help moved to top-right; every saved corner starts over once
 const CORNERS = { bl: ['↙', N_('bottom-left')], tl: ['↖', N_('top-left')], tr: ['↗', N_('top-right')], br: ['↘', N_('bottom-right')] };
 
 export function mountKeyHelp(el) {
@@ -71,12 +71,12 @@ export function mountKeyHelp(el) {
       <div class="hk-main pad-only">${padSvg('xbox')}${padLegend('xbox')}</div>
       <div class="hk-foot"><span class="kb-only">${t('Hold <b>A</b>/<b>D</b> or <b>←</b>/<b>→</b> while hitting = aim · <b>Esc</b>: pause · ⛶ / <b>F11</b>: fullscreen · ')}</span><span class="pad-only">${t('Phone or tablet: pair an Xbox or PlayStation controller over Bluetooth, then press any button · 2 players: keyboard + a pad, or a pad each · ')}</span><a href="kontroller.html" target="_blank" rel="noopener">${t('all controls →')}</a></div>
     </div>`;
-  // phones / tablets start top-left: bottom-left is under the thumb, and with a pad the touch buttons up there are hidden
-  const home = isTouch() ? 'tl' : 'bl';
+  // default corner: top-right on desktop and touch (clear of top-left scoreboard)
+  const home = 'tr';
   let hidden = false, pos = home;
   try { hidden = localStorage.getItem(STORE) === '1'; pos = localStorage.getItem(POS_STORE) || home; } catch { /* storage blocked: defaults */ }
   const place = (p) => {
-    pos = CORNERS[p] ? p : 'bl'; el.dataset.pos = pos;
+    pos = CORNERS[p] ? p : 'tr'; el.dataset.pos = pos;
     el.querySelectorAll('.hk-pos i').forEach(i => i.classList.toggle('cur', i.dataset.pos === pos));
     try { localStorage.setItem(POS_STORE, pos); } catch { /* not kept */ }
   };
