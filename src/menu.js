@@ -766,7 +766,11 @@ export function initMenu() {
   }
 
   setWizardWhereFn = (where, room) => setWhere(where, room);
-  setWizardRoomFn = (code) => updateRoomDisplay(code);
+  setWizardRoomFn = (code) => {  // a new room: open the Match step, the only one that shows the code and invite link
+    const fresh = String(code || '').toUpperCase().slice(0, 6) !== currentRoomCode;
+    updateRoomDisplay(code);
+    if (fresh) switchStep(3);
+  };
 
   // Home & Fullscreen buttons
   shell.querySelectorAll('#pl-home-btn, #pl-home-mini').forEach(b => { b.onclick = () => { location.hash = '#home'; }; });
