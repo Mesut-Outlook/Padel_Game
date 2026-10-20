@@ -944,6 +944,13 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
     padding: 6px 10px;
     line-height: 1.35;
   }
+  /* phones in landscape: one thin line, so the player cards above keep the room */
+  @media (max-height: 500px) and (orientation: landscape) {
+    .cr-foot { padding-top: 4px; }
+    .cr-storage-note { font-size: 10px; padding: 2px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cr-head-tpl .cr-sub { display: none; }
+    .cr-head .cr-btn { padding: 4px 10px; font-size: 13px; }
+  }
   .cr-btn {
     appearance: none;
     border: 1px solid var(--border);

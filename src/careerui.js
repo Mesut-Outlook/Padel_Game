@@ -183,7 +183,7 @@ let shopErrors = {}; // { [itemId]: string }
 
 // Creator state
 let creatorMode = 'create'; // 'create' | 'edit'
-let creatorTemplate = characters[0];
+let creatorTemplate = characters[Math.floor(Math.random() * characters.length)];  // a different first pick on every visit
 let creatorState = null;
 let pendingLook = null; // look from the creator, waiting for the level step
 let lvl = { mode: 'choose', answers: [null, null, null, null, null], input: '', error: '', start: null };
@@ -587,7 +587,7 @@ function renderTemplatesScreen() {
 
   careerPanel.innerHTML = `
     ${renderBannersHtml()}
-    <div class="cr-head">
+    <div class="cr-head cr-head-tpl">
       <div>
         <h2 class="cr-title">${t('NEW CAREER · <span>CHOOSE A TEMPLATE</span>')}</h2>
         <div class="cr-sub">${t('Pick any of the {n} players as your starting template, then customize your look.', { n: characters.length })}</div>
