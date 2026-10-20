@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newMatch, onHit, onContact, point, scoreText, scoreBoard, serviceBox, servePosition, serverId } from '../src/rules.js';
+import { newMatch, onHit, onContact, point, scoreText, scoreBoard, serviceBox, servePosition, serverId, receiverId } from '../src/rules.js';
 
 const fl = (side, x, z) => ({ kind: 'floor', side, p: [x, 0.03, z] });
 
@@ -176,4 +176,15 @@ test('rally scoring to 16: every rally is a point, serve passes every 4 points, 
   assert.equal(b.label, 'RALLY TO 16');
   assert.deepEqual(b.sets, []);
   assert.equal(scoreText(m).pts, '16-9');
+});
+
+test('receiverId: the opposite team returns, alternating each point; singles has one receiver', () => {
+  const m = newMatch();
+  assert.equal(serverId(m), 0);
+  assert.equal(receiverId(m), 2);
+  m.points = [1, 0];
+  assert.equal(receiverId(m), 3);
+  const s = newMatch({ players: 2 });
+  s.points = [1, 0];
+  assert.equal(receiverId(s), 2);
 });

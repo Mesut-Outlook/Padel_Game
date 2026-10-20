@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import venues from '../data/venues.json';
 import characters from '../data/characters.json';
 import rackets from '../data/rackets.json';
-import { newWorld, stepWorld, snapshot } from './game.js';
-import { scoreText } from './rules.js';
+import { newWorld, stepWorld, snapshot, serveX } from './game.js';
+import { scoreText, serverId } from './rules.js';
 import { buildVenue, buildBall } from './court.js';
 import { createAvatar } from './player.js';
 import { createCameraRig } from './camera.js';
@@ -11,6 +11,7 @@ import { createReplay } from './replay.js';
 import { aiInput } from './ai.js';
 import { readLocal, readGamepad, consumePressed, clearPressed, localControl } from './input.js';
 import { connect } from './net.js';
+import { debugFrame } from './debug.js';
 import { serverUrl, NO_SERVER, allowServer, NOT_CONNECTED } from './serverurl.js';
 import { track, trackOnce } from './track.js';
 import { predict } from './physics.js';
@@ -1032,7 +1033,10 @@ function loop(now) {
   }
   updateSmashBanner();
   // landing marker: where the ball will bounce next (offline only; online uses ball shadow)
-  if (world && !net && world.ball.live && !replay.playing) {
+  const srvAim = world && (world.state === 'serve' || world.state === 'toss') ? serverId(world.match) : -1;
+  if (!net && !replay.playing && humans.includes(srvAim)) {  // a human serving: show where the serve is aimed (hold left/right)
+    marker.visible = true; marker.position.set(serveX(world.match, world.serveAim), 0.01, (srvAim < 2 ? -1 : 1) * 5.6);
+  } else if (world && !net && world.ball.live && !replay.playing) {
     const c = predict(world.ball, 2).contacts.find(c => c.kind === 'floor');
     marker.visible = !!c; if (c) marker.position.set(c.p[0], 0.01, c.p[2]);
   } else if (marker) marker.visible = false;
@@ -1074,6 +1078,7 @@ function loop(now) {
   if (shake > 0) { shake -= dt; shakeOff.set(Math.random() - 0.5, Math.random() - 0.5, 0).multiplyScalar(shake * 0.5); }
   camera.position.add(shakeOff);
   renderer.render(scene, camera);
+  debugFrame(now, renderer, net);  // read right after the render: info resets on the next one
   camera.position.sub(shakeOff);
   requestAnimationFrame(loop);
 }

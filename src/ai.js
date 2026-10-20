@@ -3,7 +3,7 @@
 // one teammate takes it, the other holds formation; shot choice and aim follow padel tactics.
 // ponytail: per-world state in a WeakMap (server may run many matches); heuristics only, no search/learning.
 import { predict, REACH, SPEED } from './game.js';
-import { serverId } from './rules.js';
+import { serverId, receiverId, serviceBox } from './rules.js';
 
 const LV = {
   //          reaction s, pos error m, decision quality, aim noise, smash prob, unforced-error (skipped ball) prob
@@ -69,6 +69,7 @@ function analyze(w, s, T) {
   let best = Infinity;
   for (const pl of w.players) {
     if (pl.team !== T || !pl.active) continue;
+    if (r.phase === 'serveFlight' && pl.id !== receiverId(w.match)) continue;  // the serve is the receiver's alone
     const sel = an.sel[pl.id] = select(an, pl);
     let cost;
     if (sel) {
@@ -185,7 +186,8 @@ export function aiInput(w, pid, level = 'club') {
     if (st.serveAt == null) st.serveAt = w.t + L.serve[0] + rnd() * (L.serve[1] - L.serve[0]);
     if (w.t >= st.serveAt) {
       out.swing = rnd() < 0.3 ? 'slice' : 'serve';
-      out.aim = clamp((L.q >= 0.85 ? (rnd() < 0.5 ? 0.9 : -0.4) : rnd() * 1.2 - 0.4) + gauss() * L.aim * 0.3, -0.5, 1);
+      // +1 = wide, -0.5 = toward the T; serve aim is world x, so flip it for the box on the -x side
+      out.aim = serviceBox(m).xSign * clamp((L.q >= 0.85 ? (rnd() < 0.5 ? 0.9 : -0.4) : rnd() * 1.2 - 0.4) + gauss() * L.aim * 0.3, -0.5, 1);
     }
     return out;
   }

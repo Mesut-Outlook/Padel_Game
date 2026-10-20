@@ -103,6 +103,10 @@ function originOk(req) {
   } catch { return false; }
 }
 
+// one status line a minute for journalctl: counts and timings only, never an IP, a name or a room code
+export const statusLine = ({ rooms, clients, tickAvg, tickMax, cpu, rss }) =>
+  `status rooms=${rooms} clients=${clients} tick_avg=${tickAvg.toFixed(2)}ms tick_max=${tickMax.toFixed(2)}ms cpu=${cpu.toFixed(1)}% rss=${Math.round(rss / 1048576)}MB`;
+
 export function startServer(port, limits = {}) {
   const lim = { ...LIMITS, ...limits };
   const httpServer = http.createServer((req, res) => {
@@ -122,6 +126,19 @@ export function startServer(port, limits = {}) {
     for (const ws of wss.clients) { if (ws.alive === false) ws.terminate(); else { ws.alive = false; ws.ping(); } }
   }, 30000);
 
+  // tick timing over the current minute (rooms that have not started do no work, so they are not counted)
+  let tSum = 0, tN = 0, tMax = 0, lastCpu = process.cpuUsage(), lastWall = performance.now();
+  const tickAvg = () => tN ? Math.round(tSum / tN * 100) / 100 : 0;
+  function status() {
+    const clients = wss.clients.size;
+    if (clients || rooms.size) {
+      const cu = process.cpuUsage(lastCpu), wall = performance.now() - lastWall;
+      console.log(statusLine({ rooms: rooms.size, clients, tickAvg: tickAvg(), tickMax: tMax, cpu: wall > 0 ? (cu.user + cu.system) / 1000 / wall * 100 : 0, rss: process.memoryUsage.rss() }));
+    }
+    lastCpu = process.cpuUsage(); lastWall = performance.now(); tSum = tN = tMax = 0;
+  }
+  const statusTimer = setInterval(status, 60000);
+
   function newCode() {
     let code;
     do code = Array.from({ length: 6 }, () => CODE_CHARS[randomInt(CODE_CHARS.length)]).join(''); while (rooms.has(code));
@@ -135,7 +152,10 @@ export function startServer(port, limits = {}) {
       world: newWorld({ players, match: { sets: cfg.sets, goldenPoint: cfg.goldenPoint, starPoint: cfg.starPoint, superTiebreak: cfg.superTiebreak }, stats: {}, rackets: {}, outdoor: cfg.outdoor }),
       chars: {}, looks: {}, names: {}, timer: null,
     };
-    room.timer = setInterval(() => tick(room), 1000 / 60);
+    room.timer = setInterval(() => {
+      const t0 = performance.now(); tick(room);
+      if (room.started) { const d = performance.now() - t0; tSum += d; tN++; if (d > tMax) tMax = d; }
+    }, 1000 / 60);
     rooms.set(code, room);
     return room;
   }
@@ -180,7 +200,8 @@ export function startServer(port, limits = {}) {
       try { onMessage(m); } catch (e) { console.error('bad message', e); }  // one bad message never takes the server down
     });
     function onMessage(m) {
-      if (m.type === 'list') {  // public lobbies that still have a free seat
+      if (m.type === 'ping') ws.send(JSON.stringify({ type: 'pong', t: Number.isFinite(m.t) ? m.t : null, tick: tickAvg() }));
+      else if (m.type === 'list') {  // public lobbies that still have a free seat
         const open = [...rooms.values()].filter(r => r.cfg.public && !r.started && r.clients.size < r.seats.length);
         ws.send(JSON.stringify({ type: 'rooms', rooms: open.map(r => ({ code: r.code, players: r.seats.length, venue: r.cfg.venue, free: r.seats.length - r.clients.size, host: r.cfg.host })) }));
       } else if (m.type === 'join') {
@@ -243,7 +264,7 @@ export function startServer(port, limits = {}) {
   // HOST=127.0.0.1 when a tunnel is the only way in (otherwise every device on the Wi-Fi can reach the port too)
   return new Promise(resolve => httpServer.listen(port, process.env.HOST, () => resolve({
     port: httpServer.address().port, rooms,
-    close: () => new Promise(done => { clearInterval(heartbeat); for (const r of rooms.values()) clearInterval(r.timer); for (const c of wss.clients) c.terminate(); wss.close(); httpServer.close(done); }),
+    close: () => new Promise(done => { clearInterval(heartbeat); clearInterval(statusTimer); for (const r of rooms.values()) clearInterval(r.timer); for (const c of wss.clients) c.terminate(); wss.close(); httpServer.close(done); }),
   })));
 }
 

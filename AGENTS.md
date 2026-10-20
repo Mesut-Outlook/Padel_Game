@@ -6,6 +6,7 @@ Read `CLAUDE.md` — it is the shared guide for every agent (Claude, Antigravity
 2. Run `npm test` after any change; add a test for new rules or physics.
 3. Claude Opus reviews Antigravity work: put task results in `agents/reports/<task-id>.md` and list changed files there.
 4. Never copy code or assets from commercial games; rea is for behaviour analysis only.
+5. Roles (user, 2026-10-19 and 2026-10-21): Claude Opus is the manager and senior developer. Work Antigravity can do goes to Antigravity (task file in `agents/tasks/`); Claude Sonnet 5.5 subagents take well-specified modules and Claude Haiku 5.5 subagents take data or mechanical edits whenever useful. Opus keeps game rules, physics, shared client/server code and server work, reviews everything, and is the only one who commits and pushes.
 
 ## Task Status
 
@@ -34,3 +35,4 @@ Read `CLAUDE.md` — it is the shared guide for every agent (Claude, Antigravity
 | `agy-21` | Telefon/tablet + Xbox/PS kumandası: pad varken dokunmatik kontroller gizli, ekran kararmaz, sesi aç rozeti, uygulama modu (manifest) | `agents/reports/agy-21-mobile-gamepad.md` | Completed, Opus reviewed (the `createFx` import was dropped — every match start crashed; duplicate audio-unlock listeners removed) |
 | `agy-22` | Çok dil (8 dil), aşama 2: bütün arayüz metinlerini `t()` / `data-i18n` ile sar (`src/i18n.js`) | `agents/reports/agy-22-i18n-strings.md` | Completed, Opus reviewed (776 `t()` + 155 `data-i18n*`, wording kept; review: the coach tip had numbers inside the sentence, so `coachTip` now also returns `msg` template pieces — translated by `coachLine` in careerui.js) |
 | `agy-23` | Gerçek insan görünümlü seyirciler (16 görünüş, 11'i kadın) + stadyum koltukları + 14 ülke bayrağı (`src/crowdatlas.js`, `crowdplan.js`, `flags.js`) | `agents/reports/agy-23-crowd.md` | Completed, Opus reviewed (debug hooks `?match=`, `?nocrowd`, `window.takeScreenshot/measureFps/switchVenue` removed from main.js/splash.js; the atlas renderer now drops its WebGL context; the atlas takes ~5 s on HD 620, the old crowd shows meanwhile) |
+| `agy-24` | Skor tablosu sol üst, yardım sağ üst, kamera rozeti sağ alt + Friendly seçimleri hatırlansın (`padel.friendly.v1`) | `agents/reports/agy-24-hud-layout-remember-picks.md` | Assigned 2026-10-21 |

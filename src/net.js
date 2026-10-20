@@ -1,4 +1,5 @@
 // Online client: joins a room on the authoritative server, sends inputs, buffers snapshots for smooth rendering.
+import { debugOn } from './debug.js';
 export function connect({ url, code, cfg, char, stats, racket, onLobby, onError, ...extra }) {  // extra: public, name, look, shoes, ball, bag
   const ws = new WebSocket(url);
   const net = { seat: null, lobby: null, snaps: [], events: [], score: null, winner: null, ws };
@@ -8,6 +9,7 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError,
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
     if (m.type === 'seat') net.seat = m.seat;
+    else if (m.type === 'pong') { net.rtt = performance.now() - m.t; net.srvTick = m.tick; }
     else if (m.type === 'lobby') { net.lobby = m; onLobby?.(m); }
     else if (m.type === 'error') onError?.(m.msg);
     else if (m.type === 'state') {
@@ -18,6 +20,8 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError,
       net.score = m.score; net.winner = m.winner;
     }
   };
+  // debug panel only: RTT + the server's tick time
+  if (debugOn()) { const iv = setInterval(() => ws.readyState === 1 ? ws.send(JSON.stringify({ type: 'ping', t: performance.now() })) : ws.readyState > 1 && clearInterval(iv), 2000); }
   let lastSent = '';
   net.send = (inp) => {
     if (ws.readyState !== 1) return;

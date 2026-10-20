@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
-import { startServer } from '../server/server.js';
+import { startServer, statusLine } from '../server/server.js';
 import { readFileSync } from 'node:fs';
 
 const ROSTER = JSON.parse(readFileSync(new URL('../data/characters.json', import.meta.url))).length;
@@ -312,6 +312,26 @@ test('a flood of messages from one socket is cut at the per-second limit', async
     assert.equal(answers, 3);
     a.ws.close();
   } finally { await srv.close(); }
+});
+
+test('ping gets a pong with the echoed t and the tick time; a non-numeric t is not echoed', async () => {
+  const srv = await startServer(0);
+  try {
+    const a = client(srv.port);
+    let p = a.next('pong'); await a.send({ type: 'ping', t: 123.5 });
+    const m = await p;
+    assert.equal(m.t, 123.5);
+    assert.equal(typeof m.tick, 'number');
+    p = a.next('pong'); await a.send({ type: 'ping', t: '<b>x</b>' });
+    assert.equal((await p).t, null);
+    a.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('the status line holds counts and timings only', () => {
+  const line = statusLine({ rooms: 2, clients: 3, tickAvg: 0.456, tickMax: 3.2, cpu: 4.25, rss: 80 * 1048576 });
+  assert.equal(line, 'status rooms=2 clients=3 tick_avg=0.46ms tick_max=3.20ms cpu=4.3% rss=80MB');
+  assert.doesNotMatch(line, /\d+\.\d+\.\d+\.\d+|::/);
 });
 
 test('five wrong room codes close the socket (no code guessing)', async () => {

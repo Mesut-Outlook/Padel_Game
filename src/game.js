@@ -1,6 +1,6 @@
 // Shared match simulation (client offline + authoritative server). No rendering here.
 import { newBall, stepBall, aimVelocity, predict, contraVelocity } from './physics.js';
-import { newMatch, onHit, onContact, servePosition, serviceBox, serverId } from './rules.js';
+import { newMatch, onHit, onContact, servePosition, serviceBox, serverId, receiverId } from './rules.js';
 
 export const REACH = 1.35, MAX_HIT_H = 2.9, SPEED = 5.2;
 // Energy 0..1: running and strokes drain it (long rallies ever faster, low stamina faster), points and changeover
@@ -64,16 +64,13 @@ export function newWorld(opts = {}) {
 }
 
 function resetPositions(w) {
-  const m = w.match, sid = serverId(m), [sx, sz] = servePosition(m), box = serviceBox(m);
+  const m = w.match, sid = serverId(m), rid = receiverId(m), [sx, sz] = servePosition(m), box = serviceBox(m);
   const singles = m.opts.players === 2;
   for (const pl of w.players) {
     const zs = pl.team === 0 ? 1 : -1;
     if (pl.id === sid) pl.p = [sx, sz];
     else if (pl.team === w.players[sid].team) pl.p = [-sx, zs * 3.5];                 // server's partner at net
-    else {
-      const receiver = singles || (pl.id % 2) === ((w.match.points[0] + w.match.points[1]) % 2 === 0 ? 0 : 1);
-      pl.p = receiver ? [box.xSign * 2.6, zs * 9.3] : [-box.xSign * 2.4, zs * 8.2];
-    }
+    else pl.p = pl.id === rid ? [box.xSign * 2.6, zs * 9.3] : [-box.xSign * 2.4, zs * 8.2];
     if (singles) pl.p[0] = pl.id === sid ? sx : box.xSign * 2.6;
     pl.f = pl.team === 0 ? Math.PI : 0; pl.swing = null; pl.want = null; pl.anim = 'idle';
   }
@@ -102,6 +99,12 @@ function autoShot(w, pl) {
 }
 
 function gauss() { return (Math.random() + Math.random() + Math.random() - 1.5) / 1.5; }
+
+// serve aim in world x (same as every other shot: +1 = toward +x): from near the T (0.4 m) to beside the side wall (4.2 m)
+export function serveX(m, aim = 0) {
+  const xs = serviceBox(m).xSign;
+  return xs * Math.max(0.4, Math.min(4.2, xs * (xs * 2.2 + aim * 1.7)));
+}
 
 function strike(w, pl, kind, aimX = 0) {
   const b = w.ball, s = SHOTS[kind === 'serve' && pl.want === 'slice' ? 'serveSlice' : kind];
@@ -144,8 +147,7 @@ function strike(w, pl, kind, aimX = 0) {
 
   let tx, tz;
   if (kind === 'serve') {
-    const box = serviceBox(w.match);
-    tx = box.xSign * (1.4 + aimX * 1.2) + gauss() * err * 0.5;
+    tx = serveX(w.match, aimX) + gauss() * err * 0.5;
     tz = dir * (depth + gauss() * err * 0.5);
   } else {
     tx = Math.max(-4.6, Math.min(4.6, aimX * 3.8 + gauss() * err));
@@ -254,6 +256,7 @@ export function stepWorld(w, inputs, dt) {
     const s = w.players[serverId(w.match)];
     w.ball.p = serveBall(s);
     s.anim = 'serveReady';
+    w.serveAim = inputs[s.id]?.aim || 0;  // for the aim marker
     if (s.want) {  // let go of the ball: a padel serve is struck after it bounces, below the waist
       w.state = 'toss'; w.toss = { want: s.want, aim: s.aim || inputs[s.id]?.aim || 0, bounced: false, t: 0 };
       Object.assign(w.ball, { v: [0, 0, 0], w: [0, 0, 0], live: true });
@@ -264,6 +267,8 @@ export function stepWorld(w, inputs, dt) {
   if (w.state === 'toss') {
     const s = w.players[serverId(w.match)], b = w.ball, vy = b.v[1], tz = w.toss;
     s.anim = 'serveToss'; s.want = null;
+    if (inputs[s.id]?.aim) tz.aim = inputs[s.id].aim;  // the server keeps aiming until the racket meets the ball
+    w.serveAim = tz.aim;
     stepBall(b, dt);  // contact events ignored: the dropped ball is not in play yet
     tz.t += dt;
     if (vy < 0 && b.v[1] > 0) tz.bounced = true;
@@ -289,7 +294,8 @@ export function stepWorld(w, inputs, dt) {
     if (!pl.want || pl.swing) continue;
     const onSide = (pl.team === 0 ? b.p[2] > -0.3 : b.p[2] < 0.3);
     const r = w.match.rally;
-    const notMine = r.bouncesSinceHit === 0 && (r.lastHitTeam === pl.team || r.phase === 'serveFlight'); // never volley the serve
+    const notMine = (r.bouncesSinceHit === 0 && (r.lastHitTeam === pl.team || r.phase === 'serveFlight'))  // never volley the serve
+      || (r.phase === 'serveFlight' && pl.id !== receiverId(w.match));  // only the receiver returns it
     const now = d < 0.8 || !closing || pl.wantT < 0.05 || (b.v[1] < 0 && b.p[1] < 0.45);
     if (onSide && !notMine && reachable(pl, b) && now) strike(w, pl, SHOTS[pl.want] ? pl.want : autoShot(w, pl), pl.aim || inputs[pl.id]?.aim || 0);
   }

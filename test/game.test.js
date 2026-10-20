@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newWorld, stepWorld, snapshot } from '../src/game.js';
+import { newWorld, stepWorld, snapshot, serveX } from '../src/game.js';
+import { receiverId } from '../src/rules.js';
 import { toWorld } from '../src/input.js';
 
 // naive bots: chase ball x, swing always -> match must progress and score points without throwing
@@ -374,4 +375,64 @@ test('key E (edge) asks to eat', async () => {  // fresh module with a fake wind
   down({ code: 'KeyE' });
   assert.equal(readKeyboard(0).eat, true);
   assert.equal(readKeyboard(0).eat, undefined);
+});
+
+// a served ball that has bounced in the box, drifting past player `pid` on team 1's side
+function serveReturn(pid) {
+  const w = newWorld();
+  w.state = 'play';
+  Object.assign(w.match.rally, { phase: 'serveFlight', lastHitTeam: 0, bouncesSinceHit: 1 });
+  for (const p of w.players) p.p = [p.id === pid ? 0 : 4.5, p.team === 0 ? 9 : -9];
+  Object.assign(w.ball, { p: [0.6, 1.0, -6], v: [-1, 0, 0], w: [0, 0, 0], live: true });
+  w.players[pid].p = [0, -6];
+  let hit = null;
+  for (let i = 0; i < 20 && !hit; i++) {
+    stepWorld(w, { [pid]: { move: [0, 0], swing: i === 0 ? 'drive' : null, aim: 0 } }, 1 / 60);
+    hit = w.events.find(e => e.type === 'hit');
+    w.events.length = 0;
+  }
+  return hit;
+}
+
+test('only the receiver returns the serve: the partner cannot hit it', () => {
+  const rid = receiverId(newWorld().match);
+  assert.equal(rid, 2);
+  assert.ok(serveReturn(rid), 'receiver hits');
+  assert.equal(serveReturn(3), undefined, 'partner does not');
+});
+
+test('a serve nobody on the receiving side may return gives the point to the server', () => {
+  const w = newWorld();
+  w.state = 'play';
+  Object.assign(w.match.rally, { phase: 'serveFlight', lastHitTeam: 0, bouncesSinceHit: 1 });
+  w.players[3].p = [0, -6];  // partner right at the ball, swinging every frame
+  Object.assign(w.ball, { p: [0.4, 0.8, -6], v: [0, -2, -3], w: [0, 0, 0], live: true });
+  let pt = null;
+  for (let i = 0; i < 600 && !pt; i++) {
+    stepWorld(w, { 3: { move: [0, 0], swing: 'drive', aim: 0 }, 2: { move: [0, 0] } }, 1 / 60);
+    pt = w.events.find(e => e.type === 'point');
+    w.events.length = 0;
+  }
+  assert.equal(pt?.team, 0, JSON.stringify(pt) + ' ' + w.match.log.slice(-2));
+});
+
+test('serve aim is world x and stays inside the receiver\'s box half', () => {
+  const m = newWorld().match;
+  for (const pts of [[0, 0], [1, 0]]) {
+    m.points = pts;
+    const xs = Math.sign(serveX(m, 0));
+    for (const a of [-1, 0, 1]) { const x = serveX(m, a) * xs; assert.ok(x >= 0.4 && x <= 4.2, `aim ${a}: ${x}`); }
+    assert.ok(serveX(m, 1) > serveX(m, -1), 'pressing +x moves the target toward +x in both boxes');
+  }
+});
+
+test('serve: holding a direction during the toss re-aims the serve', () => {
+  const w = newWorld();
+  stepWorld(w, { 0: { swing: 'serve', aim: 0 } }, 1 / 60);
+  assert.equal(w.state, 'toss');
+  stepWorld(w, { 0: { move: [0, 0], aim: 1 } }, 1 / 60);
+  assert.equal(w.toss.aim, 1);
+  assert.equal(w.serveAim, 1);
+  stepWorld(w, { 0: { move: [0, 0], aim: 0 } }, 1 / 60);
+  assert.equal(w.toss.aim, 1, 'letting go keeps the last aim');
 });

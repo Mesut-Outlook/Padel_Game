@@ -31,6 +31,12 @@ export function serverId(m) {
   return m.serveOrder[m.serveIdx % 4];
 }
 
+// Who returns this point's serve (FIP: only the receiver may play it; the partner never touches it)
+export function receiverId(m) {
+  const t = 1 - teamOf(serverId(m));
+  return m.opts.players === 2 ? t * 2 : t * 2 + (m.points[0] + m.points[1]) % 2;
+}
+
 // Where server stands (world x,z) for current point
 export function servePosition(m) {
   const zs = teamOf(serverId(m)) === 0 ? 1 : -1;
