@@ -1029,4 +1029,8 @@ export default {
   "Not connected: you did not allow that game server.": "Sem ligação: não autorizaste esse servidor de jogo.",
   " — the room creator starts the match": " — quem criou a sala inicia o jogo",
   "Nobody has joined yet: send your friend the invite link first.": "Ainda ninguém entrou: primeiro envia o link de convite ao teu amigo.",
+  "You are back in the match.": "Voltaste ao jogo.",
+  "Connection lost. Getting you back into the match…": "Ligação perdida. A levar-te de volta ao jogo…",
+  "{name} lost connection. The AI plays for them until they are back.": "{name} perdeu a ligação. A IA joga no seu lugar até voltar.",
+  "{name} is back.": "{name} voltou.",
 };

@@ -274,7 +274,7 @@ test('bad messages, prototype shot names and broken URLs do not crash the server
     await join(c, code);
     await c.send({ type: 'input', swing: 'constructor', move: [5, 'x'] });
     await new Promise(r => setTimeout(r, 50));
-    assert.deepEqual(room.inputs[2], { move: [1, 0], swing: null, aim: 0, eat: false });
+    assert.deepEqual(room.inputs[2], { move: [1, 0], swing: null, aim: 0, eat: false, skip: false });
     assert.equal((await list(srv.port)).length, 0);  // still answering
     a.ws.close(); c.ws.close();
   } finally { await srv.close(); }
@@ -341,5 +341,110 @@ test('five wrong room codes close the socket (no code guessing)', async () => {
     const closed = new Promise(r => a.ws.once('close', (code) => r(code)));
     for (let i = 0; i < 5; i++) await a.send({ type: 'join', code: 'ZZZZZ' + i });
     assert.equal(await closed, 1008);
+  } finally { await srv.close(); }
+});
+
+test('a winner\'s skip input reaches the world: the server holds after a highlight', async () => {
+  const srv = await startServer(0);
+  try {
+    const a = client(srv.port);
+    const l = await create(a, { cfg: { players: 2 } });
+    const room = srv.rooms.get(l.code);
+    assert.equal(room.world.opts.holdReplay, true);
+    await a.send({ type: 'input', skip: true });
+    await new Promise(r => setTimeout(r, 30));
+    assert.equal(room.inputs[0].skip, true);
+    a.ws.close();
+  } finally { await srv.close(); }
+});
+
+// two players in a started 1v1 match; returns the guest's token
+async function startedMatch(srv) {
+  const host = client(srv.port), guest = client(srv.port);
+  const { code } = await create(host, { cfg: { players: 2 } });
+  const seat = guest.next('seat');
+  await join(guest, code, { name: 'Guest' });
+  const { token } = await seat;
+  await host.send({ type: 'start' });
+  while (!(await host.next('lobby')).started);
+  return { host, guest, code, token };
+}
+
+test('a player whose connection drops mid-match gets the same seat back with the token', async () => {
+  const srv = await startServer(0);
+  try {
+    const { host, guest, code, token } = await startedMatch(srv);
+    assert.equal(typeof token, 'string');
+    assert.ok(token.length >= 20);
+    guest.ws.close();
+    let l;
+    do l = await host.next('lobby'); while (!l.taken.length || l.taken.includes(2));
+    assert.deepEqual(l.away, [2]);  // the AI plays seat 2 meanwhile
+    const back = client(srv.port);
+    const seat = back.next('seat');
+    const lob = await join(back, code, { rejoin: token });
+    assert.equal((await seat).seat, 2);
+    assert.deepEqual(lob.away, []);
+    assert.deepEqual(lob.taken.sort(), [0, 2]);
+    assert.equal(lob.names[2], 'Guest');
+    host.ws.close(); back.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('rejoin: a wrong or expired token, or a plain join, cannot take a started match\'s seat', async () => {
+  const srv = await startServer(0, { rejoinMs: 50 });
+  try {
+    const { host, guest, code, token } = await startedMatch(srv);
+    guest.ws.close();
+    while ((await host.next('lobby')).taken.includes(2));
+    const x = client(srv.port);
+    let err = x.next('error');
+    await x.send({ type: 'join', code, rejoin: 'not-the-token' });
+    assert.equal((await err).msg, 'Could not get back into the match');
+    err = x.next('error');
+    await x.send({ type: 'join', code });
+    assert.equal((await err).msg, 'Room is full or match already started');
+    await new Promise(r => setTimeout(r, 80));
+    err = x.next('error');
+    await x.send({ type: 'join', code, rejoin: token });
+    assert.equal((await err).msg, 'Could not get back into the match');  // too late
+    host.ws.close(); x.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('a started room waits for its dropped players, then closes once their seats run out', async () => {
+  const srv = await startServer(0, { rejoinMs: 50 });
+  try {
+    const { host, guest, code } = await startedMatch(srv);
+    host.ws.close(); guest.ws.close();
+    await new Promise(r => setTimeout(r, 30));
+    assert.ok(srv.rooms.has(code), 'kept for a rejoin');
+    await new Promise(r => setTimeout(r, 60));
+    srv.sweep();
+    assert.ok(!srv.rooms.has(code), 'closed');
+  } finally { await srv.close(); }
+});
+
+test('client: a connection that drops mid-match reconnects by itself and gets its seat back', async () => {
+  const { connect } = await import('../src/net.js');
+  const srv = await startServer(0);
+  try {
+    const url = `ws://127.0.0.1:${srv.port}`;
+    const host = client(srv.port);
+    const { code } = await create(host, { cfg: { players: 2 } });
+    const status = [];
+    let backed;
+    const back = new Promise(r => { backed = r; });
+    const net = connect({ url, code, char: 0, onStatus: (s) => { status.push(s); if (s === 'back') backed(); }, onError: (e) => status.push('error: ' + e) });
+    while (!net.lobby) await new Promise(r => setTimeout(r, 10));
+    await host.send({ type: 'start' });
+    while (!net.lobby.started) await new Promise(r => setTimeout(r, 10));
+    const seat = net.seat, first = net.ws;
+    first.close();  // the network drops
+    await back;
+    assert.deepEqual(status, ['reconnecting', 'back']);
+    assert.equal(net.seat, seat);
+    assert.notEqual(net.ws, first);
+    net.ws.onclose = null; net.ws.close(); host.ws.close();
   } finally { await srv.close(); }
 });

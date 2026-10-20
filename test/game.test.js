@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newWorld, stepWorld, snapshot, serveX } from '../src/game.js';
+import { newWorld, stepWorld, snapshot, serveX, REPLAY } from '../src/game.js';
 import { receiverId } from '../src/rules.js';
 import { toWorld } from '../src/input.js';
 
@@ -435,4 +435,60 @@ test('serve: holding a direction during the toss re-aims the serve', () => {
   assert.equal(w.serveAim, 1);
   stepWorld(w, { 0: { move: [0, 0], aim: 0 } }, 1 / 60);
   assert.equal(w.toss.aim, 1, 'letting go keeps the last aim');
+});
+
+// a rally of `rally` shots that team 0 wins on a double bounce in team 1's half
+function longPoint(opts = {}, rally = 9) {
+  const w = newWorld(opts);
+  w.state = 'play'; w.rally = rally; w.t = 10; w.hl.hits = [7, 8.5];
+  Object.assign(w.match.rally, { phase: 'rally', lastHitTeam: 0, bouncesSinceHit: 1 });
+  Object.assign(w.ball, { p: [0, 0.3, -6], v: [0, -3, 0], w: [0, 0, 0], live: true });
+  let pt = null;
+  for (let i = 0; i < 60 && !pt; i++) { stepWorld(w, {}, 1 / 60); pt = w.events.find(e => e.type === 'point'); w.events.length = 0; }
+  return { w, pt };
+}
+
+test('replay: a long rally sends a replay window of the last 2 shots; a short one does not', () => {
+  const { pt } = longPoint();
+  assert.equal(pt.team, 0);
+  assert.ok(pt.replay && pt.replay.from === 7 - REPLAY.lead && pt.replay.to > pt.t && pt.replay.speed === REPLAY.speed, JSON.stringify(pt));
+  assert.equal(longPoint({}, 3).pt.replay, undefined);
+});
+
+test('replay: offline the timer is unchanged; with holdReplay the next serve waits for it', () => {
+  assert.ok(Math.abs(longPoint().w.timer - 2.2) < 0.1);
+  const { w, pt } = longPoint({ holdReplay: true });
+  const need = REPLAY.delay + (pt.replay.to - pt.replay.from) / pt.replay.speed;
+  assert.ok(w.timer >= need, `${w.timer} >= ${need}`);
+  for (let i = 0; i < 60 * 3; i++) stepWorld(w, {}, 1 / 60);
+  assert.equal(w.state, 'dead', 'still waiting 3 s later');
+});
+
+test('replay: only the team that won the point can skip it', () => {
+  const { w } = longPoint({ holdReplay: true });
+  const before = w.timer;
+  stepWorld(w, { 2: { skip: true } }, 1 / 60);  // the losers
+  assert.ok(w.timer > before - 0.1 && w.replay, 'losers cannot skip');
+  stepWorld(w, { 1: { skip: true } }, 1 / 60);  // a winner
+  assert.ok(w.timer <= 0.5 && !w.replay, 'winners can');
+});
+
+test('replay: a serve that comes off the back glass is not a highlight, a ball played back off the glass is', () => {
+  const w = newWorld();
+  w.hl.bounced = true;
+  w.events.length = 0;
+  w.hl.offGlass = true; w.match.rally.phase = 'serveFlight';
+  w.state = 'play';
+  w.players[2].p = [0, -9]; w.players[2].want = 'drive';
+  Object.assign(w.ball, { p: [0.5, 1, -9], v: [0, 0, 0], w: [0, 0, 0], live: true });
+  w.match.rally.bouncesSinceHit = 1; w.match.rally.lastHitTeam = 0;
+  stepWorld(w, { 2: { move: [0, 0], swing: 'drive' } }, 1 / 60);
+  assert.equal(w.hl.glass, false, 'serve return off the glass');
+  w.hl.offGlass = true;
+  w.match.rally.phase = 'rally';
+  w.players[0].p = [0, 9];
+  Object.assign(w.ball, { p: [0.5, 1, 9], v: [0, 0, 0], w: [0, 0, 0], live: true });
+  w.match.rally.lastHitTeam = 1; w.match.rally.bouncesSinceHit = 1;
+  for (let i = 0; i < 5 && !w.hl.glass; i++) stepWorld(w, { 0: { move: [0, 0], swing: i ? null : 'drive' } }, 1 / 60);
+  assert.equal(w.hl.glass, true, 'glass save in a rally');
 });

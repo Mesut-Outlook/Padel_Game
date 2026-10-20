@@ -1029,4 +1029,8 @@ export default {
   "Not connected: you did not allow that game server.": "Niet verbonden: je hebt die gameserver niet toegestaan.",
   " — the room creator starts the match": " — de maker van de kamer start de wedstrijd",
   "Nobody has joined yet: send your friend the invite link first.": "Er is nog niemand binnen: stuur je vriend eerst de uitnodigingslink.",
+  "You are back in the match.": "Je bent terug in de wedstrijd.",
+  "Connection lost. Getting you back into the match…": "Verbinding verbroken. We brengen je terug in de wedstrijd…",
+  "{name} lost connection. The AI plays for them until they are back.": "{name} is de verbinding kwijt. De AI speelt voor hen tot ze terug zijn.",
+  "{name} is back.": "{name} is terug.",
 };

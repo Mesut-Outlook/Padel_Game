@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { randomInt } from 'node:crypto';
+import { randomInt, randomBytes } from 'node:crypto';
 import { newWorld, stepWorld, snapshot, SHOTS, BAG } from '../src/game.js';
 import { scoreText } from '../src/rules.js';
 import { aiInput } from '../src/ai.js';
@@ -20,7 +20,7 @@ const VENUES = JSON.parse(fs.readFileSync(new URL('../data/venues.json', import.
 const AI_LEVELS = ['rookie', 'club', 'pro', 'legend'];
 // abuse limits (startServer(port, { ...LIMITS }) overrides them in tests): rooms on the server, sockets per visitor IP,
 // messages per socket per second (beyond it they are dropped; the client sends ~60/s at most), largest message in bytes
-export const LIMITS = { rooms: 100, perIp: 8, msgsPerSec: 120, payload: 4096 };
+export const LIMITS = { rooms: 100, perIp: 8, msgsPerSec: 120, payload: 4096, rejoinMs: 60000 };  // rejoinMs: a dropped player's seat waits this long
 // pages that may open a socket here: the site, local dev, and any page served by this same host (npm run online, a tunnel)
 const ORIGINS = ['padellegends.eu', 'www.padellegends.eu', 'localhost', '127.0.0.1', ...(process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean)];
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // no 0/O or 1/I: codes are read aloud and typed
@@ -124,7 +124,15 @@ export function startServer(port, limits = {}) {
   // a dead connection (phone went to sleep, network gone) never sends close: ping every 30 s, drop what did not answer
   const heartbeat = setInterval(() => {
     for (const ws of wss.clients) { if (ws.alive === false) ws.terminate(); else { ws.alive = false; ws.ping(); } }
+    sweep();
   }, 30000);
+  // seats kept for dropped players run out; a room nobody came back to closes
+  function sweep(now = Date.now()) {
+    for (const room of rooms.values()) {
+      for (const s in room.away) if (room.away[s].until < now) delete room.away[s];
+      if (!room.clients.size && !Object.keys(room.away).length) { clearInterval(room.timer); rooms.delete(room.code); }
+    }
+  }
 
   // tick timing over the current minute (rooms that have not started do no work, so they are not counted)
   let tSum = 0, tN = 0, tMax = 0, lastCpu = process.cpuUsage(), lastWall = performance.now();
@@ -149,8 +157,8 @@ export function startServer(port, limits = {}) {
     const players = cfg.players === 2 ? 2 : 4;
     const room = {
       code, cfg, seats: players === 2 ? [0, 2] : [0, 2, 1, 3], clients: new Map(), inputs: {}, started: false, host: null, frame: 0,
-      world: newWorld({ players, match: { sets: cfg.sets, goldenPoint: cfg.goldenPoint, starPoint: cfg.starPoint, superTiebreak: cfg.superTiebreak }, stats: {}, rackets: {}, outdoor: cfg.outdoor }),
-      chars: {}, looks: {}, names: {}, timer: null,
+      world: newWorld({ players, match: { sets: cfg.sets, goldenPoint: cfg.goldenPoint, starPoint: cfg.starPoint, superTiebreak: cfg.superTiebreak }, stats: {}, rackets: {}, outdoor: cfg.outdoor, holdReplay: true }),  // every client shows a highlight before the next serve
+      chars: {}, looks: {}, names: {}, timer: null, tokens: {}, away: {},  // away: seat -> { token, until, name, look } of a dropped player
     };
     room.timer = setInterval(() => {
       const t0 = performance.now(); tick(room);
@@ -170,7 +178,7 @@ export function startServer(port, limits = {}) {
       for (const ws of room.clients.keys()) ws.close(1011, 'match error');
       return;
     }
-    for (const id in room.inputs) if (room.inputs[id]) { room.inputs[id].swing = null; room.inputs[id].eat = false; } // edge events
+    for (const id in room.inputs) if (room.inputs[id]) { room.inputs[id].swing = null; room.inputs[id].eat = room.inputs[id].skip = false; } // edge events
     const events = w.events.splice(0);
     if (++room.frame % 2 && !events.some(e => e.type !== 'contact')) return; // 30 Hz unless something happened
     const msg = JSON.stringify({ type: 'state', snap: snapshot(w), score: scoreText(w.match), events, winner: w.match.winner });
@@ -178,7 +186,7 @@ export function startServer(port, limits = {}) {
   }
 
   function lobby(room) {
-    const msg = JSON.stringify({ type: 'lobby', code: room.code, cfg: room.cfg, seats: room.seats, taken: [...room.clients.values()], chars: room.chars, looks: room.looks, names: room.names, started: room.started, host: room.host });
+    const msg = JSON.stringify({ type: 'lobby', code: room.code, cfg: room.cfg, seats: room.seats, taken: [...room.clients.values()], away: Object.keys(room.away).map(Number), chars: room.chars, looks: room.looks, names: room.names, started: room.started, host: room.host });
     for (const ws of room.clients.keys()) ws.readyState === 1 && ws.send(msg);
   }
 
@@ -214,6 +222,20 @@ export function startServer(port, limits = {}) {
           target = rooms.get(String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6));
           if (!target) { if (++misses >= 5) ws.close(1008, 'too many wrong codes'); return fail('Room not found'); }  // no code guessing
         }
+        if (typeof m.rejoin === 'string') {  // back after a dropped connection: the same seat, even in a match that has started
+          const seat = Object.keys(target.away).map(Number).find(s => target.away[s].token === m.rejoin && target.away[s].until >= Date.now());
+          if (seat == null) { if (++misses >= 5) ws.close(1008, 'too many wrong codes'); return fail('Could not get back into the match'); }
+          const a = target.away[seat];
+          delete target.away[seat];
+          room = target;
+          room.clients.set(ws, seat);
+          if (room.host == null) room.host = seat;
+          if (a.name) room.names[seat] = a.name;
+          if (a.look) room.looks[seat] = a.look;
+          console.log(`rejoin seat=${seat}`);
+          ws.send(JSON.stringify({ type: 'seat', seat, code: room.code, token: a.token }));
+          return lobby(room);
+        }
         const taken = new Set(target.clients.values());
         const seat = target.seats.find(s => !taken.has(s));
         if (seat == null || target.started) return fail('Room is full or match already started');
@@ -234,7 +256,9 @@ export function startServer(port, limits = {}) {
         if (m.name) room.names[seat] = text(m.name, 16);
         const look = sanitizeLook(m.look);
         if (look) room.looks[seat] = look;
-        ws.send(JSON.stringify({ type: 'seat', seat, code: room.code }));
+        room.tokens[seat] = randomBytes(16).toString('base64url');  // lets this player back into the seat if the connection drops
+        console.log(`join seat=${seat}`);
+        ws.send(JSON.stringify({ type: 'seat', seat, code: room.code, token: room.tokens[seat] }));
         lobby(room);
       } else if (!room) return;
       else if (m.type === 'start') {  // only the room creator (or whoever took over after they left)
@@ -245,17 +269,20 @@ export function startServer(port, limits = {}) {
         const prev = room.inputs[seat];
         const mv = Array.isArray(m.move) ? m.move.slice(0, 2).map(v => Math.max(-1, Math.min(1, +v || 0))) : [0, 0];
         const shot = m.swing === 'auto' || (typeof m.swing === 'string' && Object.hasOwn(SHOTS, m.swing) && m.swing !== 'serve') ? m.swing : null;
-        room.inputs[seat] = { move: mv, swing: shot || prev?.swing || null, aim: Math.max(-1, Math.min(1, +m.aim || 0)), eat: m.eat === true || !!prev?.eat };
+        room.inputs[seat] = { move: mv, swing: shot || prev?.swing || null, aim: Math.max(-1, Math.min(1, +m.aim || 0)), eat: m.eat === true || !!prev?.eat, skip: m.skip === true || !!prev?.skip };
       }
     }
-    ws.on('close', () => {
+    ws.on('close', (code) => {
       const n = (perIp.get(ip) || 1) - 1;
       if (n) perIp.set(ip, n); else perIp.delete(ip);
       if (!room) return;
       const seat = room.clients.get(ws);
       room.clients.delete(ws);
+      console.log(`leave seat=${seat} code=${code} started=${+room.started}`);  // why a player left; never an IP or a room code
+      // mid-match the AI plays the seat while it waits for its player (rejoin); in the lobby the seat is simply free
+      if (room.started && room.world.match.winner == null) room.away[seat] = { token: room.tokens[seat], until: Date.now() + lim.rejoinMs, name: room.names[seat], look: room.looks[seat] };
       delete room.looks[seat]; delete room.names[seat];
-      if (!room.clients.size) { clearInterval(room.timer); rooms.delete(room.code); return; }
+      if (!room.clients.size) { if (!Object.keys(room.away).length) { clearInterval(room.timer); rooms.delete(room.code); } return; }
       if (seat === room.host) room.host = room.clients.values().next().value;  // the next player may start the match
       lobby(room);  // seat falls back to AI
     });
@@ -263,7 +290,7 @@ export function startServer(port, limits = {}) {
 
   // HOST=127.0.0.1 when a tunnel is the only way in (otherwise every device on the Wi-Fi can reach the port too)
   return new Promise(resolve => httpServer.listen(port, process.env.HOST, () => resolve({
-    port: httpServer.address().port, rooms,
+    port: httpServer.address().port, rooms, sweep,
     close: () => new Promise(done => { clearInterval(heartbeat); clearInterval(statusTimer); for (const r of rooms.values()) clearInterval(r.timer); for (const c of wss.clients) c.terminate(); wss.close(); httpServer.close(done); }),
   })));
 }

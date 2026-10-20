@@ -1029,4 +1029,8 @@ export default {
   "Not connected: you did not allow that game server.": "Non connesso: non hai autorizzato quel server di gioco.",
   " — the room creator starts the match": " — chi ha creato la stanza avvia la partita",
   "Nobody has joined yet: send your friend the invite link first.": "Non è ancora entrato nessuno: prima manda il link di invito al tuo amico.",
+  "You are back in the match.": "Sei di nuovo in partita.",
+  "Connection lost. Getting you back into the match…": "Connessione persa. Ti stiamo riportando in partita…",
+  "{name} lost connection. The AI plays for them until they are back.": "{name} ha perso la connessione. L'IA gioca al suo posto finché non torna.",
+  "{name} is back.": "{name} è tornato.",
 };

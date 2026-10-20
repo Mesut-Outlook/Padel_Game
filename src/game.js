@@ -79,6 +79,7 @@ function resetPositions(w) {
   w.ball.bounce = w.ballSpec.bounce;
   w.ball.p = serveBall(s);
   w.state = 'serve'; w.timer = 0; w.rally = 0;
+  w.hl = { hits: [], smash: false, glass: false, bounced: false, offGlass: false }; w.replay = null;
 }
 
 // server holds the ball up in front, on the court-centre side (right of them when serving from the left, and vice versa)
@@ -99,6 +100,10 @@ function autoShot(w, pl) {
 }
 
 function gauss() { return (Math.random() + Math.random() + Math.random() - 1.5) / 1.5; }
+
+// Highlight replay of a point (long rally, smash/víbora, ball played off the glass): the last 2 shots at half speed, starting
+// REPLAY.delay s after the point. With opts.holdReplay (the server) the next serve waits until every client has shown it.
+export const REPLAY = { shots: 2, speed: 0.5, delay: 0.9, lead: 0.4, tail: 0.5, maxHold: 12 };
 
 // serve aim in world x (same as every other shot: +1 = toward +x): from near the T (0.4 m) to beside the side wall (4.2 m)
 export function serveX(m, aim = 0) {
@@ -182,6 +187,9 @@ function strike(w, pl, kind, aimX = 0) {
   pl.swing = { kind, t: 0, anim: s.anim, backhand: (b.p[0] - pl.p[0]) * (pl.team === 0 ? -1 : 1) < 0 };
   pl.want = null;
   w.rally++;
+  if (w.hl.offGlass && w.match.rally.phase === 'rally') w.hl.glass = true;  // a ball played back after it came off the glass (not the serve)
+  w.hl.hits = [...w.hl.hits.slice(1 - REPLAY.shots), w.t]; w.hl.bounced = w.hl.offGlass = false;
+  if (kind === 'smash' || kind === 'vibora') w.hl.smash = true;
   w.events.push({ type: 'hit', pid: pl.id, shot: kind, t: w.t, mistake, speed: Math.hypot(...b.v), quality, volley: w.match.rally.bouncesSinceHit === 0 && kind !== 'serve' });
   const r = onHit(w.match, pl.id);
   if (r?.point != null) endPoint(w, r);
@@ -189,7 +197,10 @@ function strike(w, pl, kind, aimX = 0) {
 }
 
 function endPoint(w, r) {
-  w.events.push({ type: 'point', team: r.point, why: r.why, rally: w.rally, t: w.t });
+  const hl = w.hl, worth = w.match.winner == null && (w.rally >= 8 || hl.smash || hl.glass);
+  // the window every client plays: from just before the 2nd-last shot to just after the point
+  const replay = worth ? { from: (hl.hits[0] ?? w.t - 4) - REPLAY.lead, to: w.t + REPLAY.tail, speed: REPLAY.speed } : null;
+  w.events.push({ type: 'point', team: r.point, why: r.why, rally: w.rally, t: w.t, ...(replay && { replay }) });
   const m = w.match, total = m.points[0] + m.points[1];
   if (m.winner == null && (r.changeEnds || (m.opts.pointsTo && total % 8 === 0))) {  // changeover: a rest, a drink, maybe food
     for (const pl of w.players) {
@@ -206,6 +217,10 @@ function endPoint(w, r) {
   }
   w.state = w.match.winner != null ? 'over' : 'dead';
   w.timer = 2.2;
+  if (replay && w.opts.holdReplay) {  // the next serve waits for the replay; the point's winners may cut it short (input skip)
+    w.timer = Math.min(REPLAY.maxHold, Math.max(w.timer, REPLAY.delay + (replay.to - replay.from) / replay.speed + 0.4));
+    w.replay = { team: r.point };
+  }
 }
 
 // inputs[pid] = { move:[x,z] (world, |v|<=1), swing: null|'auto'|shot, aim: -1..1 }
@@ -279,6 +294,7 @@ export function stepWorld(w, inputs, dt) {
     return w;
   }
   if (w.state === 'dead' || w.state === 'over') {
+    if (w.replay && w.players.some(p => p.team === w.replay.team && inputs[p.id]?.skip)) { w.timer = Math.min(w.timer, 0.5); w.replay = null; }
     w.timer -= dt;
     if (w.timer <= 0 && w.state === 'dead') resetPositions(w);
     stepBallEvents(w, dt);
@@ -309,6 +325,8 @@ function stepBallEvents(w, dt) {
     for (const e of stepBall(w.ball, dt / n)) {
       w.events.push({ type: 'contact', kind: e.kind, p: e.p, t: w.t });
       if (w.state !== 'play') continue;
+      if (e.kind === 'floor') w.hl.bounced = true;
+      else if (e.kind === 'glass' && w.hl.bounced) w.hl.offGlass = true;
       const r = onContact(w.match, e);
       if (r?.point != null) endPoint(w, r);
       else if (r?.fault || r?.let) { w.events.push({ type: r.let ? 'let' : 'fault', why: r.why, t: w.t }); w.state = 'dead'; w.timer = 1.0; }

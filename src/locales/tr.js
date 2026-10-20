@@ -1029,4 +1029,8 @@ export default {
   "Not connected: you did not allow that game server.": "Bağlanılmadı: o oyun sunucusuna izin vermedin.",
   " — the room creator starts the match": " — maçı odayı kuran başlatır",
   "Nobody has joined yet: send your friend the invite link first.": "Henüz kimse katılmadı: önce arkadaşına davet linkini gönder.",
+  "You are back in the match.": "Maça geri döndün.",
+  "Connection lost. Getting you back into the match…": "Bağlantı koptu. Seni maça geri bağlıyoruz…",
+  "{name} lost connection. The AI plays for them until they are back.": "{name} bağlantısını kaybetti. Geri gelene kadar yerine yapay zekâ oynuyor.",
+  "{name} is back.": "{name} geri döndü.",
 };

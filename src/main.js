@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import venues from '../data/venues.json';
 import characters from '../data/characters.json';
 import rackets from '../data/rackets.json';
-import { newWorld, stepWorld, snapshot, serveX } from './game.js';
+import { newWorld, stepWorld, snapshot, serveX, REPLAY } from './game.js';
 import { scoreText, serverId } from './rules.js';
 import { buildVenue, buildBall } from './court.js';
 import { createAvatar } from './player.js';
@@ -261,8 +261,16 @@ export function startOnline({ url, code, create = false, players = 4, venue = 0,
   net = connect({
     url, code, create, char, stats, racket, public: isPublic, name, look, shoes, ball, bag,
     cfg: { players, ...match, ai, venue, outdoor: venues[venue]?.type === 'outdoor' },
-    onError: (e) => { say(escapeText(e), null, true); if (!net?.lobby?.started) net = null; },  // not in a match yet: START can try again
+    onError: (e) => { say(escapeText(e), null, true); if (!net?.lobby?.started) net = null; else flash(e, 4); },  // not in a match yet: START can try again
+    onStatus: (s) => flash(s === 'back' ? t('You are back in the match.') : t('Connection lost. Getting you back into the match…'), s === 'back' ? 2.5 : 30),
     onLobby: (l) => {
+      // in the match: tell the others when a player drops (the AI plays their seat) and when they come back
+      const nameOf = (id) => avatars[id]?.ch?.name || '?';
+      if (l.started && avatars.length) {
+        for (const id of l.away || []) if (!awaySeats.includes(id) && id !== net.seat) flash(t('{name} lost connection. The AI plays for them until they are back.', { name: nameOf(id) }), 4);
+        for (const id of awaySeats) if (!(l.away || []).includes(id) && l.taken?.includes(id)) flash(t('{name} is back.', { name: nameOf(id) }), 2.5);
+      }
+      awaySeats = l.away || [];
       setWizardRoom(l.code);
       say(t('Room <b>{code}</b> · your seat: {seat} · players: {taken}/{total} (empty = AI)', { code: escapeText(l.code), seat: Number(net.seat) || 0, taken: Number(l.taken?.length) || 0, total: Number(l.seats?.length) || 0 }) +
         (l.started ? '' : l.host === net.seat ? t(' — <b>click “START MATCH” when everyone is ready</b>') : t(' — the room creator starts the match')), l);
@@ -394,7 +402,7 @@ function flash(text, sec = 1.8, kicker = '', sub = '') {
 }
 
 const STEP = 1 / 60;
-let last = 0, acc = 0, rallyFlags = {};
+let last = 0, acc = 0, rallyFlags = {}, awaySeats = [];  // awaySeats: online seats whose player dropped (AI plays them)
 // game feel: slower-than-real default pace, a short hit-stop on contact, camera kick on smashes
 // pace follows the chosen level and creeps up as the match goes on; low levels also get a positioning assist
 // (when you are not steering, your player drifts to where the AI would stand — you still choose every shot)
@@ -712,8 +720,8 @@ function handleEvents(events, score, winner) {
         ? avatars[call.pid].ch.name
         : (call.team === 0 ? $('t0').textContent : $('t1').textContent);
       if (!tut) flash(`${subject}\n${t(call.text)}`, 2.1, kicker);
-      // auto highlight: long rally, smash, or a ball played off the glass
-      if (!tut && (rallyLen >= 8 || rallyFlags.smash || rallyFlags.glass)) setTimeout(() => startReplay(true), 900);
+      // auto highlight (game.js decides: long rally, smash, a ball played back off the glass); online the server waits for it
+      if (!tut && e.replay) setTimeout(() => startReplay(e.replay, e.team), REPLAY.delay * 1000);
       rallyFlags = {};
       if (!tut && winner != null) {
         keepAwake(false);
@@ -952,21 +960,35 @@ function pauseInput() {
   }
 }
 
-let replayCamBefore = null;
-function startReplay(auto) {
+// auto: the point's replay window from game.js + the team that won it (only they may skip it); none = R, the last shots, yours to end
+let replayCamBefore = null, replayWho = null;
+function startReplay(auto, team = null) {
   if (replay.playing) return;
   replayCamBefore = rig.name;
+  replayWho = auto ? team : null;
   rig.set(auto ? (Math.random() < 0.5 ? 'side' : 'ball') : rig.name);
-  replay.playLastShots(3, { speed: auto ? 0.5 : 0.6 });
+  if (auto) replay.play(auto); else replay.playLastShots(REPLAY.shots, { speed: 0.6 });
   $('replayTag').hidden = false;
 }
-function endReplay() { replay.stop(); $('replayTag').hidden = true; if (replayCamBefore) rig.set(replayCamBefore); replayCamBefore = null; clearPressed(); }
-// any key or pad button skips a replay (H = key help and M = mute keep their own job)
-let skipReplay = false, padWasDown = false;
-addEventListener('keydown', (e) => { if (replay.playing && !e.repeat && !['KeyH', 'KeyM', 'ShiftLeft', 'ShiftRight'].includes(e.code)) skipReplay = true; });
+function endReplay() { replay.stop(); $('replayTag').hidden = true; if (replayCamBefore) rig.set(replayCamBefore); replayCamBefore = null; replayWho = null; clearPressed(); }
+// a key ('kb') or a pad (its index) asks to skip: a highlight ends early only for a human of the team that won the point
+function trySkip(dev) {
+  if (replayWho != null) {
+    const ctl = localControl(control, humans.length);
+    const pid = net ? net.seat : humans[dev === 'kb' ? 0 : ctl === 'kb' ? dev + 1 : dev];
+    if (pid == null || teamOf(pid) !== replayWho) return;  // the others watch it to the end
+    net?.send({ move: [0, 0], swing: null, aim: 0, skip: true });  // the server then starts the next point sooner
+  }
+  endReplay();
+}
+// any key or pad button asks to skip a replay (H = key help and M = mute keep their own job)
+let skipBy = null, padWas = [];
+addEventListener('keydown', (e) => { if (replay.playing && !e.repeat && !['KeyH', 'KeyM', 'ShiftLeft', 'ShiftRight'].includes(e.code)) skipBy = 'kb'; });
+// index of a pad with a newly pressed button, else -1
 function padButtonDown() {
   const pads = [...(navigator.getGamepads?.() || [])];
-  const down = pads.some(gp => gp?.buttons.some(b => b.pressed));
+  let edge = -1;
+  pads.forEach((gp, i) => { const d = !!gp?.buttons.some(b => b.pressed); if (d && !padWas[i] && edge < 0) edge = i; padWas[i] = d; });
   // hints follow P1's own controller: when P1 is on the keyboard, P2's pad must not switch them to pad buttons
   const mine = localControl(control, humans.length) === 'kb' ? [] : pads.filter(Boolean).slice(0, 1);
   if (mine.some(gp => gp.buttons.some(b => b.pressed) || gp.axes.some(a => Math.abs(a) > 0.5))) {
@@ -981,7 +1003,7 @@ function padButtonDown() {
       if (offers.size) renderOffers();
     }
   }
-  const edge = down && !padWasDown; padWasDown = down; return edge;
+  return edge;
 }
 
 function loop(now) {
@@ -1004,9 +1026,12 @@ function loop(now) {
     setPaused(true); requestAnimationFrame(loop); return;
   }
   // skip first, so the press that starts a replay (R / R3) can't also end it
-  if (padButtonDown() || skipReplay) { if (replay.playing) endReplay(); skipReplay = false; }
+  const padPress = padButtonDown();
+  if (padPress >= 0 || skipBy != null) { if (replay.playing) trySkip(skipBy ?? padPress); skipBy = null; }
+  if (replay.playing && net && ['serve', 'toss', 'play'].includes(net.snaps.at(-1)?.s)) endReplay();  // online: the server has moved on to the next point
   if (consumePressed('KeyC')) rig.next();
-  if (consumePressed('KeyR')) startReplay(false);
+  const st = world ? world.state : net?.snaps.at(-1)?.s;
+  if (consumePressed('KeyR') && (tut || st === 'dead' || st === 'over')) startReplay();  // between points only: a replay freezes the match
   if (consumePressed('KeyM')) flash(toggleMute() ? t('🔇 SOUND OFF') : t('🔊 SOUND ON'), 1);
   if (consumePressed('KeyB')) nextHudMode();
   if (!tut && consumePressed('Enter') && (world?.match.winner != null || net?.winner != null)) { toMenu(); return; }

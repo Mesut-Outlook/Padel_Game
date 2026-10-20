@@ -1,34 +1,47 @@
 // Online client: joins a room on the authoritative server, sends inputs, buffers snapshots for smooth rendering.
 import { debugOn } from './debug.js';
-export function connect({ url, code, cfg, char, stats, racket, onLobby, onError, ...extra }) {  // extra: public, name, look, shoes, ball, bag
-  const ws = new WebSocket(url);
-  const net = { seat: null, lobby: null, snaps: [], events: [], score: null, winner: null, ws };
-  ws.onopen = () => ws.send(JSON.stringify({ type: 'join', code, cfg, char, stats, racket, ...extra }));
-  ws.onerror = () => onError?.('Could not connect to server: ' + url);
-  ws.onclose = () => onError?.('Connection closed');
-  ws.onmessage = (ev) => {
-    const m = JSON.parse(ev.data);
-    if (m.type === 'seat') net.seat = m.seat;
-    else if (m.type === 'pong') { net.rtt = performance.now() - m.t; net.srvTick = m.tick; }
-    else if (m.type === 'lobby') { net.lobby = m; onLobby?.(m); }
-    else if (m.type === 'error') onError?.(m.msg);
-    else if (m.type === 'state') {
-      m.snap.rt = performance.now();
-      net.snaps.push(m.snap);
-      if (net.snaps.length > 30) net.snaps.shift();
-      net.events.push(...m.events);
-      net.score = m.score; net.winner = m.winner;
-    }
-  };
+// a dropped connection mid-match tries again after these waits (~30 s in all); the server keeps the seat for a minute, the AI plays it
+const RETRY = [1000, 2000, 4000, 8000, 15000];
+
+export function connect({ url, code, cfg, char, stats, racket, onLobby, onError, onStatus, ...extra }) {  // extra: public, name, look, shoes, ball, bag
+  const net = { seat: null, lobby: null, snaps: [], events: [], score: null, winner: null, ws: null, token: null };
+  let tries = 0, lastSent = '';
+  function open(join) {
+    const ws = net.ws = new WebSocket(url);
+    ws.onopen = () => ws.send(JSON.stringify(join));
+    ws.onerror = () => { if (!net.lobby) onError?.('Could not connect to server: ' + url); };
+    ws.onclose = () => {
+      if (net.ws !== ws) return;
+      if (net.lobby?.started && net.winner == null && net.token && tries < RETRY.length) {  // mid-match: get the seat back
+        onStatus?.('reconnecting');
+        setTimeout(() => open({ type: 'join', code: net.lobby.code, rejoin: net.token }), RETRY[tries++]);
+      } else onError?.('Connection closed');
+    };
+    ws.onmessage = (ev) => {
+      const m = JSON.parse(ev.data);
+      if (m.type === 'seat') { net.seat = m.seat; net.token = m.token; lastSent = ''; if (tries) { tries = 0; onStatus?.('back'); } }
+      else if (m.type === 'pong') { net.rtt = performance.now() - m.t; net.srvTick = m.tick; }
+      else if (m.type === 'lobby') { net.lobby = m; onLobby?.(m); }
+      else if (m.type === 'error') { if (join.rejoin) tries = RETRY.length; onError?.(m.msg); }  // the seat is gone: stop trying
+      else if (m.type === 'state') {
+        m.snap.rt = performance.now();
+        net.snaps.push(m.snap);
+        if (net.snaps.length > 30) net.snaps.shift();
+        net.events.push(...m.events);
+        net.score = m.score; net.winner = m.winner;
+      }
+    };
+  }
+  open({ type: 'join', code, cfg, char, stats, racket, ...extra });
   // debug panel only: RTT + the server's tick time
-  if (debugOn()) { const iv = setInterval(() => ws.readyState === 1 ? ws.send(JSON.stringify({ type: 'ping', t: performance.now() })) : ws.readyState > 1 && clearInterval(iv), 2000); }
-  let lastSent = '';
+  if (debugOn()) setInterval(() => net.ws.readyState === 1 && net.ws.send(JSON.stringify({ type: 'ping', t: performance.now() })), 2000);
   net.send = (inp) => {
+    const ws = net.ws;
     if (ws.readyState !== 1) return;
     const s = JSON.stringify({ type: 'input', ...inp });
-    if (s !== lastSent || inp.swing || inp.eat) { ws.send(s); lastSent = s; }
+    if (s !== lastSent || inp.swing || inp.eat || inp.skip) { ws.send(s); lastSent = s; }
   };
-  net.start = () => ws.readyState === 1 && ws.send(JSON.stringify({ type: 'start' }));
+  net.start = () => net.ws.readyState === 1 && net.ws.send(JSON.stringify({ type: 'start' }));
   // render ~70ms in the past, interpolating between buffered server snapshots
   net.view = () => {
     const S = net.snaps;
