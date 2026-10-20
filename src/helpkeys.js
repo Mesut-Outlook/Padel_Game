@@ -3,13 +3,13 @@
 // the corner arrows or Shift+H move it; both choices are remembered. Pressed keys and buttons light up.
 // Mirrors the bindings in input.js / main.js — keep in sync with public/kontroller.html.
 const K = {
-  KeyW: ['W', 'move', 'fwd'], KeyA: ['A', 'move', 'left'], KeyS: ['S', 'move', 'back'], KeyD: ['D', 'move', 'right'],
+  KeyW: ['W', 'move', N_('fwd')], KeyA: ['A', 'move', N_('left')], KeyS: ['S', 'move', N_('back')], KeyD: ['D', 'move', N_('right')],
   ArrowUp: ['↑', 'move'], ArrowDown: ['↓', 'move'], ArrowLeft: ['←', 'move'], ArrowRight: ['→', 'move'],
-  Space: ['Space', 'hit', 'shot · serve'], KeyJ: ['J', 'hit', 'shot'],
-  KeyK: ['K', 'shot', 'lob'], KeyL: ['L', 'shot', 'smash'], KeyU: ['U', 'shot', 'chiq.'], KeyI: ['I', 'shot', 'víbora'],
-  KeyO: ['O', 'shot', 'contra'], KeyF: ['F', 'shot', 'slice'],
-  KeyE: ['E', 'sys', 'eat'], KeyB: ['B', 'sys', 'score'], KeyC: ['C', 'sys', 'cam'], KeyR: ['R', 'sys', 'replay'], KeyM: ['M', 'sys', 'sound'], KeyH: ['H', 'sys', 'hide'],
-  Escape: ['Esc', 'sys', 'pause'], Enter: ['Enter', 'sys', 'menu'],
+  Space: ['Space', 'hit', N_('shot · serve')], KeyJ: ['J', 'hit', N_('shot')],
+  KeyK: ['K', 'shot', N_('lob')], KeyL: ['L', 'shot', N_('smash')], KeyU: ['U', 'shot', N_('chiq.')], KeyI: ['I', 'shot', N_('víbora')],
+  KeyO: ['O', 'shot', N_('contra')], KeyF: ['F', 'shot', N_('slice')],
+  KeyE: ['E', 'sys', N_('eat')], KeyB: ['B', 'sys', N_('score')], KeyC: ['C', 'sys', N_('cam')], KeyR: ['R', 'sys', N_('replay')], KeyM: ['M', 'sys', N_('sound')], KeyH: ['H', 'sys', N_('hide')],
+  Escape: ['Esc', 'sys', N_('pause')], Enter: ['Enter', 'sys', N_('menu')],
 };
 const ROWS = [
   ['Escape'],
@@ -21,16 +21,16 @@ const ROWS = [
 // Xbox buttons (standard gamepad indices): drawing [shape, x, y, label] + legend text, coloured like the keyboard
 // groups except A/B/X/Y, which keep their real Xbox colours so they are found at a glance
 import { padText, isPlayStation } from './padstyle.js';
-import { t } from './i18n.js';
+import { t, N_ } from './i18n.js';
 import { isTouch } from './touch.js';
 
 const PAD = [
-  [6, 'sys', 'LT', 44, 2, 'eat (food offer)'], [7, 'shot', 'RT', 168, 2, 'contrapared'],
-  [4, 'shot', 'LB', 38, 15, 'slice serve'], [5, 'shot', 'RB', 158, 15, 'víbora'],
-  [0, 'xa', 'A', 176, 76, 'shot · serve'], [1, 'xb', 'B', 190, 62, 'lob'], [2, 'xx', 'X', 162, 62, 'chiquita'], [3, 'xy', 'Y', 176, 48, 'smash'],
-  [8, 'sys', '', 104, 58, 'camera (View)'], [9, 'sys', '', 136, 58, 'pause (Start)'], [11, 'sys', 'R3', 148, 92, 'replay (press R stick)'],
-  [12, 'sys', '', 92, 83, 'hide this help (D-pad ↑)'],
-  [13, 'sys', '', 92, 97, 'scoreboard (D-pad ↓)'],
+  [6, 'sys', 'LT', 44, 2, N_('eat (food offer)')], [7, 'shot', 'RT', 168, 2, N_('contrapared')],
+  [4, 'shot', 'LB', 38, 15, N_('slice serve')], [5, 'shot', 'RB', 158, 15, N_('víbora')],
+  [0, 'xa', 'A', 176, 76, N_('shot · serve')], [1, 'xb', 'B', 190, 62, N_('lob')], [2, 'xx', 'X', 162, 62, N_('chiquita')], [3, 'xy', 'Y', 176, 48, N_('smash')],
+  [8, 'sys', '', 104, 58, N_('camera (View)')], [9, 'sys', '', 136, 58, N_('pause (Start)')], [11, 'sys', 'R3', 148, 92, N_('replay (press R stick)')],
+  [12, 'sys', '', 92, 83, N_('hide this help (D-pad ↑)')],
+  [13, 'sys', '', 92, 97, N_('scoreboard (D-pad ↓)')],
 ];
 const PAD_BODY = 'M60 30C80 22 160 22 180 30C205 34 222 50 228 80C236 118 230 142 210 144C192 146 182 126 170 112C160 104 80 104 70 112C58 126 48 146 30 144C10 142 4 118 12 80C18 50 35 34 60 30Z';
 export function padSvg(kind) {
@@ -51,7 +51,7 @@ export const padLegend = (kind) => `<div class="hp-legend">
   </div>`;
 
 const STORE = 'padel.helpHidden', POS_STORE = 'padel.helpPos';
-const CORNERS = { bl: ['↙', 'bottom-left'], tl: ['↖', 'top-left'], tr: ['↗', 'top-right'], br: ['↘', 'bottom-right'] };
+const CORNERS = { bl: ['↙', N_('bottom-left')], tl: ['↖', N_('top-left')], tr: ['↗', N_('top-right')], br: ['↘', N_('bottom-right')] };
 
 export function mountKeyHelp(el) {
   const caps = {};

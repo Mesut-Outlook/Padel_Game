@@ -33,7 +33,7 @@ import { tipCycle } from './tips.js';
 import { newTally, tallyEvents, tallyFrame } from './matchstats.js';
 import { isTouch, mountTouch, offerKeyLabel, showTouchTips } from './touch.js';
 import { keepAwake } from './wakelock.js';
-import { t } from './i18n.js';
+import { t, N_ } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 const matchOpts = () => ({ sets: parseInt($('sets').value), superTiebreak: $('sets').value === '3s', goldenPoint: $('golden').value === '1', starPoint: $('golden').value === 'star' });
@@ -152,10 +152,10 @@ let onEnd = null, pointsWon = [0, 0], lastCfg = null, bagLeft = null, tally = nu
 let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, msgTimer = 0, hypeTimer = 0, net = null, marker, loadingScene = false, control = 'auto', gameSpeed = 0.85;
 let styleStats = { pts: 0, streak: 0, maxRally: 0, smashes: 0, medals: [] };
 const MEDALS = {
-  wall:   ['🧱', 'WALL WIZARD'],
-  smash:  ['⚡', 'SMASH MASTER'],
-  iron:   ['🔥', 'IRON LUNG'],
-  clutch: ['👑', 'CLUTCH KING'],
+  wall:   ['🧱', N_('WALL WIZARD')],
+  smash:  ['⚡', N_('SMASH MASTER')],
+  iron:   ['🔥', N_('IRON LUNG')],
+  clutch: ['👑', N_('CLUTCH KING')],
 };
 
 function resetStyleStats() {
@@ -407,9 +407,9 @@ let lastD = Infinity, nearD = Infinity;
 // Shot coach (offline, for your player). An overhead you can take inside the service line slows the ball's
 // approach and shows it from behind your player; every overhead / glass rebound / lob chance gets key hints.
 const SHOT_KEYS = { kb: { smash: 'L', vibora: 'I', bandeja: 'Space', bajada: 'Space', lob: 'K' }, pad: { smash: 'Y', vibora: 'RB', bandeja: 'A', bajada: 'A', lob: 'B' } };
-const SHOT_NAME = { smash: 'SMASH', vibora: 'VÍBORA', bandeja: 'BANDEJA', bajada: 'BAJADA', lob: 'LOB' };
+const SHOT_NAME = { smash: N_('SMASH'), vibora: N_('VÍBORA'), bandeja: N_('BANDEJA'), bajada: N_('BAJADA'), lob: N_('LOB') };
 const nextTip = tipCycle();
-const CAM_NAME = { tv: 'TV view', behind: 'Behind player', side: 'Side view', top: 'Top-down', ball: 'Follow ball', drone: 'Drone', free: 'Free camera' };
+const CAM_NAME = { tv: N_('TV view'), behind: N_('Behind player'), side: N_('Side view'), top: N_('Top-down'), ball: N_('Follow ball'), drone: N_('Drone'), free: N_('Free camera') };
 let camShown = '';
 let device = 'kb', approach = 0, armed = true, hintKey = '';  // armed: the next overhead chance may start a slow approach
 addEventListener('keydown', () => { device = 'kb'; if (offers.size) renderOffers(); });
@@ -528,7 +528,7 @@ function inputs() {
 }
 
 // eating: a tap or click on the offer box asks for the next input of that player (key E / LT go through input.js)
-const eatReq = new Set(), FOOD_NAME = { bag_banana: 'a banana', bag_gel: 'an energy gel' };
+const eatReq = new Set(), FOOD_NAME = { bag_banana: N_('a banana'), bag_gel: N_('an energy gel') };
 let emptyFoodWarned = false, changeMsgs = [];
 const offers = new Map();  // pid -> { item, energy, timer }
 export const requestEat = (pid) => eatReq.add(pid);
@@ -777,7 +777,7 @@ function renderEnergy(view) {
 
 // scoreboard mode, cycled with B / pad D-pad ↓ / touch 📊 and remembered: auto = hidden while a point is played
 const HUD_MODES = ['auto', 'off', 'on'], HUD_MODE_KEY = 'padel.hudMode';
-const HUD_NAME = { auto: 'SCOREBOARD: AUTO (HIDDEN DURING POINTS)', off: 'SCOREBOARD: HIDDEN', on: 'SCOREBOARD: ALWAYS ON' };
+const HUD_NAME = { auto: N_('SCOREBOARD: AUTO (HIDDEN DURING POINTS)'), off: N_('SCOREBOARD: HIDDEN'), on: N_('SCOREBOARD: ALWAYS ON') };
 let hudMode = 'auto';
 try { const m = localStorage.getItem(HUD_MODE_KEY); if (HUD_MODES.includes(m)) hudMode = m; } catch { /* storage blocked: auto */ }
 function nextHudMode() {

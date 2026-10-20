@@ -1,34 +1,34 @@
 // Friendly character card generator (pure: no DOM or three.js imports).
 // Evaluates character stats to highlight top strengths, main weakness, and actionable play tips.
-import { t } from './i18n.js';
+import { t, N_ } from './i18n.js';
 
 export const STAT_ORDER = ['speed', 'power', 'control', 'volley', 'smash', 'stamina'];
 
 export const STAT_NAMES = {
-  speed: 'Speed',
-  power: 'Power',
-  control: 'Control',
-  volley: 'Volley',
-  smash: 'Smash',
-  stamina: 'Stamina',
+  speed: N_('Speed'),
+  power: N_('Power'),
+  control: N_('Control'),
+  volley: N_('Volley'),
+  smash: N_('Smash'),
+  stamina: N_('Stamina'),
 };
 
 export const STRENGTH_TIPS = {
-  speed: 'chase every ball down',
-  power: 'go for winners with hard drives',
-  control: 'place the ball into the corners',
-  volley: 'take the net early',
-  smash: 'finish at the net',
-  stamina: 'wear them down in long rallies',
+  speed: N_('chase every ball down'),
+  power: N_('go for winners with hard drives'),
+  control: N_('place the ball into the corners'),
+  volley: N_('take the net early'),
+  smash: N_('finish at the net'),
+  stamina: N_('wear them down in long rallies'),
 };
 
 export const WEAKNESS_TIPS = {
-  speed: 'stay central and let your partner cover',
-  power: 'play for placement, not pace',
-  control: 'keep rallies short',
-  volley: 'let the ball bounce off the glass',
-  smash: 'play a bandeja instead of a full smash',
-  stamina: 'keep points short and eat at changeovers',
+  speed: N_('stay central and let your partner cover'),
+  power: N_('play for placement, not pace'),
+  control: N_('keep rallies short'),
+  volley: N_('let the ball bounce off the glass'),
+  smash: N_('play a bandeja instead of a full smash'),
+  stamina: N_('keep points short and eat at changeovers'),
 };
 
 /**
@@ -56,8 +56,8 @@ export function charCard(stats = {}) {
 
   const s1Name = t(STAT_NAMES[s1[0]] || s1[0]);
   const wName = t(STAT_NAMES[weakness[0]] || weakness[0]);
-  const s1Tip = t(STRENGTH_TIPS[s1[0]] || 'play to your strengths');
-  const wTip = t(WEAKNESS_TIPS[weakness[0]] || 'manage your weakness');
+  const s1Tip = t(STRENGTH_TIPS[s1[0]] || N_('play to your strengths'));
+  const wTip = t(WEAKNESS_TIPS[weakness[0]] || N_('manage your weakness'));
 
   const tip = t('{sName} {sVal} · {wName} {wVal} — {sTip}, {wTip}', {
     sName: s1Name,

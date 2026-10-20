@@ -45,85 +45,85 @@ import {
   setCareerGamepadHandler,
 } from './menu.js';
 import { getPortraitThumb, getVenueThumb, getRacketThumb } from './thumbs.js';
-import { t } from './i18n.js';
+import { t, N_ } from './i18n.js';
 
-const STORAGE_NOTICE = 'Your progress is saved in this browser only. Clearing browser data deletes it. Accounts are coming later.';
-const BLOCKED_BANNER = 'Storage is blocked in this browser — progress lasts only while this tab stays open. Use Profile → Export to keep it.';
-const CORRUPT_BANNER = 'Your saved profile could not be read.';
+const STORAGE_NOTICE = N_('Your progress is saved in this browser only. Clearing browser data deletes it. Accounts are coming later.');
+const BLOCKED_BANNER = N_('Storage is blocked in this browser — progress lasts only while this tab stays open. Use Profile → Export to keep it.');
+const CORRUPT_BANNER = N_('Your saved profile could not be read.');
 
 const SKIN_PRESETS = [
-  ['#F9DCC4', 'Porcelain'],
-  ['#F3D2B3', 'Fair'],
-  ['#F1C27D', 'Warm Sand'],
-  ['#E0B58F', 'Honey'],
-  ['#D9A679', 'Tan'],
-  ['#C68642', 'Bronze'],
-  ['#A5714B', 'Chestnut'],
-  ['#8D5524', 'Espresso'],
+  ['#F9DCC4', N_('Porcelain')],
+  ['#F3D2B3', N_('Fair')],
+  ['#F1C27D', N_('Warm Sand')],
+  ['#E0B58F', N_('Honey')],
+  ['#D9A679', N_('Tan')],
+  ['#C68642', N_('Bronze')],
+  ['#A5714B', N_('Chestnut')],
+  ['#8D5524', N_('Espresso')],
 ];
 
 // 8 hair/beard presets: black, dark brown, brown, chestnut, red/auburn, blonde, ash, grey
 const HAIR_PRESETS = [
-  ['#141414', 'Black'],
-  ['#2b1d14', 'Dark Brown'],
-  ['#4a2f1d', 'Brown'],
-  ['#7a5230', 'Chestnut'],
-  ['#8e3b1f', 'Red'],
-  ['#d6b46a', 'Blonde'],
-  ['#9e9a93', 'Ash'],
-  ['#b5b5b5', 'Grey'],
+  ['#141414', N_('Black')],
+  ['#2b1d14', N_('Dark Brown')],
+  ['#4a2f1d', N_('Brown')],
+  ['#7a5230', N_('Chestnut')],
+  ['#8e3b1f', N_('Red')],
+  ['#d6b46a', N_('Blonde')],
+  ['#9e9a93', N_('Ash')],
+  ['#b5b5b5', N_('Grey')],
 ];
 
 const ACCENT_PRESETS = ['#1b1b1b', '#ffffff', '#e63946', '#2f6fb5', '#d8f53a', '#2ec4b6'];
 
 const BODY_TYPES = [
-  { id: 'slim', label: 'Slim', width: 0.9 },
-  { id: 'athletic', label: 'Athletic', width: 1.0 },
-  { id: 'muscular', label: 'Muscular', width: 1.12 },
-  { id: 'stocky', label: 'Stocky', width: 1.15 },
-  { id: 'tall', label: 'Tall', width: 0.97 },
-  { id: 'petite', label: 'Petite', width: 0.92 },
+  { id: 'slim', label: N_('Slim'), width: 0.9 },
+  { id: 'athletic', label: N_('Athletic'), width: 1.0 },
+  { id: 'muscular', label: N_('Muscular'), width: 1.12 },
+  { id: 'stocky', label: N_('Stocky'), width: 1.15 },
+  { id: 'tall', label: N_('Tall'), width: 0.97 },
+  { id: 'petite', label: N_('Petite'), width: 0.92 },
 ];
 
 const HAIR_STYLES = [
-  { id: 'Hair_SimpleParted', label: 'Parted' },
-  { id: 'Hair_Buzzed', label: 'Buzzed' },
-  { id: 'Hair_BuzzedFemale', label: 'Short Crop' },
-  { id: 'Hair_Long', label: 'Long' },
-  { id: 'Hair_Buns', label: 'Buns' },
-  { id: 'none', label: 'None / Bald' },
+  { id: 'Hair_SimpleParted', label: N_('Parted') },
+  { id: 'Hair_Buzzed', label: N_('Buzzed') },
+  { id: 'Hair_BuzzedFemale', label: N_('Short Crop') },
+  { id: 'Hair_Long', label: N_('Long') },
+  { id: 'Hair_Buns', label: N_('Buns') },
+  { id: 'none', label: N_('None / Bald') },
 ];
 
 const BEARD_STYLES = [
-  { id: 'none', label: 'None' },
-  { id: 'stubble', label: 'Stubble' },
-  { id: 'full', label: 'Full' },
-  { id: 'goatee', label: 'Goatee' },
+  { id: 'none', label: N_('None') },
+  { id: 'stubble', label: N_('Stubble') },
+  { id: 'full', label: N_('Full') },
+  { id: 'goatee', label: N_('Goatee') },
 ];
 
 const AI_LEVELS = [
-  { id: 'rookie', label: 'Rookie', stars: '★' },
-  { id: 'club', label: 'Club', stars: '★★' },
-  { id: 'pro', label: 'Pro', stars: '★★★' },
-  { id: 'legend', label: 'Legend', stars: '★★★★' },
+  { id: 'rookie', label: N_('Rookie'), stars: '★' },
+  { id: 'club', label: N_('Club'), stars: '★★' },
+  { id: 'pro', label: N_('Pro'), stars: '★★★' },
+  { id: 'legend', label: N_('Legend'), stars: '★★★★' },
 ];
 
 const TRAINING_STATS = [
-  { key: 'speed', label: 'Speed', desc: 'Speed: court movement and sprint pace across the turf.' },
-  { key: 'power', label: 'Power', desc: 'Power: ball speed on groundstrokes and serves.' },
-  { key: 'control', label: 'Control', desc: 'Control: shot placement accuracy toward your target.' },
-  { key: 'volley', label: 'Volley', desc: 'Volley: accuracy on balls taken before the bounce.' },
-  { key: 'smash', label: 'Smash', desc: 'Smash: speed and accuracy on smashes, bandejas and víboras.' },
-  { key: 'stamina', label: 'Stamina', desc: 'Stamina: reduces accuracy loss during long rallies (8+ shots).' },
+  { key: 'speed', label: N_('Speed'), desc: N_('Speed: court movement and sprint pace across the turf.') },
+  { key: 'power', label: N_('Power'), desc: N_('Power: ball speed on groundstrokes and serves.') },
+  { key: 'control', label: N_('Control'), desc: N_('Control: shot placement accuracy toward your target.') },
+  { key: 'volley', label: N_('Volley'), desc: N_('Volley: accuracy on balls taken before the bounce.') },
+  { key: 'smash', label: N_('Smash'), desc: N_('Smash: speed and accuracy on smashes, bandejas and víboras.') },
+  { key: 'stamina', label: N_('Stamina'), desc: N_('Stamina: reduces accuracy loss during long rallies (8+ shots).') },
 ];
 
 const SHOP_TABS = [
-  { id: 'racket', label: 'Rackets' },
-  { id: 'shoes', label: 'Shoes' },
-  { id: 'ball', label: 'Balls' },
-  { id: 'kit', label: 'Kit' },
-  { id: 'headwear', label: 'Headwear' },
-  { id: 'bag', label: 'Bag' },
+  { id: 'racket', label: N_('Rackets') },
+  { id: 'shoes', label: N_('Shoes') },
+  { id: 'ball', label: N_('Balls') },
+  { id: 'kit', label: N_('Kit') },
+  { id: 'headwear', label: N_('Headwear') },
+  { id: 'bag', label: N_('Bag') },
 ];
 
 function buildCountriesList() {
@@ -249,15 +249,16 @@ function buildEquippedPlayer(p = profile) {
   };
 }
 
-const levelText = (p) => t('Level {level} · {tier}', { level: (p.level ?? 1.5).toFixed(2), tier: tierAt(p.level ?? 1.5).name });
+const levelVars = (p) => ({ level: (p.level ?? 1.5).toFixed(2), tier: t(tierAt(p.level ?? 1.5).name) });
+const levelText = (p) => t('Level {level} · {tier}', levelVars(p));
 const relPct = (p) => Math.round((p.reliability ?? 0.2) * 100);
 const tierByIndex = (i) => TIERS.find(t => t.index === i) || TIERS[0];
-const LEVEL_NOTE = 'Padel Legends level — Playtomic-style, not synced';
+const LEVEL_NOTE = N_('Padel Legends level — Playtomic-style, not synced');
 const formText = (p) => { const f = formNow(p, eco); return f < 0 ? t('Rusty ({pct}%)', { pct: Math.round(f * 100) }) : t('Sharp'); };
 
 function renderTopCreditsHtml(p = profile) {
   if (!p) return '';
-  const tier = tierAt(p.level ?? 1.5).name;
+  const tier = t(tierAt(p.level ?? 1.5).name);
   const num = (p.level ?? 1.5).toFixed(2);
   return `
     <div class="cr-top-currencies" aria-label="${t('Player currencies')}">
@@ -1014,11 +1015,11 @@ function renderCreatorScreen() {
 
 // 2b. Level start (new career only): questionnaire, Playtomic level or skip
 const LEVEL_QUESTIONS = [
-  ['How long have you played padel?', ['Never / just started', 'Under a year', '1 to 3 years', 'Over 3 years']],
-  ['How do you use the back glass?', ['I avoid it', 'I let the ball bounce off it', 'I play most balls off the glass', 'I use it for tactics and attack']],
-  ['Bandeja and víbora?', ['What are those?', 'I know them but rarely hit them', 'I hit them fairly often', 'Reliable weapons']],
-  ['Holding the net?', ['I stay at the back', 'I go up when I can', 'I win the net most points', 'I dominate the net']],
-  ['Tournaments?', ['Never', 'Friendly events', 'Club or local tournaments', 'Regional or national']],
+  [N_('How long have you played padel?'), [N_('Never / just started'), N_('Under a year'), N_('1 to 3 years'), N_('Over 3 years')]],
+  [N_('How do you use the back glass?'), [N_('I avoid it'), N_('I let the ball bounce off it'), N_('I play most balls off the glass'), N_('I use it for tactics and attack')]],
+  [N_('Bandeja and víbora?'), [N_('What are those?'), N_('I know them but rarely hit them'), N_('I hit them fairly often'), N_('Reliable weapons')]],
+  [N_('Holding the net?'), [N_('I stay at the back'), N_('I go up when I can'), N_('I win the net most points'), N_('I dominate the net')]],
+  [N_('Tournaments?'), [N_('Never'), N_('Friendly events'), N_('Club or local tournaments'), N_('Regional or national')]],
 ];
 
 function renderLevelStartScreen() {
@@ -1053,7 +1054,7 @@ function renderLevelStartScreen() {
     const st = lvl.start, bonus = startCredits(st.level);
     body = `
       <div class="cr-lvl-result">
-        <div class="cr-lvl-big">${t('Level {level} · {tier}', { level: st.level.toFixed(2), tier: tierAt(st.level).name })}</div>
+        <div class="cr-lvl-big">${t('Level {level} · {tier}', { level: st.level.toFixed(2), tier: t(tierAt(st.level).name) })}</div>
         ${bonus > 0 ? `<div class="cr-sub">${t('Starting bonus: {bonus} Credits', { bonus })}</div>` : ''}
         <div class="cr-sub">${escapeHtml(t(LEVEL_NOTE))}</div>
         <div class="cr-lvl-actions"><button type="button" class="cr-btn cr-btn-acc" id="cr-lvl-continue">${t('Continue')}</button></div>
@@ -1200,7 +1201,7 @@ function renderHubScreen() {
         <button type="button" class="pl-card cr-hub-card" id="cr-hub-shop">
           <div class="cr-hub-card-top">
             <div class="pl-card-title">${t('🛒 Shop')}</div>
-            <span class="pl-meta-pill">${t('{tier} Tier', { tier: tierAt(profile.level).name })}</span>
+            <span class="pl-meta-pill">${t('{tier} Tier', { tier: t(tierAt(profile.level).name) })}</span>
           </div>
           <div class="pl-card-sub">${t('Unlock pro rackets, shoes, kits, headwear & match balls.')}</div>
         </button>
@@ -1514,7 +1515,7 @@ function renderTrainingScreen() {
           const deficit = Math.max(0, cost - profile.credits);
           const canBuy = !isMax && deficit === 0;
           const pct = Math.min(100, (level / maxLevel) * 100);
-          const reasonText = isMax ? (level >= maxLevel || !nextTier ? t('Maxed') : t('Reach {tier} to train beyond {cap}', { tier: nextTier.name, cap })) : deficit > 0 ? t('Need {deficit} more Credits', { deficit }) : '';
+          const reasonText = isMax ? (level >= maxLevel || !nextTier ? t('Maxed') : t('Reach {tier} to train beyond {cap}', { tier: t(nextTier.name), cap })) : deficit > 0 ? t('Need {deficit} more Credits', { deficit }) : '';
 
           return `
             <div class="cr-train-card" data-stat-card="${st.key}">
@@ -1562,7 +1563,7 @@ function renderTrainingScreen() {
         const msg = res.reason === 'max'
           ? t('Maxed')
           : res.reason === 'cap'
-          ? t('Tier cap: reach {tier} to train beyond {cap}', { tier: TIERS.find(t => t.cap > statCap(profile))?.name || 'the next tier', cap: statCap(profile) })
+          ? t('Tier cap: reach {tier} to train beyond {cap}', { tier: t(TIERS.find(x => x.cap > statCap(profile))?.name || N_('the next tier')), cap: statCap(profile) })
           : res.reason === 'credits'
           ? t('Need {deficit} more Credits', { deficit: Math.max(1, cost - profile.credits) })
           : t('Cannot train this stat.');
@@ -1717,7 +1718,7 @@ function renderShopScreen() {
     const price = stack && room ? Math.ceil(item.price * room / item.pack) : item.price;
     const isEquipped = profile.equipped?.[shopTab] === item.id;
     const minTier = shop.tiers[item.tier] ?? 0;
-    const tierName = tierByIndex(minTier).name;
+    const tierName = t(tierByIndex(minTier).name);
     const isTierLocked = (profile.bestTier || 1) < minTier;
     const canAfford = profile.credits >= price;
     const errText = shopErrors[item.id] || '';
@@ -2021,7 +2022,7 @@ function renderRewardScreen() {
         <div class="cr-reward-lines">
           ${(r.lines || []).map(line => `
             <div class="cr-reward-row">
-              <span>${escapeHtml(t(line.label))}</span>
+              <span>${escapeHtml(line.msg ? t(...line.msg) : t(line.label))}</span>
               <b class="tabular">+${line.credits}</b>
             </div>
           `).join('')}
@@ -2033,7 +2034,7 @@ function renderRewardScreen() {
             <span>${t('Level {from} → {to}', { from: r.level.from.toFixed(2), to: r.level.to.toFixed(2) })}</span>
             <b class="tabular">${r.level.delta >= 0 ? '+' : ''}${r.level.delta.toFixed(2)}</b>
           </div>` : ''}
-          ${r.level?.tierUp ? `<div class="cr-reward-row is-mult"><span>${t('TIER UP: {tier}', { tier: r.level.tierUp })}</span><b>⬆</b></div>` : ''}
+          ${r.level?.tierUp ? `<div class="cr-reward-row is-mult"><span>${t('TIER UP: {tier}', { tier: t(r.level.tierUp) })}</span><b>⬆</b></div>` : ''}
           ${r.level?.bonus ? `<div class="cr-reward-row"><span>${t('Tier up bonus')}</span><b class="tabular">+${r.level.bonus}</b></div>` : ''}
           ${(r.ups || []).map(([k, from, to]) => `<div class="cr-reward-row is-mult"><span>📈 ${escapeHtml(t('{stat} {from} → {to} (match play)', { stat: TRAINING_STATS.find(x => x.key === k)?.label ? t(TRAINING_STATS.find(x => x.key === k).label) : k, from, to }))}</span><b>⬆</b></div>`).join('')}
         </div>
@@ -2218,11 +2219,13 @@ function renderProfileScreen() {
 
 // 10. Tournaments, Tournament run, Tournament result, World ranking
 const FORMAT_INFO = {
-  americano: 'Partners rotate every round; every rally is a point, first to 16.',
-  mexicano: 'Round 1 is random, then 1st+4th play 2nd+3rd by the table.',
-  knockout: 'Lose once and you are out. One set to 6.',
-  league: 'Everyone plays everyone; table by wins, then game difference.',
+  americano: N_('Partners rotate every round; every rally is a point, first to 16.'),
+  mexicano: N_('Round 1 is random, then 1st+4th play 2nd+3rd by the table.'),
+  knockout: N_('Lose once and you are out. One set to 6.'),
+  league: N_('Everyone plays everyone; table by wins, then game difference.'),
 };
+// t(e.format) / t(e.ai) in the tournament cards: the ids in data/tournaments.json
+const FORMAT_AI_NAMES = [N_('americano'), N_('mexicano'), N_('knockout'), N_('league'), N_('rookie'), N_('club'), N_('pro'), N_('legend')];
 const AI_OFFSET = { rookie: -1.5, club: 0, pro: 1, legend: 2 };
 const isPairFormat = (f) => f === 'knockout' || f === 'league';
 const avgStats = (s) => Object.values(s).reduce((a, b) => a + b, 0) / Object.values(s).length;

@@ -1,12 +1,14 @@
 // Career level (Playtomic-style 0.50-7.00 + reliability), tiers and AI levels. Pure: no DOM, shared with tests.
 // Design: docs/superpowers/specs/2026-10-19-career-progression-design.md §4-§5, §12.
 
+import { N_ } from './i18n.js';
+
 // index, id, name, lowest level, shop tier (data/shop.json item.tier), base-stat cap, recommended AI difficulty
 export const TIERS = [
-  ['rookie', 'Rookie', 0.5, 'amateur', 6, 'rookie'], ['beginner', 'Beginner', 1, 'amateur', 6, 'rookie'],
-  ['club', 'Club', 1.5, 'club', 7, 'club'], ['intermediate', 'Intermediate', 2.5, 'regional', 7, 'club'],
-  ['advanced', 'Advanced', 3.5, 'national', 8, 'pro'], ['competition', 'Competition', 4.5, 'pro', 9, 'pro'],
-  ['master', 'Master', 5.5, 'elite', 10, 'legend'], ['legend', 'Legend', 6.5, 'elite', 10, 'legend'],
+  ['rookie', N_('Rookie'), 0.5, 'amateur', 6, 'rookie'], ['beginner', N_('Beginner'), 1, 'amateur', 6, 'rookie'],
+  ['club', N_('Club'), 1.5, 'club', 7, 'club'], ['intermediate', N_('Intermediate'), 2.5, 'regional', 7, 'club'],
+  ['advanced', N_('Advanced'), 3.5, 'national', 8, 'pro'], ['competition', N_('Competition'), 4.5, 'pro', 9, 'pro'],
+  ['master', N_('Master'), 5.5, 'elite', 10, 'legend'], ['legend', N_('Legend'), 6.5, 'elite', 10, 'legend'],
 ].map(([id, name, min, shop, cap, ai], i) => ({ index: i + 1, id, name, min, shop, cap, ai }));
 
 export const tierAt = (level) => TIERS.findLast(t => level >= t.min) || TIERS[0];

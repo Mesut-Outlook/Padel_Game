@@ -206,34 +206,34 @@
 </div>
 
 <script type="module">
-import { t, loadLang, pickLang, translateDom } from './src/i18n.js';
+import { t, N_, loadLang, pickLang, translateDom } from './src/i18n.js';
 import { loadSettings } from './src/settings.js';
 import { padSvg, padLegend } from './src/helpkeys.js';
 
 // key code -> [label, category, short caption, full description]; mirrors src/input.js and src/main.js
 const K = {
-  KeyW: ['W', 'move', 'fwd', 'Run toward the net · adjust position before serving'],
-  KeyA: ['A', 'move', 'left', 'Run left · aim left while hitting'],
-  KeyS: ['S', 'move', 'back', 'Run backward'],
-  KeyD: ['D', 'move', 'right', 'Run right · aim right while hitting'],
-  ArrowUp: ['↑', 'move', '', 'Run toward the net (same as W)'], ArrowDown: ['↓', 'move', '', 'Run backward (same as S)'],
-  ArrowLeft: ['←', 'move', '', 'Run left (same as A)'], ArrowRight: ['→', 'move', '', 'Run right (same as D)'],
-  Space: ['Space', 'hit', 'shot · serve', 'Smart shot: drive, volley, bandeja, or smash; tosses & hits serve'],
-  KeyJ: ['J', 'hit', 'shot', 'Smart shot (same as Space)'],
-  KeyK: ['K', 'shot', 'lob', 'Lob: high and deep over the opponents'],
-  KeyL: ['L', 'shot', 'smash', 'Smash: powerful overhead strike on high balls'],
-  KeyU: ['U', 'shot', 'chiquita', 'Chiquita: soft, short ball dropping just over the net'],
-  KeyI: ['I', 'shot', 'víbora', 'Víbora: side-spin slicing overhead'],
-  KeyO: ['O', 'shot', 'contra', 'Contrapared: hit off your own glass wall over the net; hold A/D for side glass'],
-  KeyF: ['F', 'shot', 'slice', 'Slice serve: stays low and curves sideways'],
-  KeyE: ['E', 'sys', 'eat', 'Eat the food offered at a changeover when your energy is low'],
-  KeyB: ['B', 'sys', 'score', 'Scoreboard: auto (hidden during points) → hidden → always on'],
-  KeyC: ['C', 'sys', 'cam', 'Cycle camera angle'],
-  KeyR: ['R', 'sys', 'replay', 'Watch instant replay of the last point'],
-  KeyM: ['M', 'sys', 'sound', 'Mute / unmute sound & music'],
-  KeyH: ['H', 'sys', 'help', 'Show / hide on-screen key help · Shift+H moves corner'],
-  Escape: ['Esc', 'sys', 'pause', 'Open pause menu · skip replay'],
-  Enter: ['Enter', 'sys', 'menu', 'Main menu after match · skip lesson in training'],
+  KeyW: ['W', 'move', N_('fwd'), N_('Run toward the net · adjust position before serving')],
+  KeyA: ['A', 'move', N_('left'), N_('Run left · aim left while hitting')],
+  KeyS: ['S', 'move', N_('back'), N_('Run backward')],
+  KeyD: ['D', 'move', N_('right'), N_('Run right · aim right while hitting')],
+  ArrowUp: ['↑', 'move', N_(''), N_('Run toward the net (same as W)')], ArrowDown: ['↓', 'move', N_(''), N_('Run backward (same as S)')],
+  ArrowLeft: ['←', 'move', N_(''), N_('Run left (same as A)')], ArrowRight: ['→', 'move', N_(''), N_('Run right (same as D)')],
+  Space: ['Space', 'hit', N_('shot · serve'), N_('Smart shot: drive, volley, bandeja, or smash; tosses & hits serve')],
+  KeyJ: ['J', 'hit', N_('shot'), N_('Smart shot (same as Space)')],
+  KeyK: ['K', 'shot', N_('lob'), N_('Lob: high and deep over the opponents')],
+  KeyL: ['L', 'shot', N_('smash'), N_('Smash: powerful overhead strike on high balls')],
+  KeyU: ['U', 'shot', N_('chiquita'), N_('Chiquita: soft, short ball dropping just over the net')],
+  KeyI: ['I', 'shot', N_('víbora'), N_('Víbora: side-spin slicing overhead')],
+  KeyO: ['O', 'shot', N_('contra'), N_('Contrapared: hit off your own glass wall over the net; hold A/D for side glass')],
+  KeyF: ['F', 'shot', N_('slice'), N_('Slice serve: stays low and curves sideways')],
+  KeyE: ['E', 'sys', N_('eat'), N_('Eat the food offered at a changeover when your energy is low')],
+  KeyB: ['B', 'sys', N_('score'), N_('Scoreboard: auto (hidden during points) → hidden → always on')],
+  KeyC: ['C', 'sys', N_('cam'), N_('Cycle camera angle')],
+  KeyR: ['R', 'sys', N_('replay'), N_('Watch instant replay of the last point')],
+  KeyM: ['M', 'sys', N_('sound'), N_('Mute / unmute sound & music')],
+  KeyH: ['H', 'sys', N_('help'), N_('Show / hide on-screen key help · Shift+H moves corner')],
+  Escape: ['Esc', 'sys', N_('pause'), N_('Open pause menu · skip replay')],
+  Enter: ['Enter', 'sys', N_('menu'), N_('Main menu after match · skip lesson in training')],
 };
 const ROWS = [
   ['Escape'],

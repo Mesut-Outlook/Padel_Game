@@ -24,6 +24,9 @@ export function t(text, vars) {
   return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m)) : s;
 }
 
+// marks an English text that reaches t() later through a variable (a table, a label), so tools/extract-keys.js finds it
+export const N_ = (s) => s;
+
 export function setLang(code, tbl = {}) { current = code; table = tbl; }
 
 export async function loadLang(code) {

@@ -14,7 +14,10 @@ import { padText } from './padstyle.js';
 import { loadSettings, saveSettings } from './settings.js';
 import { toggleFullscreen } from './fullscreen.js';
 import { charCard } from './charcard.js';
-import { t } from './i18n.js';
+import { t, N_ } from './i18n.js';
+
+// the stat pills below call t(name.toUpperCase()); these make the keys findable
+const STAT_PILL_NAMES = [N_('SPEED'), N_('POWER'), N_('CONTROL'), N_('VOLLEY'), N_('SMASH'), N_('STAMINA')];
 
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);

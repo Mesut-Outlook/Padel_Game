@@ -3,7 +3,7 @@
 // They feed input.js like a keyboard, so the {move, swing, aim} input stays the same everywhere.
 import { setTouchMove } from './input.js';
 import { padText } from './padstyle.js';
-import { t } from './i18n.js';
+import { t, N_ } from './i18n.js';
 
 export const isTouch = () => (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches) || (typeof location !== 'undefined' && new URLSearchParams(location.search).has('touch'));
 
@@ -18,12 +18,12 @@ const STICK_R = 56;  // px from the centre to full speed
 // shot buttons ring the big SHOT button (bottom right): [key, label, class, radius px, angle° (180 = left, 90 = up)].
 // Inner ring = rally shots by height (lob left, víbora diagonal, smash up); outer ring = special shots.
 const BUTTONS = [
-  ['Space', 'SHOT', 'tc-shot', 0, 0],
-  ['KeyK', 'LOB', 'tc-ring', 100, 180], ['KeyI', 'VÍBORA', 'tc-ring', 100, 135], ['KeyL', 'SMASH', 'tc-ring', 100, 90],
-  ['KeyU', 'CHIQUITA', 'tc-mini', 172, 172], ['KeyO', 'CONTRA', 'tc-mini', 172, 135], ['KeyF', 'SLICE', 'tc-mini', 172, 98],
+  ['Space', N_('SHOT'), 'tc-shot', 0, 0],
+  ['KeyK', N_('LOB'), 'tc-ring', 100, 180], ['KeyI', N_('VÍBORA'), 'tc-ring', 100, 135], ['KeyL', N_('SMASH'), 'tc-ring', 100, 90],
+  ['KeyU', N_('CHIQUITA'), 'tc-mini', 172, 172], ['KeyO', N_('CONTRA'), 'tc-mini', 172, 135], ['KeyF', N_('SLICE'), 'tc-mini', 172, 98],
 ];
 const SHOT_C = 50;  // px from the box's right/bottom edge to the SHOT button's centre
-const TOP = [['KeyC', '🎥', 'Camera'], ['Escape', '⏸', 'Pause'], ['KeyR', '🔁', 'Replay'], ['KeyM', '🔈', 'Sound on / off'], ['KeyB', '📊', 'Scoreboard: auto / hidden / always on']];
+const TOP = [['KeyC', '🎥', N_('Camera')], ['Escape', '⏸', N_('Pause')], ['KeyR', '🔁', N_('Replay')], ['KeyM', '🔈', N_('Sound on / off')], ['KeyB', '📊', N_('Scoreboard: auto / hidden / always on')]];
 
 export function mountTouch(el) {
   el.innerHTML = `

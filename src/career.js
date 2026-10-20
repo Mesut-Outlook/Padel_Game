@@ -1,5 +1,6 @@
 // Career profile and economy (pure: no DOM, shared with tests). Balance numbers come in as `eco` (data/economy.json).
 // The profile is one JSON object saved in the browser; storage is passed in so a blocked localStorage never crashes.
+import { N_ } from './i18n.js';
 import { TIERS, tierAt, rateMatch, matchShare, idleReliability, startCredits } from './level.js';
 import { xpFromTally } from './matchstats.js';
 
@@ -118,17 +119,20 @@ export function importProfile(text) {
 
 // result = { won, gamesWon, pointsWon, scoring: 'sets'|'rally', ai: rookie|club|pro|legend|online, style? }
 // bonus = { firstWin, streak: 0..streakMax } from settleMatch; both are added before the AI multiplier
+
+// a reward line: label = the English text; msg = [template, vars] for the UI's t() when the label carries numbers
+const rline = (tpl, vars, credits) => ({ label: tpl.replace(/\{(\w+)\}/g, (_, k) => vars[k]), msg: [tpl, vars], credits });
 export function matchReward(result, eco, bonus = {}) {
   const mult = eco.mult[result.ai] ?? 1;
-  if (result.forfeit) return { lines: [{ label: 'Forfeit', credits: 0 }], mult, credits: 0 };  // quitting must not farm the 'Played' Credits
-  const m = eco.match, lines = [{ label: 'Played', credits: m.base }];
-  if (result.scoring === 'rally') lines.push({ label: `${result.pointsWon} points × ${m.perPointWon}`, credits: result.pointsWon * m.perPointWon });
-  else lines.push({ label: `${result.gamesWon} games × ${m.perGameWon}`, credits: result.gamesWon * m.perGameWon });
-  if (result.won) lines.push({ label: 'Win', credits: m.winBonus });
-  if (result.style > 0) lines.push({ label: `Style ${result.style} pts`, credits: Math.floor(result.style / m.stylePerCredit) });
+  if (result.forfeit) return { lines: [{ label: N_('Forfeit'), credits: 0 }], mult, credits: 0 };  // quitting must not farm the 'Played' Credits
+  const m = eco.match, lines = [{ label: N_('Played'), credits: m.base }];
+  if (result.scoring === 'rally') lines.push(rline(N_('{n} points × {per}'), { n: result.pointsWon, per: m.perPointWon }, result.pointsWon * m.perPointWon));
+  else lines.push(rline(N_('{n} games × {per}'), { n: result.gamesWon, per: m.perGameWon }, result.gamesWon * m.perGameWon));
+  if (result.won) lines.push({ label: N_('Win'), credits: m.winBonus });
+  if (result.style > 0) lines.push(rline(N_('Style {n} pts'), { n: result.style }, Math.floor(result.style / m.stylePerCredit)));
   const sub = lines.reduce((n, l) => n + l.credits, 0);
-  if (bonus.firstWin) lines.push({ label: `First win of the day ×${eco.bonus.firstWin}`, credits: sub * (eco.bonus.firstWin - 1) });
-  if (bonus.streak > 0) lines.push({ label: `Streak +${Math.round(bonus.streak * 100)}%`, credits: Math.round(sub * bonus.streak) });
+  if (bonus.firstWin) lines.push(rline(N_('First win of the day ×{x}'), { x: eco.bonus.firstWin }, sub * (eco.bonus.firstWin - 1)));
+  if (bonus.streak > 0) lines.push(rline(N_('Streak +{pct}%'), { pct: Math.round(bonus.streak * 100) }, Math.round(sub * bonus.streak)));
   return { lines, mult, credits: Math.round(lines.reduce((n, l) => n + l.credits, 0) * mult) };
 }
 
@@ -189,7 +193,7 @@ export const expiringSoon = (p, eco, now = new Date(), days = 7) =>
 
 // stats grow to the best tier's cap (spec §9, §12.2); a stat already above it (migrated) is kept, never lowered
 export const statCap = (profile) => TIERS[(profile.bestTier || 1) - 1].cap;
-const STAT_NAME = { speed: 'Speed', power: 'Power', control: 'Control', volley: 'Volley', smash: 'Smash', stamina: 'Stamina' };
+const STAT_NAME = { speed: N_('Speed'), power: N_('Power'), control: N_('Control'), volley: N_('Volley'), smash: N_('Smash'), stamina: N_('Stamina') };
 
 // match XP: a stat goes up when its XP reaches eco.xp.per × the stat; nothing is gained at the cap
 // (the cap is the one before this match's tier-up: the new tier lifts it from the next match on)
@@ -212,18 +216,18 @@ const tip = (lead, rest, alt, action) => ({ text: `${fill(lead)} — ${fill(rest
 export function coachTip(t, profile, eco) {
   const cap = statCap(profile), next = TIERS.find(x => x.cap > cap);
   const train = (k, lead, alt = null) => profile.stats[k] >= cap
-    ? tip(lead, next ? ['reach {tier} to train beyond {cap}', { tier: next.name, cap }] : ['keep playing'], null, null)
-    : tip(lead, ['Train {stat} ({cost} Credits)', { stat: STAT_NAME[k], cost: trainCost(profile.stats[k], eco) }], alt, { train: k });
+    ? tip(lead, next ? [N_('reach {tier} to train beyond {cap}'), { tier: next.name, cap }] : [N_('keep playing')], null, null)
+    : tip(lead, [N_('Train {stat} ({cost} Credits)'), { stat: STAT_NAME[k], cost: trainCost(profile.stats[k], eco) }], alt, { train: k });
   const food = (profile.bag?.bag_banana || 0) + (profile.bag?.bag_gel || 0);
-  if (t.drySec >= 30) return tip(['You were dehydrated for {s} s', { s: Math.round(t.drySec) }], ['keep water in your bag'], null, { restock: true });
-  const tired = ['You were exhausted for {s} s', { s: Math.round(t.tiredSec) }];
-  if (t.tiredSec >= 30) return food ? train('stamina', tired, ['or eat at changeovers'])
-    : tip(tired, ['keep food in your bag and eat at changeovers'], null, { restock: true });
+  if (t.drySec >= 30) return tip([N_('You were dehydrated for {s} s'), { s: Math.round(t.drySec) }], [N_('keep water in your bag')], null, { restock: true });
+  const tired = [N_('You were exhausted for {s} s'), { s: Math.round(t.tiredSec) }];
+  if (t.tiredSec >= 30) return food ? train('stamina', tired, [N_('or eat at changeovers')])
+    : tip(tired, [N_('keep food in your bag and eat at changeovers')], null, { restock: true });
   const [vm, vx] = t.volley, [sm, sx] = t.smash;
-  if (vm + vx >= 5 && vx / (vm + vx) >= 0.4) return train('volley', ['Your volleys missed {x} of {n}', { x: vx, n: vm + vx }], ['or play at the net more']);
-  if (sm + sx >= 4 && sx / (sm + sx) >= 0.4) return train('smash', ['Your smashes missed {x} of {n}', { x: sx, n: sm + sx }], ['or let more lobs bounce off the glass']);
+  if (vm + vx >= 5 && vx / (vm + vx) >= 0.4) return train('volley', [N_('Your volleys missed {x} of {n}'), { x: vx, n: vm + vx }], [N_('or play at the net more')]);
+  if (sm + sx >= 4 && sx / (sm + sx) >= 0.4) return train('smash', [N_('Your smashes missed {x} of {n}'), { x: sx, n: sm + sx }], [N_('or let more lobs bounce off the glass')]);
   const weak = STATS.reduce((a, k) => (profile.stats[k] < profile.stats[a] ? k : a));
-  return train(weak, ['Your weakest skill is {stat} ({v})', { stat: STAT_NAME[weak], v: profile.stats[weak] }]);
+  return train(weak, [N_('Your weakest skill is {stat} ({v})'), { stat: STAT_NAME[weak], v: profile.stats[weak] }]);
 }
 
 // Credits to raise a stat from `level` to level + 1

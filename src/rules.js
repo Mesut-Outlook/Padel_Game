@@ -1,6 +1,8 @@
 // Padel match rules (shared client/server). Pure state machine driven by hit + contact events.
 // Players: 0,1 = team 0 (z>0); 2,3 = team 1 (z<0). Singles: players 0 and 2.
 
+import { N_ } from './i18n.js';
+
 export const PTS = ['0', '15', '30', '40'];
 
 export function newMatch(opts = {}) {
@@ -157,16 +159,19 @@ export function scoreText(m) {
   return { sets, pts, board: scoreBoard(m) };
 }
 
+// scoreBoard labels with the target number: t(b.label) in main.js looks these up (careerui plays to 16, or 4 in a quick match)
+export const RALLY_LABELS = [N_('RALLY TO 16'), N_('RALLY TO 4')];
+
 // Structured score for the on-screen board: games per set, each team's point, who serves and a state label.
 export function scoreBoard(m) {
   const p = m.points, deuce = !m.tiebreak && p[0] >= 3 && p[1] >= 3;
   if (m.opts.pointsTo) return { sets: [], pts: [String(p[0]), String(p[1])], server: teamOf(serverId(m)), label: 'RALLY TO ' + m.opts.pointsTo, setNo: 1 };
   let pts, label = '';
-  if (m.tiebreak) { pts = [String(p[0]), String(p[1])]; label = 'TIE-BREAK'; }
-  else if (deuce && p[0] !== p[1]) { pts = p[0] > p[1] ? ['AD', '40'] : ['40', 'AD']; label = 'ADVANTAGE'; }
+  if (m.tiebreak) { pts = [String(p[0]), String(p[1])]; label = N_('TIE-BREAK'); }
+  else if (deuce && p[0] !== p[1]) { pts = p[0] > p[1] ? ['AD', '40'] : ['40', 'AD']; label = N_('ADVANTAGE'); }
   else {
     pts = [PTS[Math.min(p[0], 3)], PTS[Math.min(p[1], 3)]];
-    if (deuce) label = m.opts.starPoint ? (m.deuces >= 3 ? 'STAR POINT' : 'DEUCE') : m.opts.goldenPoint ? 'GOLDEN POINT' : 'DEUCE';
+    if (deuce) label = m.opts.starPoint ? (m.deuces >= 3 ? N_('STAR POINT') : N_('DEUCE')) : m.opts.goldenPoint ? N_('GOLDEN POINT') : N_('DEUCE');
   }
   return { sets: m.sets.map(s => [...s]), pts, server: teamOf(serverId(m)), label, setNo: m.sets.length };
 }
