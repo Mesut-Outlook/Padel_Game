@@ -2121,6 +2121,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   }
   .pl-room-link-input {
     flex: 1 1 auto;
+    min-width: 0;
     background: transparent;
     border: none;
     color: var(--acc);
@@ -2140,6 +2141,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
     color: var(--acc);
     cursor: pointer;
     white-space: nowrap;
+    flex: none;
   }
   .pl-copy-btn:hover { background: rgba(216, 245, 58, 0.25); }
   .pl-online-divider {
