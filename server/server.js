@@ -169,7 +169,7 @@ export function startServer(port, limits = {}) {
   }
 
   function tick(room) {
-    if (!room.started) return;
+    if (!room.started || !room.clients.size) return;  // nobody connected: the match waits for a rejoin instead of playing on
     const w = room.world, taken = new Set(room.clients.values());
     const inp = {};
     for (const pl of w.players) if (pl.active) inp[pl.id] = taken.has(pl.id) ? room.inputs[pl.id] || {} : aiInput(w, pl.id, room.cfg.ai);
@@ -215,7 +215,7 @@ export function startServer(port, limits = {}) {
       } else if (m.type === 'join') {
         if (room) return fail('Already in a room');  // one room per connection
         let target;
-        if (m.create === true) {  // the server picks the code: never guessable, never someone else's room
+        if (m.create === true && m.rejoin === undefined) {  // the server picks the code: never guessable, never someone else's room
           if (rooms.size >= lim.rooms) return fail('The server is full. Try again later.');
           target = makeRoom(newCode(), sanitizeCfg(m.cfg, m));
         } else {
@@ -223,17 +223,20 @@ export function startServer(port, limits = {}) {
           if (!target) { if (++misses >= 5) ws.close(1008, 'too many wrong codes'); return fail('Room not found'); }  // no code guessing
         }
         if (typeof m.rejoin === 'string') {  // back after a dropped connection: the same seat, even in a match that has started
-          const seat = Object.keys(target.away).map(Number).find(s => target.away[s].token === m.rejoin && target.away[s].until >= Date.now());
-          if (seat == null) { if (++misses >= 5) ws.close(1008, 'too many wrong codes'); return fail('Could not get back into the match'); }
+          const seat = Number(Object.keys(target.tokens).find(s => target.tokens[s] === m.rejoin));
           const a = target.away[seat];
+          // a phone that switched networks comes back before the server noticed the old socket is dead: the token replaces it
+          const old = target.started && !a && [...target.clients].find(([, s]) => s === seat)?.[0];
+          if (!(a?.until >= Date.now()) && !old) { if (++misses >= 5) ws.close(1008, 'too many wrong codes'); return fail('Could not get back into the match'); }
+          if (old) { target.clients.delete(old); old.terminate(); }
           delete target.away[seat];
           room = target;
           room.clients.set(ws, seat);
           if (room.host == null) room.host = seat;
-          if (a.name) room.names[seat] = a.name;
-          if (a.look) room.looks[seat] = a.look;
+          if (a?.name) room.names[seat] = a.name;
+          if (a?.look) room.looks[seat] = a.look;
           console.log(`rejoin seat=${seat}`);
-          ws.send(JSON.stringify({ type: 'seat', seat, code: room.code, token: a.token }));
+          ws.send(JSON.stringify({ type: 'seat', seat, code: room.code, token: m.rejoin }));
           return lobby(room);
         }
         const taken = new Set(target.clients.values());
@@ -277,6 +280,7 @@ export function startServer(port, limits = {}) {
       if (n) perIp.set(ip, n); else perIp.delete(ip);
       if (!room) return;
       const seat = room.clients.get(ws);
+      if (seat === undefined) return;  // replaced by the same player's new connection (rejoin)
       room.clients.delete(ws);
       console.log(`leave seat=${seat} code=${code} started=${+room.started}`);  // why a player left; never an IP or a room code
       // mid-match the AI plays the seat while it waits for its player (rejoin); in the lobby the seat is simply free

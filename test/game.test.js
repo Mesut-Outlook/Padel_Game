@@ -470,7 +470,7 @@ test('replay: only the team that won the point can skip it', () => {
   stepWorld(w, { 2: { skip: true } }, 1 / 60);  // the losers
   assert.ok(w.timer > before - 0.1 && w.replay, 'losers cannot skip');
   stepWorld(w, { 1: { skip: true } }, 1 / 60);  // a winner
-  assert.ok(w.timer <= 0.5 && !w.replay, 'winners can');
+  assert.ok(w.timer <= 2.2 && w.timer > 1.5 && !w.replay, 'winners can, but never below a normal break');
 });
 
 test('replay: a serve that comes off the back glass is not a highlight, a ball played back off the glass is', () => {

@@ -219,7 +219,7 @@ function endPoint(w, r) {
   w.timer = 2.2;
   if (replay && w.opts.holdReplay) {  // the next serve waits for the replay; the point's winners may cut it short (input skip)
     w.timer = Math.min(REPLAY.maxHold, Math.max(w.timer, REPLAY.delay + (replay.to - replay.from) / replay.speed + 0.4));
-    w.replay = { team: r.point };
+    w.replay = { team: r.point, min: w.t + 2.2 };  // a skip never makes the break shorter than a normal one
   }
 }
 
@@ -294,7 +294,7 @@ export function stepWorld(w, inputs, dt) {
     return w;
   }
   if (w.state === 'dead' || w.state === 'over') {
-    if (w.replay && w.players.some(p => p.team === w.replay.team && inputs[p.id]?.skip)) { w.timer = Math.min(w.timer, 0.5); w.replay = null; }
+    if (w.replay && w.players.some(p => p.team === w.replay.team && inputs[p.id]?.skip)) { w.timer = Math.min(w.timer, Math.max(0.5, w.replay.min - w.t)); w.replay = null; }
     w.timer -= dt;
     if (w.timer <= 0 && w.state === 'dead') resetPositions(w);
     stepBallEvents(w, dt);

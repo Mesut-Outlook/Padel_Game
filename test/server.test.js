@@ -448,3 +448,30 @@ test('client: a connection that drops mid-match reconnects by itself and gets it
     net.ws.onclose = null; net.ws.close(); host.ws.close();
   } finally { await srv.close(); }
 });
+
+test('rejoin hardening: create + rejoin makes no room, an empty match waits, a live old socket is replaced', async () => {
+  const srv = await startServer(0);
+  try {
+    const x = client(srv.port);
+    const err = x.next('error');
+    await x.send({ type: 'join', create: true, rejoin: 'abc' });
+    await err;
+    assert.equal(srv.rooms.size, 0);
+    const { host, guest, code, token } = await startedMatch(srv);
+    const room = srv.rooms.get(code);
+    const fresh = client(srv.port);  // the guest's new connection while the old one still looks alive
+    const seat = fresh.next('seat');
+    await fresh.send({ type: 'join', code, rejoin: token });
+    assert.equal((await seat).seat, 2);
+    await new Promise(r => setTimeout(r, 30));
+    assert.equal(guest.ws.readyState, 3, 'old socket closed');
+    assert.deepEqual([...room.clients.values()].sort(), [0, 2]);
+    assert.deepEqual(room.away, {});
+    host.ws.close(); fresh.ws.close();
+    await new Promise(r => setTimeout(r, 30));
+    const t = room.world.t;
+    await new Promise(r => setTimeout(r, 60));
+    assert.equal(room.world.t, t, 'no one connected: the match is paused');
+    x.ws.close();
+  } finally { await srv.close(); }
+});
