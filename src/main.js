@@ -39,6 +39,7 @@ const $ = (id) => document.getElementById(id);
 const matchOpts = () => ({ sets: parseInt($('sets').value), superTiebreak: $('sets').value === '3s', goldenPoint: $('golden').value === '1', starPoint: $('golden').value === 'star' });
 const fill = (sel, items, label) => { sel.innerHTML = items.map((x, i) => `<option value="${i}">${label(x)}</option>`).join(''); };
 fill($('char'), characters, c => `${c.name} (${c.countryCode}, ${c.gender === 'f' ? 'F' : 'M'})`);
+$('char').value = Math.floor(Math.random() * characters.length);  // a different starting player on every visit
 fill($('venue'), venues, v => `${v.name} — ${v.city}`);
 fill($('racket'), rackets, r => `${r.name} · ${r.shape} · P${r.stats.power}/C${r.stats.control}`);
 initMenu();
