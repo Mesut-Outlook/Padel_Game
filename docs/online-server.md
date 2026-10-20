@@ -7,14 +7,12 @@ Kullanıcı acemi, adım adım ilerliyoruz: bir adım bitmeden sonrakine geçme,
 
 ## Adımlar
 0. **Ücretsiz deneme (sunucu kiralamadan):** `npm run online` ile bir Cloudflare quick tunnel aç (`cloudflared tunnel --url http://localhost:8080`), ardından arkadaşa `https://padellegends.eu/?server=wss://<tünel>` linkini gönder. Sorulacak sorular: online oyun eğlenceli mi, gecikme vuruş zamanlamasını bozuyor mu?
-1. **Herkese açmadan önce sunucuyu sağlamlaştır:**
-   - `maxPayload` limiti koy (ws'nin varsayılanı 100 MiB).
-   - IP başına bağlantı sınırı, toplam oda sınırı, mesaj hız sınırı.
-   - ping/pong ile ölü bağlantıları temizle.
-   - Oda kodunu sunucu üretsin (`PADEL1` gibi tahmin edilebilir kodlar olmasın).
-   - Maçı yalnız oda kurucusu başlatabilsin.
-   - Origin kontrolü ekle.
-   - Herkese açık lobide isim filtresi uygula, ya da isimleri hiç göstermeme seçeneğini değerlendir (çocuklar da oynuyor olabilir).
+1. **Herkese açmadan önce sunucuyu sağlamlaştır:** bitti (2026-10-20), testleri `test/server.test.js` içinde.
+   - Sınırlar `LIMITS` içinde (`server/server.js`): 100 oda, IP başına 8 bağlantı, bağlantı başına saniyede 120 mesaj, mesaj başına 4096 bayt.
+   - Oda kodunu sunucu üretiyor (`join` + `create: true`; 6 karakter, `crypto.randomInt`). Kodla katılmak için oda var olmalı. Maçı yalnızca oda kurucusu başlatıyor (o çıkarsa sıradaki oyuncu). `cfg` izin listesinden geçiyor (`sanitizeCfg`). ping/pong var.
+   - Origin: padellegends.eu, localhost ve sayfayı sunan aynı host. Başka site gerekirse `ALLOWED_ORIGINS=a.com,b.com`.
+   - Ziyaretçi IP'si: Cloudflare tüneli (cloudflared yerelden bağlanır) için otomatik `cf-connecting-ip`. Fly.io gibi önünde proxy olan bir hostta `TRUST_PROXY=1` ayarla, yoksa herkes aynı IP sayılır ve 8 bağlantı sınırı hepsine birden uygulanır.
+   - Açık kalan: herkese açık lobide isim filtresi uygula, ya da isimleri hiç göstermeme seçeneğini değerlendir (çocuklar da oynuyor olabilir).
 2. **Oyun tasarımı kararı:** Kariyer statları istemcide tutuluyor, yani hile yapmak kolay. Online modda eşit statlar mı olsun, yoksa yalnızca arkadaş maçları mı? Sıralamalı (ranked) maç sunucuda profil tutmayı gerektirir, bu da kişisel veri demek ve sonraya kalıyor.
 3. **Barındırma (hosting):** Fly.io (kabaca 2 $/ay, Frankfurt veya Amsterdam bölgesi, TLS otomatik, Linux yönetimi yok) ya da Hetzner (AB şirketi, CX23 kabaca 5,5 €/ay + KDV, VPS'i biz yönetiriz, TLS için Caddy). Fiyatları seçim anında yeniden kontrol et. Alt alan adı: `server.padellegends.eu` (Namecheap'te CNAME veya A kaydı; `_github-pages-challenge` TXT kaydına dokunma). Bu adımda `DEFAULT_SERVER` tek satırla değişir.
 4. **Gizlilik sayfasını güncelle:** Sunucu IP adresini (bağlantı süresince) ve seçilen ismi/görünümü görüyor; log tutulmuyor. Fly.io seçilirse barındırma sağlayıcısının adını da yaz.

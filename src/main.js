@@ -16,7 +16,7 @@ import { track, trackOnce } from './track.js';
 import { predict } from './physics.js';
 import { createFx } from './fx.js';
 import { unlockAudio, isAudioSuspended, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxReward, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
-import { initMenu, setWizardWhere, disposeMenu } from './menu.js';
+import { initMenu, setWizardWhere, setWizardRoom, disposeMenu } from './menu.js';
 import { initCareer, openCareer } from './careerui.js';
 import { createTutorial } from './tutorial.js';
 import { padText, isPlayStation } from './padstyle.js';
@@ -240,7 +240,7 @@ async function setupScene(venue, ids, roster, rk) {
 
 // Online entry for the menu button and for Career. url defaults to serverUrl() (?server= / static build: none / :8080 / same host). look = remote-visible appearance (its stats are ignored).
 // status(text, lobby?) mirrors the #lobby line for callers that show their own panel; returns the net handle (or null if it did not connect).
-export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, bag, onEnd: end, status } = {}) {
+export function startOnline({ url, code, create = false, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, bag, onEnd: end, status } = {}) {
   unlockAudio();
   updateUnmuteBadge();
   keepAwake(true);
@@ -254,15 +254,16 @@ export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', ma
   if (!url) { say(t(NO_SERVER), null, true); return null; }
   if (!allowServer(url)) { say(t(NOT_CONNECTED), null, true); return null; }
   code = String(code || '').trim().toUpperCase();
-  if (!code) { say(t('Enter a room code first.'), null, true); return null; }
+  if (!code && !create) { say(t('Enter a room code first.'), null, true); return null; }  // create: the server picks the code
   onEnd = end || null; pointsWon = [0, 0]; bagLeft = bag ? { ...bag } : null; tally = end ? newTally() : null;
   net = connect({
-    url, code, char, stats, racket, public: isPublic, name, look, shoes, ball, bag,
+    url, code, create, char, stats, racket, public: isPublic, name, look, shoes, ball, bag,
     cfg: { players, ...match, ai, venue, outdoor: venues[venue]?.type === 'outdoor' },
     onError: (e) => say(escapeText(e), null, true),
     onLobby: (l) => {
+      setWizardRoom(l.code);
       say(t('Room <b>{code}</b> · your seat: {seat} · players: {taken}/{total} (empty = AI)', { code: escapeText(l.code), seat: Number(net.seat) || 0, taken: Number(l.taken?.length) || 0, total: Number(l.seats?.length) || 0 }) +
-        (l.started ? '' : t(' — <b>click “START MATCH” when everyone is ready</b>')), l);
+        (l.started ? '' : l.host === net.seat ? t(' — <b>click “START MATCH” when everyone is ready</b>') : t(' — the room creator starts the match')), l);
       if (l.started && !avatars.length) {
         const ids = l.seats, roster = {}, rk = {};
         for (const id of ids) {
@@ -285,11 +286,12 @@ export function startOnline({ url, code, players = 4, venue = 0, ai = 'club', ma
 const escapeText = (t) => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 
 $('online').onclick = () => {
+  if (net) { net.start(); return; }  // already in the room: START again starts the match (host only, the server checks)
   track('online-click');
   const me = +$('char').value;
   const myRk = rackets[+$('racket').value];
   startOnline({
-    code: $('room').value, char: me, stats: characters[me].stats, racket: myRk.stats,
+    code: $('room').value, create: !$('room').value, char: me, stats: characters[me].stats, racket: myRk.stats,
     look: { racket: myRk.id, racketColor: myRk.color, racketShape: myRk.shape },
     players: +$('mode').value, match: matchOpts(), ai: $('ai').value, venue: +$('venue').value,
   });

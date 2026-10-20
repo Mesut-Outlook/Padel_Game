@@ -1027,4 +1027,5 @@ export default {
   "That server will receive your IP address and the player you play with: name, look, level, stats and equipment.": "O sunucu IP adresini ve oynadığın oyuncunun bilgilerini alacak: isim, görünüm, seviye, statlar ve ekipman.",
   "Connect anyway?": "Yine de bağlanılsın mı?",
   "Not connected: you did not allow that game server.": "Bağlanılmadı: o oyun sunucusuna izin vermedin.",
+  " — the room creator starts the match": " — maçı odayı kuran başlatır",
 };

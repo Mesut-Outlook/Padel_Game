@@ -42,6 +42,10 @@ export function setCareerGamepadHandler(fn) {
 export function setWizardWhere(where, room) {
   return setWizardWhereFn?.(where, room);
 }
+let setWizardRoomFn = null;
+export function setWizardRoom(code) {  // the server picked the room code: show it with the invite link
+  return setWizardRoomFn?.(code);
+}
 
 let disposeFn = null;
 export const disposeMenu = () => disposeFn?.();
@@ -694,13 +698,6 @@ export function initMenu() {
   let selectedWhere = 'local';
   let currentRoomCode = '';
 
-  function generateRoomCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let c = '';
-    for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
-    return c;
-  }
-
   function updateRoomDisplay(code) {
     currentRoomCode = (code || '').toUpperCase().slice(0, 6);
     const codeEl = shell.querySelector('#pl-room-code-val');
@@ -721,13 +718,7 @@ export function initMenu() {
     shell.querySelectorAll('#pl-where-seg [data-where]').forEach(c => c.classList.toggle('is-selected', c.dataset.where === where));
     const onlineSec = shell.querySelector('#pl-online-section');
     if (onlineSec) onlineSec.hidden = (where !== 'online');
-    if (where === 'online') {
-      if (code) {
-        updateRoomDisplay(code);
-      } else if (!currentRoomCode) {
-        updateRoomDisplay(generateRoomCode());
-      }
-    }
+    if (where === 'online' && code) updateRoomDisplay(code);  // no code: START creates the room and the server names it
   }
 
   shell.querySelectorAll('#pl-where-seg [data-where]').forEach(card => {
@@ -775,6 +766,7 @@ export function initMenu() {
   }
 
   setWizardWhereFn = (where, room) => setWhere(where, room);
+  setWizardRoomFn = (code) => updateRoomDisplay(code);
 
   // Home & Fullscreen buttons
   shell.querySelectorAll('#pl-home-btn, #pl-home-mini').forEach(b => { b.onclick = () => { location.hash = '#home'; }; });
@@ -834,7 +826,6 @@ export function initMenu() {
     startBtn.onclick = () => {
       if (selectedWhere === 'online') {
         track(roomJoined ? 'online-join' : 'online-create');
-        if (!currentRoomCode) updateRoomDisplay(generateRoomCode());
         if ($('room')) $('room').value = currentRoomCode;
         if ($('online')) $('online').click();
       } else {

@@ -1027,4 +1027,5 @@ export default {
   "That server will receive your IP address and the player you play with: name, look, level, stats and equipment.": "Ce serveur recevra ton adresse IP et le joueur avec lequel tu joues : nom, apparence, niveau, statistiques et équipement.",
   "Connect anyway?": "Se connecter quand même ?",
   "Not connected: you did not allow that game server.": "Non connecté : tu n'as pas autorisé ce serveur de jeu.",
+  " — the room creator starts the match": " — le créateur de la salle lance le match",
 };

@@ -2645,8 +2645,11 @@ function setOnlineStatus(text, lobby, err = false) {
   const el = careerPanel?.querySelector('#cr-on-status');
   if (el) { el.innerHTML = text; el.style.display = text ? '' : 'none'; }
   const go = careerPanel?.querySelector('#cr-on-start');
-  if (go) go.hidden = !onlineState.lobby || onlineState.lobby.started;
+  if (go) go.hidden = !canStartOnline();
 }
+
+// only the room creator may start (the server ignores everyone else)
+const canStartOnline = () => !!onlineState.lobby && !onlineState.lobby.started && onlineState.lobby.host === onlineState.net?.seat;
 
 function leaveOnline() {
   if (onlineState.net) {  // a joined room lives in main.js state: reload to drop it cleanly
@@ -2673,7 +2676,7 @@ async function refreshRooms() {
 
 function joinOnlineRoom(code, create) {
   code = String(code || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-  if (!code) { setOnlineStatus(t('Enter a room code first.'), null, true); return; }
+  if (!code && !create) { setOnlineStatus(t('Enter a room code first.'), null, true); return; }
   if (!profile || onlineState.net) return;
   track(create ? 'online-create' : 'online-join');
   const { stats: _s, ...look } = { ...buildEquippedPlayer(profile), level: profile.level };  // level: rivals rate against it
@@ -2684,7 +2687,7 @@ function joinOnlineRoom(code, create) {
   const venue = venues[onlineState.venueIdx] || venues[0];
   const startedAt = new Date();  // ponytail: online counts from joining the room, not the first serve
   const net = startOnlineFn({
-    url: onlineUrl() || undefined, code, players: onlineState.players,
+    url: onlineUrl() || undefined, code, create, players: onlineState.players,
     venue: venues.indexOf(venue), ai: 'club',
     match: { sets: 1, goldenPoint: true, superTiebreak: false, starPoint: false },
     char: 0, stats: { ...profile.stats }, racket: { ...myRacket.stats },
@@ -2734,7 +2737,7 @@ function renderOnlineScreen() {
     </div>
     <div class="cr-body">
       <div class="cr-msg cr-msg-ok" id="cr-on-status" style="${onlineState.status ? '' : 'display:none'}">${onlineState.status}</div>
-      <button type="button" class="pl-start-btn" id="cr-on-start" ${onlineState.lobby && !onlineState.lobby.started ? '' : 'hidden'}>${t('START MATCH')}</button>
+      <button type="button" class="pl-start-btn" id="cr-on-start" ${canStartOnline() ? '' : 'hidden'}>${t('START MATCH')}</button>
       ${joined ? '' : `
       <div class="pl-section-label">${t('PUBLIC ROOMS')} <button type="button" class="cr-btn" id="cr-on-refresh" ${onlineState.busy ? 'disabled' : ''}>${t('Refresh')}</button></div>
       <div class="cr-tour-list">
@@ -2784,7 +2787,7 @@ function renderOnlineScreen() {
   q('#cr-on-venue').onchange = (e) => { onlineState.venueIdx = +e.target.value; };
   q('#cr-on-ball').onchange = (e) => { onlineState.ballId = e.target.value; };
   q('#cr-on-code').oninput = (e) => { onlineState.code = e.target.value; };
-  q('#cr-on-create').onclick = () => joinOnlineRoom(Math.random().toString(36).slice(2, 6).toUpperCase(), true);
+  q('#cr-on-create').onclick = () => joinOnlineRoom('', true);
   q('#cr-on-join').onclick = () => joinOnlineRoom(onlineState.code, false);
 }
 

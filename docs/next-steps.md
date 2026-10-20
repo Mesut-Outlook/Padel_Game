@@ -33,13 +33,7 @@ Ayrıntılar ve satır numaraları yerel güvenlik raporunda (`agents/reports/se
 1. ~~**Site:** `?server=` ile gelen veriler~~ **Bitti (2026-10-20):** yabancı sunucuya bağlanmadan önce onay (`allowServer` in `serverurl.js`), `?server=` URL'den çıkarılıyor, GoatCounter `count.v5.js` + SRI, `privacy.html` (online verileri + Your rights).
 2. ~~**DNS**~~ **Bitti (2026-10-20):** Namecheap'e TXT `_dmarc` = `v=DMARC1; p=reject; adkim=s; aspf=s` ve CAA `@` = `0 issue "letsencrypt.org"` eklendi. MX/SPF ve GitHub TXT kayıtlarına dokunulmadı. İleride oyun sunucusu Let's Encrypt dışında bir sertifika kullanırsa CAA'ya o da eklenmeli.
 3. ~~**GitHub**~~ **Bitti (2026-10-20):** ruleset "protect main" (aktif, varsayılan dal): silme ve force-push yasak; PR ya da status check zorunluluğu yok, normal push ve Pages yayını çalışıyor. Oluştururken GitHub "Confirm access" istiyor, onayı kullanıcı verir.
-4. **Oyun sunucusunu sağlamlaştırma** (`server/server.js`; her biri için test ekle):
-   - Bozuk mesaj ya da bozuk URL ile çökmesin.
-   - Bağlantı başına tek oda, toplam oda sınırı, IP başına bağlantı sınırı ve mesaj hız sınırı.
-   - `maxPayload`. `cfg` alanları izin listesinden geçsin.
-   - Oda kodunu sunucu üretsin; kodlar çakışınca hata versin.
-   - Maçı yalnızca oda kurucusu başlatsın. Origin kontrolü, ping/pong, `Object.hasOwn(SHOTS, …)`.
-   - `ws` ≥ 8.20.2'ye güncellensin.
+4. ~~**Oyun sunucusunu sağlamlaştırma**~~ **Bitti (2026-10-20):** ayrıntılar `docs/online-server.md` adım 1'de. `ws` 8.22.0. Hosting seçilince `TRUST_PROXY` notunu unutma.
 5. **Oyunu online'a taşıma** (`docs/online-server.md` adım 0 → 4):
    - Önce Cloudflare tüneliyle arkadaş testi. Sonra stat adaleti kararı (önerim: önce yalnızca arkadaş maçı).
    - Ardından hosting: Fly.io (yaklaşık 2 $/ay, kolay) ya da Hetzner (AB, yaklaşık 5,5 €/ay, yönetimi bizde). Fiyatları seçim anında kontrol et.
