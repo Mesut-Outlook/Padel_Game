@@ -41,4 +41,6 @@ Ayrıntılar ve satır numaraları yerel güvenlik raporunda (`agents/reports/se
    - `server.padellegends.eu` DNS kaydı, `DEFAULT_SERVER` ayarı, gizlilik sayfası güncellemesi.
    - Son olarak `security-auditor` yeniden çalıştırılsın.
 
+**Güncel plan (2026-10-21):** `docs/superpowers/plans/2026-10-21-roadmap.md`: oyun düzeltmeleri (skor/yardım yeri, son seçimler, servis karşılama kuralı, servis yönü, tekrar akışı), online hazırlığı (yeniden bağlanma, debug paneli, oda kur / maça katıl), asset önbelleği ve Hetzner'e taşıma. Hosting kararı: **Hetzner** (kullanıcı 2026-10-20 onayladı; aynı sunucu ileride başka oyunlara da hizmet edebilir).
+
 Daha sonraya: `vite --host` yalnızca mobil testte kullanılsın, meta CSP, Actions SHA sabitleme ve vite güncellemesi.
