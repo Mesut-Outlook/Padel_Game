@@ -70,155 +70,52 @@ export function initMenu() {
       <line x1="50" y1="30.5" x2="50" y2="169.5" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
     </svg>
 
-    <!-- Topbar -->
+    <!-- Topbar (hidden on phones in landscape: HOME and fullscreen move onto the preview) -->
     <header class="pl-topbar">
       <div class="pl-brand">
+        <button type="button" class="pl-home-top-btn is-home" id="pl-home-btn" title="${t('Back to the home screen (Esc)')}">‹ ${t('HOME')}</button>
         <div class="pl-logo">PADEL <span>LEGENDS</span></div>
         <div class="pl-tour-tag">MESUT PADEL TOUR</div>
       </div>
       <div class="pl-top-right">
-        <button type="button" class="pl-home-top-btn is-home" id="pl-home-btn" title="${t('Back to the home screen (Esc)')}">🏠 ${t('HOME')}</button>
-        <button type="button" class="pl-home-top-btn fs-btn-sync" id="pl-fs-btn" title="${t('Fullscreen (F)')}">⛶ ${t('Fullscreen')}</button>
         <span class="pl-pad-hint" id="pl-pad-status">${t('🎮 Checking controller…')}</span>
         <a class="pl-dev" href="kontroller.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;margin-right:14px">⌨ <b>${t('Controls')}</b></a>
         <span class="pl-dev">${t('Developer: <b>Mesut</b>')}</span>
+        <button type="button" class="pl-home-top-btn fs-btn-sync" id="pl-fs-btn" title="${t('Fullscreen (F)')}">⛶ ${t('Fullscreen')}</button>
       </div>
     </header>
 
     <!-- Main 2-column layout (~38% / ~62%) -->
     <main class="pl-main">
-      <!-- Left Panel: Live 3D Avatar Preview -->
+      <!-- Left Panel: Live 3D Avatar Preview; a tap on the player opens the stats over it -->
       <section class="pl-left-panel">
         <div class="pl-preview-stage">
           <canvas id="pl-preview-canvas" class="pl-preview-canvas"></canvas>
           <div class="pl-preview-badge">${t('LIVE PREVIEW')}</div>
+          <button type="button" class="pl-stage-btn is-home" id="pl-home-mini" aria-label="${t('HOME')}" title="${t('Back to the home screen (Esc)')}">⌂</button>
+          <button type="button" class="pl-stage-btn is-fs fs-btn-sync" id="pl-fs-mini" aria-label="${t('Fullscreen')}" title="${t('Fullscreen (F)')}">⛶</button>
           <div class="pl-preview-racket-pill" id="pl-preview-racket-pill">Starter Nova</div>
           <button type="button" class="pl-preview-nav is-prev" data-step="-1" aria-label="${t('Previous player')}">‹</button>
           <button type="button" class="pl-preview-nav is-next" data-step="1" aria-label="${t('Next player')}">›</button>
-        </div>
-        <div class="pl-char-info" id="pl-char-info">
-          <!-- Populated dynamically -->
+          <button type="button" class="pl-stats-hint" id="pl-stats-hint"><b id="pl-prev-name"></b><span>ⓘ ${t('Tap the player for stats')}</span></button>
+          <div class="pl-char-info" id="pl-char-info">
+            <!-- Populated dynamically -->
+          </div>
         </div>
       </section>
 
       <!-- Right Panel: Step Tabs + Step Body + Step Footer -->
       <section class="pl-right-panel">
         <nav class="pl-tabs" role="tablist">
-          <button type="button" class="pl-tab is-active" data-step="0"><span class="pl-tab-num">1</span>${t('Mode')}</button>
-          <button type="button" class="pl-tab" data-step="1"><span class="pl-tab-num">2</span>${t('Player')}</button>
-          <button type="button" class="pl-tab" data-step="2"><span class="pl-tab-num">3</span>${t('Venue')}</button>
-          <button type="button" class="pl-tab" data-step="3"><span class="pl-tab-num">4</span>${t('Racket')}</button>
-          <button type="button" class="pl-tab" data-step="4"><span class="pl-tab-num">5</span>${t('Match')}</button>
+          <button type="button" class="pl-tab is-active" data-step="0"><span class="pl-tab-name"><span class="pl-tab-num">1</span>${t('Player')}</span><span class="pl-tab-val" id="pl-tab-val-0"></span></button>
+          <button type="button" class="pl-tab" data-step="1"><span class="pl-tab-name"><span class="pl-tab-num">2</span>${t('Venue')}</span><span class="pl-tab-val" id="pl-tab-val-1"></span></button>
+          <button type="button" class="pl-tab" data-step="2"><span class="pl-tab-name"><span class="pl-tab-num">3</span>${t('Racket')}</span><span class="pl-tab-val" id="pl-tab-val-2"></span></button>
+          <button type="button" class="pl-tab" data-step="3"><span class="pl-tab-name"><span class="pl-tab-num">4</span>${t('Match')}</span><span class="pl-tab-val" id="pl-tab-val-3"></span></button>
         </nav>
 
         <div class="pl-step-body">
-          <!-- Step 0: Mode -->
+          <!-- Step 0: Player -->
           <div class="pl-step" data-step="0">
-            <div class="pl-section-label">${t('WHERE TO PLAY?')}</div>
-            <div class="pl-where-grid" id="pl-where-grid">
-              <button type="button" class="pl-card pl-where-card is-selected" data-where="local">
-                <div class="pl-card-title"><svg class="pl-dev-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h18V4H4c-1.1 0-2 .9-2 2v11H0v3h14v-3H4V6zm19 2h-6c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1zm-1 9h-4v-7h4v7z"/></svg> ${t('On this device')}</div>
-                <div class="pl-card-sub">${t('Local couch match · Keyboard or gamepads')}</div>
-                <span class="pl-check">✓</span>
-              </button>
-              <button type="button" class="pl-card pl-where-card" data-where="online">
-                <div class="pl-card-title">🌐 ${t('Online with a friend')}</div>
-                <div class="pl-card-sub">${t('Play over network with a room code')}</div>
-                <span class="pl-check">✓</span>
-              </button>
-            </div>
-
-            <div class="pl-online-section" id="pl-online-section" hidden>
-              <div class="pl-section-label">${t('ONLINE ROOM')}</div>
-              <div class="pl-room-link-box">
-                <div style="font-weight:700;font-size:13px;white-space:nowrap;">${t('ROOM CODE:')} <b id="pl-room-code-val" style="color:var(--acc);letter-spacing:1px;">------</b></div>
-                <input type="text" readonly id="pl-room-link-input" class="pl-room-link-input" value="">
-                <button type="button" id="pl-copy-link-btn" class="pl-copy-btn">📋 ${t('Copy Link')}</button>
-                <span id="pl-copy-status" class="pl-copy-status"></span>
-              </div>
-              <div class="pl-online-divider"><span>${t('OR JOIN / ENTER CODE')}</span></div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <input type="text" class="pl-room-input" id="pl-join-room-input" placeholder="${t('ROOM CODE')}" maxlength="6">
-                <button type="button" class="pl-online-btn" id="pl-set-room-btn">${t('USE CODE')}</button>
-              </div>
-              <div class="pl-lobby-status" id="pl-online-lobby-status"></div>
-            </div>
-
-            <div class="pl-section-label">${t('GAME MODE')}</div>
-            <div class="pl-mode-grid">
-              <button type="button" class="pl-card pl-mode-card is-selected" data-mode="4">
-                <svg class="mode-court-svg" viewBox="0 0 100 70">
-                  <rect x="2" y="2" width="96" height="66" rx="4" fill="#14263b" stroke="#2f6fb5" stroke-width="1.5"/>
-                  <line x1="50" y1="2" x2="50" y2="68" stroke="#ffffffaa" stroke-width="1.5" stroke-dasharray="3 2"/>
-                  <circle cx="25" cy="20" r="5" fill="#d8f53a"/>
-                  <circle cx="25" cy="50" r="5" fill="#d8f53a"/>
-                  <circle cx="75" cy="20" r="5" fill="#e63946"/>
-                  <circle cx="75" cy="50" r="5" fill="#e63946"/>
-                </svg>
-                <div>
-                  <div class="pl-card-title">${t('DOUBLES (2v2)')}</div>
-                  <div class="pl-card-sub">${t('4 players · Classic padel team setup')}</div>
-                </div>
-                <span class="pl-check">✓</span>
-              </button>
-              <button type="button" class="pl-card pl-mode-card" data-mode="2">
-                <svg class="mode-court-svg" viewBox="0 0 100 70">
-                  <rect x="2" y="2" width="96" height="66" rx="4" fill="#14263b" stroke="#2f6fb5" stroke-width="1.5"/>
-                  <line x1="50" y1="2" x2="50" y2="68" stroke="#ffffffaa" stroke-width="1.5" stroke-dasharray="3 2"/>
-                  <circle cx="25" cy="35" r="6" fill="#d8f53a"/>
-                  <circle cx="75" cy="35" r="6" fill="#e63946"/>
-                </svg>
-                <div>
-                  <div class="pl-card-title">${t('SINGLES (1v1)')}</div>
-                  <div class="pl-card-sub">${t('2 players · Fast cross-court duel')}</div>
-                </div>
-                <span class="pl-check">✓</span>
-              </button>
-            </div>
-
-            <div class="pl-section-label">${t('HUMAN PLAYERS')}</div>
-            <div class="pl-seg-row" id="pl-humans-seg">
-              <button type="button" class="pl-seg-btn" data-val="0">${t('0 (Watch)')}</button>
-              <button type="button" class="pl-seg-btn is-selected" data-val="1">1</button>
-              <button type="button" class="pl-seg-btn" data-val="2">2</button>
-              <button type="button" class="pl-seg-btn" data-val="3">3</button>
-              <button type="button" class="pl-seg-btn" data-val="4">4</button>
-            </div>
-
-            <div id="pl-sides-wrap" hidden>
-              <div class="pl-section-label">${t('TWO PLAYERS')}</div>
-              <div class="pl-seg-row" id="pl-sides-seg">
-                <button type="button" class="pl-seg-btn is-selected" data-val="opp">${t('Opponents')}</button>
-                <button type="button" class="pl-seg-btn" data-val="same">${t('Same team (vs 2 AI)')}</button>
-              </div>
-            </div>
-
-            <div class="pl-section-label">${t('CONTROLS (PLAYER 1)')}</div>
-            <div class="pl-ctrl-grid">
-              <button type="button" class="pl-card pl-ctrl-card is-selected" data-ctrl="auto">
-                <div class="pl-ctrl-icons">⌨️ <span class="pl-ctrl-plus">+</span> 🎮</div>
-                <div class="pl-card-title">${t('Keyboard + Controller')}</div>
-                <div class="pl-card-sub">${t('Auto-detect')}</div>
-                <span class="pl-check">✓</span>
-              </button>
-              <button type="button" class="pl-card pl-ctrl-card" data-ctrl="kb">
-                <div class="pl-ctrl-icons">⌨️</div>
-                <div class="pl-card-title">${t('Keyboard Only')}</div>
-                <div class="pl-card-sub">WASD + Space</div>
-                <span class="pl-check">✓</span>
-              </button>
-              <button type="button" class="pl-card pl-ctrl-card" data-ctrl="pad">
-                <div class="pl-ctrl-icons">🎮</div>
-                <div class="pl-card-title">${t('Controller Only')}</div>
-                <div class="pl-card-sub">${t('Left stick + Buttons')}</div>
-                <span class="pl-check">✓</span>
-              </button>
-            </div>
-            <div class="pl-gamepad-live" id="pl-gp-live">${t('🎮 Checking controller…')}</div>
-          </div>
-
-          <!-- Step 1: Player -->
-          <div class="pl-step" data-step="1" hidden>
             <div class="pl-filter-row" id="pl-char-filter-row">
               <button type="button" class="pl-chip is-active" data-filter="all">${t('All')}</button>
               <button type="button" class="pl-chip" data-filter="f">${t('Women')}</button>
@@ -227,8 +124,8 @@ export function initMenu() {
             <div class="pl-char-grid" id="pl-char-grid"></div>
           </div>
 
-          <!-- Step 2: Venue -->
-          <div class="pl-step" data-step="2" hidden>
+          <!-- Step 1: Venue -->
+          <div class="pl-step" data-step="1" hidden>
             <div class="pl-filter-row" id="pl-venue-filter-row">
               <button type="button" class="pl-chip is-active" data-filter="all">${t('All')}</button>
               <button type="button" class="pl-chip" data-filter="indoor">${t('Indoor')}</button>
@@ -238,62 +135,120 @@ export function initMenu() {
             <div class="pl-venue-grid" id="pl-venue-grid"></div>
           </div>
 
-          <!-- Step 3: Racket -->
-          <div class="pl-step" data-step="3" hidden>
+          <!-- Step 2: Racket -->
+          <div class="pl-step" data-step="2" hidden>
             <div class="pl-racket-grid" id="pl-racket-grid"></div>
           </div>
 
-          <!-- Step 4: Match -->
-          <div class="pl-step" data-step="4" hidden>
-            <div class="pl-match-groups">
-              <div class="pl-section-label">${t('SETS')}</div>
-              <div class="pl-seg-row" id="pl-sets-seg">
-                <button type="button" class="pl-seg-btn" data-val="1">${t('1 SET')}</button>
-                <button type="button" class="pl-seg-btn is-selected" data-val="3">${t('3 SETS')}</button>
-                <button type="button" class="pl-seg-btn" data-val="3s">${t('2 SETS + SUPER TIE-BREAK')}</button>
+          <!-- Step 3: Match (who plays + rules) -->
+          <div class="pl-step" data-step="3" hidden>
+            <div class="pl-match-cols">
+              <div class="pl-match-col">
+                <div class="pl-col-title">${t('Who plays')}</div>
+                <div class="pl-field"><span class="pl-field-label">${t('Where')}</span>
+                  <div class="pl-seg-row" id="pl-where-seg">
+                    <button type="button" class="pl-seg-btn is-selected" data-where="local" title="${t('Local couch match · Keyboard or gamepads')}"><svg class="pl-dev-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h18V4H4c-1.1 0-2 .9-2 2v11H0v3h14v-3H4V6zm19 2h-6c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1zm-1 9h-4v-7h4v7z"/></svg> ${t('This device')}</button>
+                    <button type="button" class="pl-seg-btn" data-where="online" title="${t('Play over network with a room code')}">🌐 ${t('Online')}</button>
+                  </div>
+                </div>
+
+                <div class="pl-online-section" id="pl-online-section" hidden>
+                  <div class="pl-room-link-box">
+                    <div style="font-weight:700;font-size:13px;white-space:nowrap;">${t('ROOM CODE:')} <b id="pl-room-code-val" style="color:var(--acc);letter-spacing:1px;">------</b></div>
+                    <input type="text" readonly id="pl-room-link-input" class="pl-room-link-input" value="">
+                    <button type="button" id="pl-copy-link-btn" class="pl-copy-btn">📋 ${t('Copy Link')}</button>
+                    <span id="pl-copy-status" class="pl-copy-status"></span>
+                  </div>
+                  <div class="pl-online-divider"><span>${t('OR JOIN / ENTER CODE')}</span></div>
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="text" class="pl-room-input" id="pl-join-room-input" placeholder="${t('ROOM CODE')}" maxlength="6">
+                    <button type="button" class="pl-online-btn" id="pl-set-room-btn">${t('USE CODE')}</button>
+                  </div>
+                  <div class="pl-lobby-status" id="pl-online-lobby-status"></div>
+                </div>
+
+                <div class="pl-field"><span class="pl-field-label">${t('Format')}</span>
+                  <div class="pl-seg-row" id="pl-mode-seg">
+                    <button type="button" class="pl-seg-btn is-selected" data-mode="4" title="${t('4 players · Classic padel team setup')}"><svg class="pl-mode-ico" viewBox="0 0 26 18" aria-hidden="true"><rect x="1" y="1" width="24" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="6" r="2" fill="#d8f53a"/><circle cx="7" cy="12" r="2" fill="#d8f53a"/><circle cx="19" cy="6" r="2" fill="#e63946"/><circle cx="19" cy="12" r="2" fill="#e63946"/></svg> ${t('Doubles')}</button>
+                    <button type="button" class="pl-seg-btn" data-mode="2" title="${t('2 players · Fast cross-court duel')}"><svg class="pl-mode-ico" viewBox="0 0 26 18" aria-hidden="true"><rect x="1" y="1" width="24" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="9" r="2.4" fill="#d8f53a"/><circle cx="19" cy="9" r="2.4" fill="#e63946"/></svg> ${t('Singles')}</button>
+                  </div>
+                </div>
+
+                <div class="pl-field"><span class="pl-field-label">${t('Humans')}</span>
+                  <div class="pl-seg-row" id="pl-humans-seg">
+                    <button type="button" class="pl-seg-btn" data-val="0">${t('Watch')}</button>
+                    <button type="button" class="pl-seg-btn is-selected" data-val="1">1</button>
+                    <button type="button" class="pl-seg-btn" data-val="2">2</button>
+                    <button type="button" class="pl-seg-btn" data-val="3">3</button>
+                    <button type="button" class="pl-seg-btn" data-val="4">4</button>
+                  </div>
+                </div>
+
+                <div class="pl-field" id="pl-sides-wrap" hidden><span class="pl-field-label">${t('TWO PLAYERS')}</span>
+                  <div class="pl-seg-row" id="pl-sides-seg">
+                    <button type="button" class="pl-seg-btn is-selected" data-val="opp">${t('Opponents')}</button>
+                    <button type="button" class="pl-seg-btn" data-val="same">${t('Same team (vs 2 AI)')}</button>
+                  </div>
+                </div>
+
+                <div class="pl-field"><span class="pl-field-label">${t('Controls')}</span>
+                  <div class="pl-seg-row" id="pl-ctrl-seg">
+                    <button type="button" class="pl-seg-btn is-selected" data-ctrl="auto" title="${t('Keyboard + Controller')}">${t('Auto')}</button>
+                    <button type="button" class="pl-seg-btn" data-ctrl="kb" title="WASD + Space">${t('Keyboard')}</button>
+                    <button type="button" class="pl-seg-btn" data-ctrl="pad" title="${t('Left stick + Buttons')}">${t('Controller')}</button>
+                  </div>
+                </div>
+                <div class="pl-gamepad-live" id="pl-gp-live">${t('🎮 Checking controller…')}</div>
               </div>
 
-              <div class="pl-section-label">${t('DEUCE FORMAT')}</div>
-              <div class="pl-seg-row" id="pl-golden-seg">
-                <button type="button" class="pl-seg-btn is-selected" data-val="1">${t('GOLDEN POINT')}</button>
-                <button type="button" class="pl-seg-btn" data-val="0">${t('ADVANTAGE')}</button>
-                <button type="button" class="pl-seg-btn" data-val="star">${t('STAR POINT (FIP 2026)')}</button>
-              </div>
+              <div class="pl-match-col">
+                <div class="pl-col-title">${t('Rules')}</div>
+                <div class="pl-field"><span class="pl-field-label">${t('Sets')}</span>
+                  <div class="pl-seg-row" id="pl-sets-seg">
+                    <button type="button" class="pl-seg-btn" data-val="1">${t('1 set')}</button>
+                    <button type="button" class="pl-seg-btn is-selected" data-val="3">${t('3 sets')}</button>
+                    <button type="button" class="pl-seg-btn" data-val="3s" title="${t('2 SETS + SUPER TIE-BREAK')}">${t('2 sets + STB')}</button>
+                  </div>
+                </div>
 
-              <div class="pl-section-label">${t('AI DIFFICULTY')}</div>
-              <div class="pl-seg-row" id="pl-ai-seg">
-                <button type="button" class="pl-seg-btn" data-val="rookie">${t('ROOKIE ★')}</button>
-                <button type="button" class="pl-seg-btn is-selected" data-val="club">${t('CLUB ★★')}</button>
-                <button type="button" class="pl-seg-btn" data-val="pro">${t('PRO ★★★')}</button>
-                <button type="button" class="pl-seg-btn" data-val="legend">${t('LEGEND ★★★★')}</button>
-              </div>
+                <div class="pl-field"><span class="pl-field-label">${t('Deuce')}</span>
+                  <div class="pl-seg-row" id="pl-golden-seg">
+                    <button type="button" class="pl-seg-btn is-selected" data-val="1">${t('Golden point')}</button>
+                    <button type="button" class="pl-seg-btn" data-val="0">${t('Advantage')}</button>
+                    <button type="button" class="pl-seg-btn" data-val="star" title="${t('STAR POINT (FIP 2026)')}">${t('Star point')}</button>
+                  </div>
+                </div>
 
-              <div class="pl-section-label">${t('GAME SPEED')}</div>
-              <div class="pl-seg-row" id="pl-speed-seg">
-                <button type="button" class="pl-seg-btn" data-val="0.7">${t('SLOW (70%)')}</button>
-                <button type="button" class="pl-seg-btn is-selected" data-val="0.85">${t('NORMAL (85%)')}</button>
-                <button type="button" class="pl-seg-btn" data-val="1">${t('FAST (REAL)')}</button>
+                <div class="pl-field"><span class="pl-field-label">${t('AI level')}</span>
+                  <div class="pl-seg-row" id="pl-ai-seg">
+                    <button type="button" class="pl-seg-btn" data-val="rookie">${t('Rookie')}</button>
+                    <button type="button" class="pl-seg-btn is-selected" data-val="club">${t('Club')}</button>
+                    <button type="button" class="pl-seg-btn" data-val="pro">${t('Pro')}</button>
+                    <button type="button" class="pl-seg-btn" data-val="legend">${t('Legend')}</button>
+                  </div>
+                </div>
+
+                <div class="pl-field"><span class="pl-field-label">${t('Speed')}</span>
+                  <div class="pl-seg-row" id="pl-speed-seg">
+                    <button type="button" class="pl-seg-btn" data-val="0.7" title="${t('SLOW (70%)')}">${t('Slow')}</button>
+                    <button type="button" class="pl-seg-btn is-selected" data-val="0.85" title="${t('NORMAL (85%)')}">${t('Normal')}</button>
+                    <button type="button" class="pl-seg-btn" data-val="1" title="${t('FAST (REAL)')}">${t('Fast')}</button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Step Footer: Next Button -->
-        <div class="pl-step-footer" style="justify-content:flex-end;">
-          <button type="button" class="pl-next-btn" id="pl-next-btn">${t('NEXT →')}</button>
+        <!-- Step Footer: Back · Next · START MATCH (always there, so a quick game is one tap away) -->
+        <div class="pl-step-footer">
+          <button type="button" class="pl-next-btn" id="pl-back-btn" hidden></button>
+          <span class="pl-footer-gap"></span>
+          <button type="button" class="pl-next-btn" id="pl-next-btn"></button>
+          <button type="button" class="pl-start-btn" id="pl-start-btn">${t('START MATCH')} ▶</button>
         </div>
       </section>
     </main>
-
-    <!-- Bottom Bar: Summary + START MATCH -->
-    <footer class="pl-bottom-bar">
-      <div class="pl-summary" id="pl-summary">
-        Doubles · Lucia Varela · Madrid Indoor Arena · Starter Nova · 3 sets
-      </div>
-      <div class="pl-start-slot">
-        <button type="button" class="pl-start-btn" id="pl-start-btn">${t('START MATCH')}</button>
-      </div>
-    </footer>
   `;
 
   menuEl.appendChild(shell);
@@ -308,11 +263,14 @@ export function initMenu() {
   const previewCanvas = shell.querySelector('#pl-preview-canvas');
   let previewRenderer = null, previewScene = null, previewCamera = null;
   let previewAvatar = null, animFrameId = null, turntable = 0;
-  let isDragging = false, lastDragX = 0;
+  let isDragging = false, lastDragX = 0, downX = 0, downY = 0;
+  const stage = previewCanvas.parentElement;
+  const toggleStats = (on = !stage.classList.contains('show-info')) => stage.classList.toggle('show-info', on);
+  shell.querySelector('#pl-stats-hint').onclick = () => toggleStats();
+  shell.querySelector('#pl-char-info').onclick = () => toggleStats(false);
 
   function initPreview() {
     if (previewRenderer) return;
-    const stage = previewCanvas.parentElement;
     const w = stage.clientWidth || 340;
     const h = stage.clientHeight || 280;
 
@@ -347,14 +305,17 @@ export function initMenu() {
     previewScene.add(disc, ring);
 
     // Manual spin on drag
-    previewCanvas.onpointerdown = (e) => { isDragging = true; lastDragX = e.clientX; previewCanvas.setPointerCapture(e.pointerId); };
+    previewCanvas.onpointerdown = (e) => { isDragging = true; lastDragX = downX = e.clientX; downY = e.clientY; previewCanvas.setPointerCapture(e.pointerId); };
     previewCanvas.onpointermove = (e) => {
       if (!isDragging) return;
       const dx = e.clientX - lastDragX;
       lastDragX = e.clientX;
       turntable += dx * 0.015;
     };
-    previewCanvas.onpointerup = () => { isDragging = false; };
+    previewCanvas.onpointerup = (e) => {
+      isDragging = false;
+      if (Math.hypot(e.clientX - downX, e.clientY - downY) < 8) toggleStats();  // a tap, not a spin
+    };
 
     let fitW = w, fitH = h;
     function loop() {
@@ -416,6 +377,7 @@ export function initMenu() {
     const pill = shell.querySelector('#pl-preview-racket-pill');
     if (pill) pill.textContent = rk?.name || 'Starter Nova';
     const info = shell.querySelector('#pl-char-info');
+    shell.querySelector('#pl-prev-name').textContent = ch?.name || '';
     if (info && infoHtml != null) info.innerHTML = infoHtml;
     else if (ch) updateInfoCard(ch, rk || rackets[0]);
 
@@ -441,6 +403,7 @@ export function initMenu() {
 
     const info = shell.querySelector('#pl-char-info');
     if (!info) return;
+    shell.querySelector('#pl-prev-name').textContent = ch.name;
     const flag = countryFlag(ch.countryCode);
     const gText = ch.gender === 'f' ? t('FEMALE') : t('MALE');
     const hText = ch.hand === 'left' ? t('LEFT-HANDED') : t('RIGHT-HANDED');
@@ -495,8 +458,7 @@ export function initMenu() {
     const rk = rackets[selectedRacketIdx]?.name || 'Racket';
     const stVal = $('sets')?.value;
     const st = stVal === '1' ? t('1 set') : stVal === '3s' ? t('2 sets + STB') : t('3 sets');
-    const sumEl = shell.querySelector('#pl-summary');
-    if (sumEl) sumEl.textContent = `${m} · ${ch} · ${vn} · ${rk} · ${st}`;
+    [ch, vn, rk, `${m} · ${st}`].forEach((v, i) => { shell.querySelector(`#pl-tab-val-${i}`).textContent = v; });
   }
 
   // Populate Character Cards
@@ -653,28 +615,34 @@ export function initMenu() {
   }
 
   // Tab switching
+  const backBtn = shell.querySelector('#pl-back-btn'), nextBtn = shell.querySelector('#pl-next-btn');
   function switchStep(idx) {
-    curStep = Math.max(0, Math.min(4, idx));
+    curStep = Math.max(0, Math.min(3, idx));
     shell.querySelectorAll('.pl-tab').forEach((b, i) => b.classList.toggle('is-active', i === curStep));
     shell.querySelectorAll('.pl-step').forEach((p, i) => {
       p.hidden = i !== curStep;
     });
-    const nextBtn = shell.querySelector('#pl-next-btn');
-    if (nextBtn) nextBtn.textContent = curStep === 4 ? t('FIRST TAB ↺') : t('NEXT →');
+    const names = [t('Player'), t('Venue'), t('Racket'), t('Match')];
+    backBtn.hidden = curStep === 0;
+    backBtn.textContent = `‹ ${names[curStep - 1] || ''}`;
+    nextBtn.hidden = curStep === 3;
+    nextBtn.textContent = `${names[curStep + 1] || ''} ›`;
   }
 
   shell.querySelectorAll('.pl-tab').forEach(btn => {
     btn.onclick = () => switchStep(parseInt(btn.dataset.step));
   });
 
-  shell.querySelector('#pl-next-btn').onclick = () => switchStep((curStep + 1) % 5);
+  nextBtn.onclick = () => switchStep(curStep + 1);
+  backBtn.onclick = () => switchStep(curStep - 1);
+  switchStep(0);
 
   // Step 0 Mode & Control
-  shell.querySelectorAll('.pl-mode-card').forEach(card => {
+  shell.querySelectorAll('#pl-mode-seg [data-mode]').forEach(card => {
     card.onclick = () => {
       const mode = card.dataset.mode;
       if ($('mode')) { $('mode').value = mode; $('mode').dispatchEvent(new Event('change')); }
-      shell.querySelectorAll('.pl-mode-card').forEach(c => c.classList.remove('is-selected'));
+      shell.querySelectorAll('#pl-mode-seg [data-mode]').forEach(c => c.classList.remove('is-selected'));
       card.classList.add('is-selected');
       // In singles mode, disable 3 and 4 players
       const btn3 = shell.querySelector('#pl-humans-seg [data-val="3"]');
@@ -712,11 +680,11 @@ export function initMenu() {
     };
   });
 
-  shell.querySelectorAll('.pl-ctrl-card').forEach(card => {
+  shell.querySelectorAll('#pl-ctrl-seg [data-ctrl]').forEach(card => {
     card.onclick = () => {
       const val = card.dataset.ctrl;
       if ($('control')) { $('control').value = val; $('control').dispatchEvent(new Event('change')); }
-      shell.querySelectorAll('.pl-ctrl-card').forEach(c => c.classList.remove('is-selected'));
+      shell.querySelectorAll('#pl-ctrl-seg [data-ctrl]').forEach(c => c.classList.remove('is-selected'));
       card.classList.add('is-selected');
       saveSettings({ control: val });
     };
@@ -750,7 +718,7 @@ export function initMenu() {
   function setWhere(where, code) {
     selectedWhere = where;
     if (code) roomJoined = true;  // arrived with a ?room= invite
-    shell.querySelectorAll('.pl-where-card').forEach(c => c.classList.toggle('is-selected', c.dataset.where === where));
+    shell.querySelectorAll('#pl-where-seg [data-where]').forEach(c => c.classList.toggle('is-selected', c.dataset.where === where));
     const onlineSec = shell.querySelector('#pl-online-section');
     if (onlineSec) onlineSec.hidden = (where !== 'online');
     if (where === 'online') {
@@ -762,7 +730,7 @@ export function initMenu() {
     }
   }
 
-  shell.querySelectorAll('.pl-where-card').forEach(card => {
+  shell.querySelectorAll('#pl-where-seg [data-where]').forEach(card => {
     card.onclick = () => setWhere(card.dataset.where);
   });
 
@@ -809,17 +777,15 @@ export function initMenu() {
   setWizardWhereFn = (where, room) => setWhere(where, room);
 
   // Home & Fullscreen buttons
-  const homeBtn = shell.querySelector('#pl-home-btn');
-  if (homeBtn) homeBtn.onclick = () => { location.hash = '#home'; };
-  const fsBtn = shell.querySelector('#pl-fs-btn');
-  if (fsBtn) fsBtn.onclick = () => toggleFullscreen();
+  shell.querySelectorAll('#pl-home-btn, #pl-home-mini').forEach(b => { b.onclick = () => { location.hash = '#home'; }; });
+  shell.querySelectorAll('#pl-fs-btn, #pl-fs-mini').forEach(b => { b.onclick = () => toggleFullscreen(); });
 
   // Settings Synchronization
   function syncSettingsFromStore() {
     const s = loadSettings();
     if ($('control')) { $('control').value = s.control; $('control').dispatchEvent(new Event('change')); }
     if ($('speed')) { $('speed').value = String(s.speed); $('speed').dispatchEvent(new Event('change')); }
-    shell.querySelectorAll('.pl-ctrl-card').forEach(c => c.classList.toggle('is-selected', c.dataset.ctrl === s.control));
+    shell.querySelectorAll('#pl-ctrl-seg [data-ctrl]').forEach(c => c.classList.toggle('is-selected', c.dataset.ctrl === s.control));
     shell.querySelectorAll('#pl-speed-seg .pl-seg-btn').forEach(b => b.classList.toggle('is-selected', b.dataset.val === String(s.speed)));
   }
   syncSettingsFromStore();

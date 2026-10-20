@@ -179,7 +179,17 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
     border: 1px solid var(--border);
     pointer-events: none;
   }
-  .pl-char-info { flex: 0 0 auto; display: flex; flex-direction: column; gap: 8px; }
+  /* stats open over the preview on a tap; the hint strip says so and names the player */
+  .pl-char-info { position: absolute; inset: 0; z-index: 3; display: none; flex-direction: column; gap: 8px; padding: 12px; overflow-y: auto; background: rgba(8, 14, 22, 0.92); backdrop-filter: blur(6px); cursor: pointer; }
+  .pl-preview-stage.show-info .pl-char-info { display: flex; }
+  .pl-preview-stage.show-info .pl-stats-hint { display: none; }
+  .pl-preview-canvas { cursor: pointer; }
+  .pl-stats-hint { position: absolute; left: 8px; bottom: 8px; z-index: 2; max-width: calc(100% - 130px); display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 4px 10px; border-radius: 10px; border: 1px solid var(--border); background: rgba(11, 21, 32, 0.82); color: #fff; font: inherit; text-align: left; cursor: pointer; }
+  .pl-stats-hint b { font-family: var(--head-font); font-size: 17px; letter-spacing: 1px; text-transform: uppercase; line-height: 1.1; }
+  .pl-stats-hint span { font-size: 11px; color: var(--acc); font-weight: 600; }
+  .pl-stage-btn { display: none; position: absolute; top: 6px; z-index: 2; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border); background: rgba(8, 14, 22, 0.82); color: #fff; font: 700 20px/1 system-ui; cursor: pointer; padding: 0; }
+  .pl-stage-btn.is-home { left: 6px; border-color: var(--acc); color: var(--acc); }
+  .pl-stage-btn.is-fs { right: 6px; }
   .pl-char-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
   .pl-char-title-wrap { display: flex; align-items: center; gap: 8px; }
   .pl-char-flag { font-size: 22px; line-height: 1; }
@@ -217,7 +227,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   .pl-right-panel { padding: clamp(10px, 1.4vh, 16px); gap: clamp(8px, 1.1vh, 12px); }
   .pl-tabs {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
     flex: 0 0 auto;
   }
@@ -235,11 +245,16 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
     letter-spacing: 0.8px;
     cursor: pointer;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     justify-content: center;
-    gap: 6px;
+    gap: 1px;
+    min-width: 0;
+    text-align: left;
     transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease;
   }
+  .pl-tab-name { display: flex; align-items: center; gap: 6px; }
+  .pl-tab-val { max-width: 100%; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-weight: 600; font-size: 11.5px; letter-spacing: 0; text-transform: none; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pl-tab:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
   .pl-tab-num {
     display: inline-grid;
@@ -343,15 +358,6 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   }
 
   /* Step 1: Mod */
-  .pl-mode-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .pl-mode-card { display: flex; align-items: center; gap: 12px; padding: 12px; }
-  .pl-mode-card.is-selected { padding: 11px; }
-  .mode-court-svg { width: 92px; height: 68px; flex: 0 0 auto; border-radius: 6px; }
-  .pl-ctrl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .pl-ctrl-card { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; padding: 10px 8px; }
-  .pl-ctrl-icons { display: flex; align-items: center; gap: 6px; color: var(--acc); }
-  .ctrl-svg { width: 38px; height: 24px; }
-  .pl-ctrl-plus { font-weight: 800; color: var(--muted); }
   .pl-gamepad-live { margin-top: 6px; font-size: 12px; color: var(--muted); font-weight: 600; }
 
   /* Segmented Controls */
@@ -505,19 +511,27 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   .pl-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--court), var(--acc)); border-radius: 999px; }
   .pl-rstat b { color: #fff; text-align: right; }
 
-  /* Step 5: Maç */
-  .pl-match-groups { display: flex; flex-direction: column; gap: 8px; }
+  /* Step 4: Match — who plays + rules side by side */
+  .pl-match-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; align-items: start; }
+  .pl-match-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .pl-col-title { font-family: var(--head-font); font-weight: 800; font-size: 14px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--acc); }
+  .pl-field { display: flex; flex-direction: column; gap: 4px; }
+  .pl-field[hidden] { display: none; }
+  .pl-field-label { font-family: var(--head-font); font-weight: 700; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+  .pl-match-cols .pl-seg-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 36px; padding: 5px 6px; line-height: 1.15; }
+  .pl-match-cols .pl-online-section { margin-top: 0; }
+  .pl-mode-ico { width: 22px; height: 15px; flex: 0 0 auto; }
 
   /* Step Footer & Online Collapsible */
   .pl-step-footer {
     flex: 0 0 auto;
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
+    align-items: center;
     gap: 10px;
-    padding-top: 6px;
+    padding-top: 8px;
     border-top: 1px solid var(--border);
   }
+  .pl-footer-gap { flex: 1 1 auto; }
   .pl-online-wrap { flex: 1 1 auto; }
   .pl-online-toggle {
     appearance: none;
@@ -572,6 +586,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
     background: rgba(255, 255, 255, 0.08);
     color: #fff;
     border-radius: 8px;
+    min-height: 40px;
     padding: 6px 16px;
     font-family: var(--head-font);
     font-weight: 700;
@@ -582,18 +597,6 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   }
   .pl-next-btn:hover { background: rgba(255, 255, 255, 0.15); }
 
-  /* Fixed Bottom-Right Bar: Summary + MAÇA BAŞLA */
-  .pl-bottom-bar {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    background: rgba(7, 13, 20, 0.85);
-    border: 1px solid var(--border);
-  }
   .pl-summary {
     font-size: 13px;
     color: var(--muted);
@@ -632,17 +635,24 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
     .pl-tab { padding: 5px 6px; }
     .pl-start-btn { padding: 8px 20px; font-size: 18px; }
   }
-  /* phones in landscape: thin bars so the steps get the height */
+  /* phones in landscape: no top bar (HOME and fullscreen sit on the preview), so the steps get the height */
   @media (max-height: 500px) {
     .pl-shell { gap: 6px; padding: 6px max(10px, env(safe-area-inset-right)) 6px max(10px, env(safe-area-inset-left)); }
-    .pl-topbar { padding: 2px 10px; }
-    .pl-tour-tag, .pl-pad-hint, .pl-dev { display: none; }
-    .pl-home-top-btn { padding-top: 2px; padding-bottom: 2px; min-height: 30px; font-size: 13px; }
+    .pl-topbar, .pl-preview-badge, .pl-preview-racket-pill, .pl-gamepad-live, .pl-col-title { display: none; }
+    .pl-stats-hint { max-width: calc(100% - 16px); }
+    .pl-stage-btn { display: grid; place-items: center; }
     .pl-main { grid-template-columns: 30fr 70fr; gap: 8px; }
-    .pl-left-panel, .pl-right-panel { padding: 8px; gap: 6px; }
+    .pl-left-panel, .pl-right-panel { padding: 6px; gap: 6px; }
     .pl-preview-stage { min-height: 0; }
-    .pl-bottom-bar { padding: 4px 10px; }
-    .pl-start-btn { padding: 6px 16px; font-size: 16px; }
+    .pl-tab { padding: 4px 6px; font-size: 13px; }
+    .pl-tab-num { width: 16px; height: 16px; font-size: 10px; }
+    .pl-tab-val { font-size: 10px; }
+    .pl-match-cols { gap: 6px 12px; }
+    .pl-match-col { gap: 6px; }
+    .pl-field { gap: 2px; }
+    .pl-match-cols .pl-seg-btn { min-height: 32px; padding: 3px 4px; font-size: 12px; }
+    .pl-step-footer { padding-top: 6px; }
+    .pl-start-btn { min-height: 44px; padding: 6px 16px; font-size: 17px; }
   }
   @media (max-width: 960px) {
     .pl-char-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -654,9 +664,11 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
     .pl-main { grid-template-columns: 1fr; }
     .pl-preview-stage { min-height: 220px; }
     .pl-char-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .pl-venue-grid, .pl-racket-grid, .pl-mode-grid, .pl-ctrl-grid { grid-template-columns: 1fr; }
-    .pl-bottom-bar { flex-direction: column; align-items: stretch; text-align: center; }
-    .pl-start-btn { width: 100%; }
+    .pl-venue-grid, .pl-racket-grid, .pl-match-cols { grid-template-columns: 1fr; }
+    .pl-tour-tag, .pl-pad-hint, .pl-dev { display: none; }
+    .pl-step-body { flex: none; overflow: visible; }  /* the page scrolls, not a zero-height box */
+    .pl-step-footer { flex-wrap: wrap; }
+    .pl-start-btn { flex: 1 1 100%; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -2063,24 +2075,6 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'); if (r) {
   .sm-btn.is-save:hover, .sm-btn.is-save:focus-visible { background: #e5ff4f; outline: none; }
 
   /* Friendly Where grid & online section */
-  .pl-where-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-  .pl-where-card {
-    padding: 12px 14px;
-    cursor: pointer;
-    border-radius: 10px;
-    background: rgba(20, 38, 59, 0.6);
-    border: 1px solid var(--border);
-    color: #fff;
-    text-align: left;
-    transition: all 0.14s ease;
-  }
-  .pl-where-card:hover, .pl-where-card:focus-visible { border-color: var(--acc); outline: none; }
-  .pl-where-card.is-selected { border-color: var(--acc); background: rgba(216, 245, 58, 0.1); }
   .pl-home-top-btn {
     font-family: var(--head-font);
     font-weight: 800;

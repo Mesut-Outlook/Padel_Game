@@ -2893,10 +2893,8 @@ export function openCareer() {
 
   isOpen = true;
   const qmRight = shell.querySelector('.pl-right-panel:not(.pl-career-panel)');
-  const qmBottom = shell.querySelector('.pl-bottom-bar');
   const topBtn = shell.querySelector('#pl-career-btn');
   if (qmRight) qmRight.hidden = true;
-  if (qmBottom) qmBottom.hidden = true;
   if (topBtn) topBtn.classList.add('is-active');
   careerPanel.hidden = false;
 
@@ -2925,10 +2923,8 @@ export function closeCareer({ navigate = true } = {}) {  // navigate: false when
   careerPanel.hidden = true;
 
   const qmRight = shell.querySelector('.pl-right-panel:not(.pl-career-panel)');
-  const qmBottom = shell.querySelector('.pl-bottom-bar');
   const topBtn = shell.querySelector('#pl-career-btn');
   if (qmRight) qmRight.hidden = false;
-  if (qmBottom) qmBottom.hidden = false;
   if (topBtn) topBtn.classList.remove('is-active');
 
   setCareerGamepadHandler(null);
