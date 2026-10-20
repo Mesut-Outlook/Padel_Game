@@ -11,7 +11,8 @@ import { aiInput } from '../src/ai.js';
 
 // serves the built client (npm run build -> dist/) so friends need a single URL
 const DIST = path.resolve(import.meta.dirname, '../dist');
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.glb': 'model/gltf-binary', '.json': 'application/json' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.glb': 'model/gltf-binary', '.json': 'application/json',
+  '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain' };
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, +v || 0));
 const LOOK_MAX = 2048;
 const CHARACTERS = JSON.parse(fs.readFileSync(new URL('../data/characters.json', import.meta.url))).length;
@@ -38,7 +39,7 @@ function sanitizeLook(l) {
   const out = {};
   if (l.name != null) out.name = text(l.name, 16);
   if (l.country != null) out.country = text(l.country, 32);
-  if (/^[A-Z]{2}$/.test(l.countryCode)) out.countryCode = l.countryCode;
+  if (typeof l.countryCode === 'string' && /^[A-Z]{2}$/.test(l.countryCode)) out.countryCode = l.countryCode;
   for (const k in ONE_OF) if (ONE_OF[k].includes(l[k])) out[k] = l[k];
   for (const k of ['skinTone', 'hairColor', 'beardColor']) if (col(l[k])) out[k] = l[k];
   if (l.outfit && typeof l.outfit === 'object') {
@@ -47,7 +48,7 @@ function sanitizeLook(l) {
     if (OUTFIT_STYLES.includes(l.outfit.style)) o.style = l.outfit.style;
     if (OUTFIT_PATTERNS.includes(l.outfit.pattern)) o.pattern = l.outfit.pattern;
     if (col(l.outfit.accent)) o.accent = l.outfit.accent;
-    if (/^[A-Z0-9]{1,3}$/.test(l.outfit.text)) o.text = l.outfit.text;
+    if (typeof l.outfit.text === 'string' && /^[A-Z0-9]{1,3}$/.test(l.outfit.text)) o.text = l.outfit.text;
     out.outfit = o;
   }
   if (l.body && typeof l.body === 'object') {
@@ -88,7 +89,7 @@ export function sanitizeCfg(c, m = {}) {
 // or TRUST_PROXY=1 is set (a host such as Fly.io that puts its proxy in front)
 function clientIp(req) {
   const peer = req.socket.remoteAddress || '';
-  if (!process.env.TRUST_PROXY && !LOOPBACK.includes(peer)) return peer;
+  if (process.env.TRUST_PROXY !== '1' && !LOOPBACK.includes(peer)) return peer;
   return String(req.headers['cf-connecting-ip'] || req.headers['fly-client-ip'] || String(req.headers['x-forwarded-for'] || '').split(',')[0]).trim() || peer;
 }
 
@@ -109,8 +110,8 @@ export function startServer(port, limits = {}) {
     try { url = decodeURIComponent(req.url.split('?')[0]); } catch { res.writeHead(400); return res.end('bad request'); }
     const file = path.join(DIST, url === '/' ? 'index.html' : url);
     if (!file.startsWith(DIST + path.sep) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); return res.end('not found (run npm run build)'); }
-    res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream' });
-    fs.createReadStream(file).pipe(res);
+    res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream', 'x-content-type-options': 'nosniff' });
+    fs.createReadStream(file).on('error', () => res.destroy()).pipe(res);
   });
   const wss = new WebSocketServer({ server: httpServer, maxPayload: lim.payload });
   const rooms = new Map(); // code -> room
@@ -130,7 +131,7 @@ export function startServer(port, limits = {}) {
   function makeRoom(code, cfg) {
     const players = cfg.players === 2 ? 2 : 4;
     const room = {
-      code, cfg, seats: players === 2 ? [0, 2] : [0, 2, 1, 3], clients: new Map(), inputs: {}, started: false, host: null,
+      code, cfg, seats: players === 2 ? [0, 2] : [0, 2, 1, 3], clients: new Map(), inputs: {}, started: false, host: null, frame: 0,
       world: newWorld({ players, match: { sets: cfg.sets, goldenPoint: cfg.goldenPoint, starPoint: cfg.starPoint, superTiebreak: cfg.superTiebreak }, stats: {}, rackets: {}, outdoor: cfg.outdoor }),
       chars: {}, looks: {}, names: {}, timer: null,
     };
@@ -139,16 +140,19 @@ export function startServer(port, limits = {}) {
     return room;
   }
 
-  let frame = 0;
   function tick(room) {
     if (!room.started) return;
     const w = room.world, taken = new Set(room.clients.values());
     const inp = {};
     for (const pl of w.players) if (pl.active) inp[pl.id] = taken.has(pl.id) ? room.inputs[pl.id] || {} : aiInput(w, pl.id, room.cfg.ai);
-    stepWorld(w, inp, 1 / 60);
+    try { stepWorld(w, inp, 1 / 60); } catch (e) {  // a broken match ends its own room, never the whole server
+      console.error('room stopped', e); clearInterval(room.timer); rooms.delete(room.code);
+      for (const ws of room.clients.keys()) ws.close(1011, 'match error');
+      return;
+    }
     for (const id in room.inputs) if (room.inputs[id]) { room.inputs[id].swing = null; room.inputs[id].eat = false; } // edge events
     const events = w.events.splice(0);
-    if (++frame % 2 && !events.some(e => e.type !== 'contact')) return; // 30 Hz unless something happened
+    if (++room.frame % 2 && !events.some(e => e.type !== 'contact')) return; // 30 Hz unless something happened
     const msg = JSON.stringify({ type: 'state', snap: snapshot(w), score: scoreText(w.match), events, winner: w.match.winner });
     for (const ws of room.clients.keys()) ws.readyState === 1 && ws.send(msg);
   }
@@ -166,7 +170,7 @@ export function startServer(port, limits = {}) {
     ws.alive = true;
     ws.on('pong', () => { ws.alive = true; });
     const fail = (msg) => ws.send(JSON.stringify({ type: 'error', msg }));
-    let room = null, win = 0, count = 0;
+    let room = null, win = 0, count = 0, misses = 0;
     ws.on('message', (raw) => {
       const now = Date.now();
       if (now - win >= 1000) { win = now; count = 0; }
@@ -187,7 +191,7 @@ export function startServer(port, limits = {}) {
           target = makeRoom(newCode(), sanitizeCfg(m.cfg, m));
         } else {
           target = rooms.get(String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6));
-          if (!target) return fail('Room not found');
+          if (!target) { if (++misses >= 5) ws.close(1008, 'too many wrong codes'); return fail('Room not found'); }  // no code guessing
         }
         const taken = new Set(target.clients.values());
         const seat = target.seats.find(s => !taken.has(s));
@@ -236,7 +240,8 @@ export function startServer(port, limits = {}) {
     });
   });
 
-  return new Promise(resolve => httpServer.listen(port, () => resolve({
+  // HOST=127.0.0.1 when a tunnel is the only way in (otherwise every device on the Wi-Fi can reach the port too)
+  return new Promise(resolve => httpServer.listen(port, process.env.HOST, () => resolve({
     port: httpServer.address().port, rooms,
     close: () => new Promise(done => { clearInterval(heartbeat); for (const r of rooms.values()) clearInterval(r.timer); for (const c of wss.clients) c.terminate(); wss.close(); httpServer.close(done); }),
   })));

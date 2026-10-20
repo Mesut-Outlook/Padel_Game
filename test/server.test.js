@@ -313,3 +313,13 @@ test('a flood of messages from one socket is cut at the per-second limit', async
     a.ws.close();
   } finally { await srv.close(); }
 });
+
+test('five wrong room codes close the socket (no code guessing)', async () => {
+  const srv = await startServer(0);
+  try {
+    const a = client(srv.port);
+    const closed = new Promise(r => a.ws.once('close', (code) => r(code)));
+    for (let i = 0; i < 5; i++) await a.send({ type: 'join', code: 'ZZZZZ' + i });
+    assert.equal(await closed, 1008);
+  } finally { await srv.close(); }
+});

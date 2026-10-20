@@ -259,7 +259,7 @@ export function startOnline({ url, code, create = false, players = 4, venue = 0,
   net = connect({
     url, code, create, char, stats, racket, public: isPublic, name, look, shoes, ball, bag,
     cfg: { players, ...match, ai, venue, outdoor: venues[venue]?.type === 'outdoor' },
-    onError: (e) => say(escapeText(e), null, true),
+    onError: (e) => { say(escapeText(e), null, true); if (!net?.lobby?.started) net = null; },  // not in a match yet: START can try again
     onLobby: (l) => {
       setWizardRoom(l.code);
       say(t('Room <b>{code}</b> · your seat: {seat} · players: {taken}/{total} (empty = AI)', { code: escapeText(l.code), seat: Number(net.seat) || 0, taken: Number(l.taken?.length) || 0, total: Number(l.seats?.length) || 0 }) +

@@ -11,7 +11,7 @@ npm run online     # build + oyun ve WebSocket sunucusu tek portta: http://local
 npm test           # kurallar, fizik, AI, replay testleri
 ```
 
-İnternetten arkadaşlarla: `npm run online` sonra `cloudflared tunnel --url http://localhost:8080`, çıkan linki paylaş. Herkes aynı **oda kodunu** girer, ev sahibi "MAÇA BAŞLA"ya basar. Boş koltuklar ve maç ortasında ayrılan oyuncular AI'ya geçer.
+İnternetten arkadaşlarla: `npm run online` sonra `cloudflared tunnel --url http://localhost:8080`, çıkan linki paylaş. Ev sahibi odayı açar (kodu sunucu verir), arkadaşlar davet linkiyle ya da kodla katılır, maçı yalnızca odayı kuran başlatır. Boş koltuklar ve maç ortasında ayrılan oyuncular AI'ya geçer.
 
 ## Tarayıcıda oyna (GitHub Pages)
 
