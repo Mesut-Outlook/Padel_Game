@@ -1,6 +1,6 @@
 {
   " — <b>click “START MATCH” when everyone is ready</b>": [
-    "src/main.js:263"
+    "src/main.js:264"
   ],
   "(before serving)": [
     "kontroller.html:109"
@@ -15,7 +15,7 @@
     "kontroller.html:179"
   ],
   "+{pts} PTS": [
-    "src/main.js:185"
+    "src/main.js:186"
   ],
   "+{spd}% speed · agility {agi}": [
     "src/careerui.js:1617",
@@ -25,7 +25,7 @@
     "src/menu.js:181"
   ],
   "0 (watch)": [
-    "index.html:2190"
+    "index.html:2197"
   ],
   "1 SET": [
     "src/menu.js:251"
@@ -44,7 +44,7 @@
   ],
   "1 set": [
     "src/menu.js:497",
-    "index.html:2202"
+    "index.html:2209"
   ],
   "1 to 3 years": [
     "src/careerui.js:1018"
@@ -59,14 +59,14 @@
     "src/menu.js:497"
   ],
   "2 sets + super tie-break": [
-    "index.html:2202"
+    "index.html:2209"
   ],
   "3 SETS": [
     "src/menu.js:252"
   ],
   "3 sets": [
     "src/menu.js:497",
-    "index.html:2202"
+    "index.html:2209"
   ],
   "4 players · Classic padel team setup": [
     "src/menu.js:160"
@@ -84,7 +84,7 @@
     "kontroller.html:164"
   ],
   "<b>{speed} KM/H</b> UNSTOPPABLE SHOT": [
-    "src/main.js:588"
+    "src/main.js:589"
   ],
   "<kbd>CHIQUITA</kbd> soft ball just over the net · <kbd>CONTRA</kbd> contrapared, off your own glass · <kbd>SLICE</kbd> slice serve": [
     "kontroller.html:178"
@@ -119,7 +119,7 @@
     "src/careerui.js:1300"
   ],
   "AI level": [
-    "index.html:2195"
+    "index.html:2202"
   ],
   "AI: {ai} (×{mult})": [
     "src/careerui.js:1329"
@@ -132,7 +132,7 @@
     "src/level.js:10"
   ],
   "Advantage": [
-    "index.html:2203"
+    "index.html:2210"
   ],
   "Aero Tank": [
     "data/shop.json"
@@ -205,10 +205,10 @@
     "src/careerui.js:1949"
   ],
   "BAJADA": [
-    "src/main.js:410"
+    "src/main.js:411"
   ],
   "BANDEJA": [
-    "src/main.js:410"
+    "src/main.js:411"
   ],
   "Back": [
     "src/careerui.js:2404"
@@ -268,10 +268,10 @@
     "src/level.js:8"
   ],
   "Behind player": [
-    "src/main.js:412"
+    "src/main.js:413"
   ],
   "Best Rally: {shots} shots": [
-    "src/main.js:729"
+    "src/main.js:730"
   ],
   "Best: #{rank}": [
     "src/careerui.js:2284"
@@ -375,7 +375,7 @@
     "src/menu.js:266"
   ],
   "CLUTCH KING": [
-    "src/main.js:158"
+    "src/main.js:159"
   ],
   "COMING SOON": [
     "src/home.js:114"
@@ -431,7 +431,7 @@
     "src/careerui.js:1569"
   ],
   "Career": [
-    "src/main.js:734"
+    "src/main.js:735"
   ],
   "Career match summary and Credits breakdown": [
     "src/careerui.js:2008"
@@ -482,7 +482,7 @@
   "Club": [
     "src/careerui.js:106",
     "src/level.js:9",
-    "index.html:2195"
+    "index.html:2202"
   ],
   "Club Americano": [
     "data/tournaments.json"
@@ -551,7 +551,7 @@
     "src/menu.js:83"
   ],
   "Controls (P1)": [
-    "index.html:2206"
+    "index.html:2213"
   ],
   "Copy Link": [
     "src/menu.js:136"
@@ -642,7 +642,7 @@
     "src/careerui.js:2148"
   ],
   "Deuce": [
-    "index.html:2203"
+    "index.html:2210"
   ],
   "Developer: <b>Mesut</b>": [
     "src/home.js:87",
@@ -664,7 +664,7 @@
   "Doubles (2v2)": [
     "src/careerui.js:1296",
     "src/careerui.js:2752",
-    "index.html:2189"
+    "index.html:2196"
   ],
   "Doubles (w/ {partner})": [
     "src/careerui.js:1329"
@@ -673,7 +673,7 @@
     "src/careerui.js:1588"
   ],
   "Drone": [
-    "src/main.js:412"
+    "src/main.js:413"
   ],
   "Drunk at every changeover: hydration +50%": [
     "data/shop.json"
@@ -713,7 +713,7 @@
   ],
   "Enter a room code first.": [
     "src/careerui.js:2675",
-    "src/main.js:255"
+    "src/main.js:256"
   ],
   "Enter player name": [
     "src/careerui.js:692"
@@ -752,7 +752,7 @@
   ],
   "Exit Fullscreen": [
     "src/fullscreen.js:63",
-    "src/main.js:822"
+    "src/main.js:823"
   ],
   "Exit fullscreen": [
     "src/fullscreen.js:68",
@@ -773,7 +773,7 @@
     "src/menu.js:445"
   ],
   "FINAL STYLE SCORE: {pts} PTS": [
-    "src/main.js:733"
+    "src/main.js:734"
   ],
   "FIP Bronze": [
     "data/tournaments.json"
@@ -809,7 +809,7 @@
     "src/settingsmodal.js:88"
   ],
   "Fast (real)": [
-    "index.html:2207"
+    "index.html:2214"
   ],
   "Female": [
     "src/careerui.js:707"
@@ -824,7 +824,7 @@
     "data/shop.json"
   ],
   "Follow ball": [
-    "src/main.js:412"
+    "src/main.js:413"
   ],
   "Food": [
     "src/careerui.js:1588"
@@ -857,7 +857,7 @@
     "src/careerui.js:682"
   ],
   "Free camera": [
-    "src/main.js:412"
+    "src/main.js:413"
   ],
   "Friendly events": [
     "src/careerui.js:1022"
@@ -879,9 +879,9 @@
     "src/fullscreen.js:71",
     "src/home.js:136",
     "src/home.js:136",
-    "src/main.js:822",
+    "src/main.js:823",
     "src/menu.js:81",
-    "index.html:2230"
+    "index.html:2237"
   ],
   "Fullscreen (F)": [
     "src/menu.js:81"
@@ -904,7 +904,7 @@
     "src/home.js:93"
   ],
   "Game speed": [
-    "index.html:2207"
+    "index.html:2214"
   ],
   "Gender (Template)": [
     "src/careerui.js:705"
@@ -913,7 +913,7 @@
     "kontroller.html:183"
   ],
   "Glass rebound": [
-    "src/main.js:462"
+    "src/main.js:463"
   ],
   "Glasses": [
     "src/careerui.js:803"
@@ -928,7 +928,7 @@
     "src/careerui.js:101"
   ],
   "Golden point": [
-    "index.html:2203"
+    "index.html:2210"
   ],
   "Got it ✓": [
     "src/touch.js:40"
@@ -982,7 +982,7 @@
     "src/helpkeys.js:66"
   ],
   "High ball": [
-    "src/main.js:477"
+    "src/main.js:478"
   ],
   "High ball near the net? Smash it with L": [
     "src/tips.js:9"
@@ -1021,7 +1021,7 @@
     "src/touch.js:35"
   ],
   "Human players": [
-    "index.html:2190"
+    "index.html:2197"
   ],
   "I avoid it": [
     "src/careerui.js:1019"
@@ -1060,7 +1060,7 @@
     "src/home.js:96"
   ],
   "IRON LUNG": [
-    "src/main.js:157"
+    "src/main.js:158"
   ],
   "Import": [
     "src/careerui.js:495",
@@ -1101,7 +1101,7 @@
     "data/shop.json"
   ],
   "JOIN / CREATE ROOM": [
-    "index.html:2213"
+    "index.html:2220"
   ],
   "JOIN BY CODE": [
     "src/careerui.js:2767"
@@ -1124,14 +1124,14 @@
     "src/settingsmodal.js:61"
   ],
   "Keyboard + Xbox controller": [
-    "index.html:2206"
+    "index.html:2213"
   ],
   "Keyboard Only": [
     "src/menu.js:206"
   ],
   "Keyboard only": [
     "src/settingsmodal.js:67",
-    "index.html:2206"
+    "index.html:2213"
   ],
   "Keys": [
     "src/helpkeys.js:64"
@@ -1151,7 +1151,7 @@
     "src/menu.js:268"
   ],
   "LET": [
-    "src/main.js:637"
+    "src/main.js:638"
   ],
   "LIVE PREVIEW": [
     "src/menu.js:94",
@@ -1159,7 +1159,7 @@
     "src/menu.js:908"
   ],
   "LOB": [
-    "src/main.js:410",
+    "src/main.js:411",
     "src/touch.js:22",
     "src/tutorial.js:14"
   ],
@@ -1188,7 +1188,7 @@
   "Legend": [
     "src/careerui.js:108",
     "src/level.js:11",
-    "index.html:2195"
+    "index.html:2202"
   ],
   "Level": [
     "src/careerui.js:267"
@@ -1205,7 +1205,7 @@
   ],
   "Loading…": [
     "src/careerui.js:2747",
-    "src/main.js:212"
+    "src/main.js:213"
   ],
   "Lob": [
     "src/tutorial.js:42"
@@ -1265,10 +1265,10 @@
     "src/careerui.js:1294"
   ],
   "Main Menu": [
-    "src/main.js:734"
+    "src/main.js:735"
   ],
   "Main menu": [
-    "src/main.js:823"
+    "src/main.js:824"
   ],
   "Main menu after match · skip lesson in training": [
     "kontroller.html:236",
@@ -1306,7 +1306,7 @@
     "src/careerui.js:1564"
   ],
   "Medals: ": [
-    "src/main.js:728"
+    "src/main.js:729"
   ],
   "Men": [
     "src/careerui.js:603",
@@ -1323,7 +1323,7 @@
   ],
   "Mode": [
     "src/menu.js:107",
-    "index.html:2189"
+    "index.html:2196"
   ],
   "Monaco V-Neck": [
     "data/shop.json"
@@ -1448,7 +1448,7 @@
     "src/careerui.js:94"
   ],
   "Normal": [
-    "index.html:2207"
+    "index.html:2214"
   ],
   "Normal (85%)": [
     "src/settingsmodal.js:85"
@@ -1479,7 +1479,7 @@
     "src/menu.js:139"
   ],
   "OVERHEAD ZONE!": [
-    "src/main.js:485"
+    "src/main.js:486"
   ],
   "Off": [
     "src/settingsmodal.js:95"
@@ -1499,14 +1499,14 @@
   "On": [
     "src/settingsmodal.js:94"
   ],
-  "On this computer": [
+  "On this device": [
     "src/menu.js:120"
   ],
   "Once you arm a swing, your feet plant so aiming left/right won't pull you away from the ball.": [
     "kontroller.html:128"
   ],
   "Online match continues in the background.": [
-    "src/main.js:852"
+    "src/main.js:853"
   ],
   "Online mode requires a game server, which is not included in this static web build. You can play against the AI.": [
     "src/serverurl.js:9"
@@ -1515,7 +1515,7 @@
     "src/menu.js:125"
   ],
   "Online — play with friends": [
-    "index.html:2210"
+    "index.html:2217"
   ],
   "Open <b>padellegends.eu</b> in Safari.": [
     "kontroller.html:185"
@@ -1528,10 +1528,10 @@
   ],
   "Opponents": [
     "src/menu.js:191",
-    "index.html:2191"
+    "index.html:2198"
   ],
   "Opponents at net": [
-    "src/main.js:470"
+    "src/main.js:471"
   ],
   "Opponents at the net? Lob over them with B": [
     "src/tips.js:5"
@@ -1550,7 +1550,7 @@
     "src/careerui.js:1018"
   ],
   "Overhead shot": [
-    "src/main.js:489"
+    "src/main.js:490"
   ],
   "Owned": [
     "src/careerui.js:1742",
@@ -1568,7 +1568,7 @@
     "src/careerui.js:2399"
   ],
   "PAUSED": [
-    "index.html:2235"
+    "index.html:2242"
   ],
   "PAY {fee} &amp; ENTER": [
     "src/careerui.js:2421"
@@ -1592,7 +1592,7 @@
     "src/menu.js:462"
   ],
   "PRESS <b>{smash}</b> SMASH · <b>{vibora}</b> VÍBORA · <b>{bandeja}</b> BANDEJA": [
-    "src/main.js:486"
+    "src/main.js:487"
   ],
   "PRO SHOP": [
     "src/careerui.js:1659"
@@ -1604,7 +1604,7 @@
     "src/careerui.js:681"
   ],
   "PTS": [
-    "src/main.js:801"
+    "src/main.js:802"
   ],
   "PUBLIC ROOMS": [
     "src/careerui.js:2738"
@@ -1616,7 +1616,7 @@
     "src/careerui.js:256"
   ],
   "Padel Legends plays in landscape": [
-    "index.html:2239"
+    "index.html:2246"
   ],
   "Pair the controller over Bluetooth (device <b>Settings → Bluetooth</b>): <b>Xbox</b>: hold the small pair button on top until the Xbox button flashes fast. <b>PlayStation</b>: hold <b>PS</b> + <b>Share/Create</b> until the light bar flashes.": [
     "kontroller.html:195"
@@ -1660,7 +1660,7 @@
   "Play Singles or Doubles against AI to earn Credits.": [
     "src/careerui.js:1174"
   ],
-  "Play now — solo vs AI, with friends on this computer, or online with a friend.": [
+  "Play now — solo vs AI, with friends on this device, or online with a friend.": [
     "src/home.js:99"
   ],
   "Play over network with a room code": [
@@ -1677,7 +1677,7 @@
   ],
   "Player": [
     "src/menu.js:108",
-    "index.html:2194"
+    "index.html:2201"
   ],
   "Player Name (1–16)": [
     "src/careerui.js:691"
@@ -1758,7 +1758,7 @@
     "kontroller.html:73"
   ],
   "Press any key or A to skip": [
-    "index.html:2180"
+    "index.html:2187"
   ],
   "Press the shot key slightly before the ball arrives — your player strikes at optimal reach.": [
     "kontroller.html:127"
@@ -1774,7 +1774,7 @@
   ],
   "Pro": [
     "src/careerui.js:107",
-    "index.html:2195"
+    "index.html:2202"
   ],
   "Pro S ball": [
     "data/shop.json"
@@ -1807,7 +1807,7 @@
     "src/careerui.js:2246"
   ],
   "Quick match · 1–4 players · vs AI or friends": [
-    "index.html:2187"
+    "index.html:2194"
   ],
   "RACKET ({count} OWNED)": [
     "src/careerui.js:1844"
@@ -1837,11 +1837,11 @@
     "src/menu.js:134"
   ],
   "ROTATE YOUR PHONE": [
-    "index.html:2239"
+    "index.html:2246"
   ],
   "Racket": [
     "src/menu.js:110",
-    "index.html:2199"
+    "index.html:2206"
   ],
   "Rackets": [
     "src/careerui.js:121"
@@ -1883,7 +1883,7 @@
     "src/careerui.js:2256"
   ],
   "Restart match": [
-    "src/main.js:821"
+    "src/main.js:822"
   ],
   "Restock": [
     "src/careerui.js:1592",
@@ -1893,7 +1893,7 @@
     "src/careerui.js:1952"
   ],
   "Resume": [
-    "src/main.js:819"
+    "src/main.js:820"
   ],
   "Right-handed": [
     "src/careerui.js:714",
@@ -1905,10 +1905,10 @@
   "Rookie": [
     "src/careerui.js:105",
     "src/level.js:8",
-    "index.html:2195"
+    "index.html:2202"
   ],
   "Room <b>{code}</b> · your seat: {seat} · players: {taken}/{total} (empty = AI)": [
-    "src/main.js:262"
+    "src/main.js:263"
   ],
   "Room code set to <b>{code}</b>. Click START MATCH to connect!": [
     "src/menu.js:802"
@@ -1963,23 +1963,23 @@
     "src/careerui.js:257"
   ],
   "SCOREBOARD: ALWAYS ON": [
-    "src/main.js:780"
+    "src/main.js:781"
   ],
   "SCOREBOARD: AUTO (HIDDEN DURING POINTS)": [
-    "src/main.js:780"
+    "src/main.js:781"
   ],
   "SCOREBOARD: HIDDEN": [
-    "src/main.js:780"
+    "src/main.js:781"
   ],
   "SELECT GAME MODE": [
     "src/home.js:92"
   ],
   "SERVE FAULT": [
-    "src/main.js:636"
+    "src/main.js:637"
   ],
   "SET {n}": [
-    "src/main.js:801",
-    "src/main.js:810"
+    "src/main.js:802",
+    "src/main.js:811"
   ],
   "SETS": [
     "src/menu.js:249"
@@ -2012,20 +2012,20 @@
   ],
   "SMASH": [
     "src/careerui.js:315",
-    "src/main.js:410",
+    "src/main.js:411",
     "src/menu.js:20",
     "src/menu.js:465",
     "src/touch.js:22",
     "src/tutorial.js:14"
   ],
   "SMASH CHANCE": [
-    "src/main.js:489"
+    "src/main.js:490"
   ],
   "SMASH MASTER": [
-    "src/main.js:156"
+    "src/main.js:157"
   ],
   "SMASH TIME!": [
-    "src/main.js:485"
+    "src/main.js:486"
   ],
   "SPEED": [
     "src/careerui.js:311",
@@ -2050,16 +2050,16 @@
     "src/careerui.js:1331",
     "src/careerui.js:2736",
     "src/menu.js:294",
-    "index.html:2209"
+    "index.html:2216"
   ],
   "STYLE <b>{pts}</b> PTS": [
-    "src/main.js:170"
+    "src/main.js:171"
   ],
   "SUPER SMASH!": [
-    "src/main.js:587"
+    "src/main.js:588"
   ],
   "Same team": [
-    "index.html:2191"
+    "index.html:2198"
   ],
   "Same team (vs 2 AI)": [
     "src/menu.js:192"
@@ -2105,7 +2105,7 @@
     "kontroller.html:110"
   ],
   "Sets": [
-    "index.html:2202"
+    "index.html:2209"
   ],
   "Sets your starting level, tier and bonus Credits. It keeps changing as you play.": [
     "src/careerui.js:1069"
@@ -2158,7 +2158,7 @@
     "src/careerui.js:1904"
   ],
   "Side view": [
-    "src/main.js:412"
+    "src/main.js:413"
   ],
   "Singles": [
     "src/careerui.js:1329",
@@ -2167,13 +2167,13 @@
   "Singles (1v1)": [
     "src/careerui.js:1297",
     "src/careerui.js:2753",
-    "index.html:2189"
+    "index.html:2196"
   ],
   "Skin Tone": [
     "src/careerui.js:721"
   ],
   "Skip lesson": [
-    "src/main.js:820"
+    "src/main.js:821"
   ],
   "Skip to my next match": [
     "src/careerui.js:2491"
@@ -2198,7 +2198,7 @@
     "src/careerui.js:80"
   ],
   "Slow": [
-    "index.html:2207"
+    "index.html:2214"
   ],
   "Slow (70%)": [
     "src/settingsmodal.js:82"
@@ -2288,7 +2288,7 @@
     "data/shop.json"
   ],
   "Star Point (FIP 2026)": [
-    "index.html:2203"
+    "index.html:2210"
   ],
   "Start match": [
     "kontroller.html:161"
@@ -2377,7 +2377,7 @@
     "src/tutorial.js:126"
   ],
   "TV view": [
-    "src/main.js:412"
+    "src/main.js:413"
   ],
   "TWO PLAYERS": [
     "src/menu.js:189"
@@ -2444,7 +2444,7 @@
     "src/tutorial.js:64"
   ],
   "Top-down": [
-    "src/main.js:412"
+    "src/main.js:413"
   ],
   "Topknot: {state}": [
     "src/careerui.js:759"
@@ -2483,7 +2483,7 @@
     "kontroller.html:170"
   ],
   "Two humans": [
-    "index.html:2191"
+    "index.html:2198"
   ],
   "Type the level shown in the app.": [
     "src/careerui.js:1036"
@@ -2545,7 +2545,7 @@
   "Venue": [
     "src/careerui.js:2760",
     "src/menu.js:109",
-    "index.html:2198"
+    "index.html:2205"
   ],
   "Vertical stripes": [
     "src/careerui.js:1630",
@@ -2566,7 +2566,7 @@
     "src/careerui.js:115"
   ],
   "VÍBORA": [
-    "src/main.js:410",
+    "src/main.js:411",
     "src/touch.js:22"
   ],
   "Víbora": [
@@ -2585,7 +2585,7 @@
     "kontroller.html:105"
   ],
   "WALL WIZARD": [
-    "src/main.js:155"
+    "src/main.js:156"
   ],
   "WASD / arrow keys": [
     "src/tutorial.js:12"
@@ -2657,7 +2657,7 @@
     "kontroller.html:135"
   ],
   "Xbox controller only": [
-    "index.html:2206"
+    "index.html:2213"
   ],
   "YOUR LEVEL": [
     "src/careerui.js:1029"
@@ -2711,7 +2711,7 @@
     "src/career.js:230"
   ],
   "a banana": [
-    "src/main.js:531"
+    "src/main.js:532"
   ],
   "all controls →": [
     "src/helpkeys.js:72"
@@ -2720,7 +2720,7 @@
     "src/careerui.js:2228"
   ],
   "an energy gel": [
-    "src/main.js:531"
+    "src/main.js:532"
   ],
   "back": [
     "src/helpkeys.js:6",
@@ -2785,7 +2785,7 @@
     "src/helpkeys.js:28"
   ],
   "eat {food}?": [
-    "src/main.js:544"
+    "src/main.js:545"
   ],
   "finish at the net": [
     "src/charcard.js:21"
@@ -3050,13 +3050,13 @@
     "src/careerui.js:2743"
   ],
   "{icon} {name} UNLOCKED!": [
-    "src/main.js:203"
+    "src/main.js:204"
   ],
   "{level} · {rel}% reliability": [
     "src/careerui.js:2105"
   ],
   "{medals} · Press Enter / Start for {target}": [
-    "src/main.js:734"
+    "src/main.js:735"
   ],
   "{n} games × {per}": [
     "src/career.js:130"
@@ -3068,7 +3068,7 @@
     "src/charcard.js:62"
   ],
   "{shot}!": [
-    "src/main.js:587"
+    "src/main.js:588"
   ],
   "{stat} upgraded to {level}/{max}!": [
     "src/careerui.js:1558"
@@ -3121,25 +3121,25 @@
     "src/home.js:142"
   ],
   "↑ ↓ / Left Stick select · Enter / A confirm · Esc / Start resume": [
-    "src/main.js:855"
+    "src/main.js:856"
   ],
   "↑ ↓ select · Enter / A (✕) confirm · Esc / Start (Options) resume": [
-    "index.html:2235"
+    "index.html:2242"
   ],
   "⌨ Keyboard": [
     "kontroller.html:74"
   ],
   "● REPLAY <small style=\"font-weight:600;opacity:.85\">· press any key to skip</small>": [
-    "index.html:2236"
+    "index.html:2243"
   ],
   "⚡ CLEAN WINNER! · +{bonus} PTS": [
-    "src/main.js:685"
+    "src/main.js:686"
   ],
   "⚡ LASER VOLLEY!": [
-    "src/main.js:601"
+    "src/main.js:602"
   ],
   "⚡ SLOW MOTION · OVERHEAD LOCKED ⚡": [
-    "src/main.js:484"
+    "src/main.js:485"
   ],
   "✓ Copied!": [
     "src/menu.js:784"
@@ -3148,7 +3148,7 @@
     "src/tutorial.js:152"
   ],
   "✨ PERFECT TIMING!": [
-    "src/main.js:602"
+    "src/main.js:603"
   ],
   "🌍 Ranking": [
     "src/careerui.js:1219"
@@ -3157,7 +3157,7 @@
     "src/careerui.js:1187"
   ],
   "🍌 Your bag is empty — buy food in the Shop": [
-    "src/main.js:641"
+    "src/main.js:642"
   ],
   "🎒 Locker": [
     "src/careerui.js:1211"
@@ -3185,7 +3185,7 @@
     "src/menu.js:926"
   ],
   "🎯 SILKY CHIQUITA!": [
-    "src/main.js:600"
+    "src/main.js:601"
   ],
   "🎾 Play": [
     "src/careerui.js:1171"
@@ -3203,34 +3203,34 @@
     "src/careerui.js:2018"
   ],
   "🏆 {winner} WINS!": [
-    "src/main.js:731"
+    "src/main.js:732"
   ],
   "👆 Put your thumb down anywhere here<br>and drag to run": [
     "src/touch.js:37"
   ],
   "👏 GREAT RALLY! ({shots} SHOTS) · +{bonus} PTS": [
-    "src/main.js:688"
+    "src/main.js:689"
   ],
   "👑 CLUTCH POINT! · +{bonus} PTS": [
-    "src/main.js:672"
+    "src/main.js:673"
   ],
   "👤 Profile": [
     "src/careerui.js:1227"
   ],
   "💥 GLASS BAJADA!": [
-    "src/main.js:598"
+    "src/main.js:599"
   ],
   "💥 POWER OVERHEAD 💥": [
-    "src/main.js:586"
+    "src/main.js:587"
   ],
   "💥 UNSTOPPABLE WINNER! · +{bonus} PTS": [
-    "src/main.js:679"
+    "src/main.js:680"
   ],
   "💧 CHANGEOVER — water break, energy back up": [
-    "src/main.js:639"
+    "src/main.js:640"
   ],
   "💧 Out of water — buy more in the Shop after the match": [
-    "src/main.js:635"
+    "src/main.js:636"
   ],
   "💪 Training": [
     "src/careerui.js:1195"
@@ -3242,39 +3242,39 @@
     "kontroller.html:74"
   ],
   "🔇 SOUND OFF": [
-    "src/main.js:1001"
+    "src/main.js:1002"
   ],
   "🔇 Tap for sound": [
-    "index.html:2229"
+    "index.html:2236"
   ],
   "🔊 SOUND ON": [
-    "src/main.js:1001"
+    "src/main.js:1002"
   ],
   "🔥 EPIC {shots}-SHOT RALLY": [
-    "src/main.js:694"
+    "src/main.js:695"
   ],
   "🔥 MARATHON RALLY! ({shots} SHOTS) · +{bonus} PTS": [
-    "src/main.js:675"
+    "src/main.js:676"
   ],
   "🔥 PERFECT TIMING 🔥": [
-    "src/main.js:586"
+    "src/main.js:587"
   ],
   "🔥 x{mult} ON FIRE": [
-    "src/main.js:173"
+    "src/main.js:174"
   ],
   "😮‍💨 TIRED — catch your breath between points": [
-    "src/main.js:772"
+    "src/main.js:773"
   ],
   "🛒 Shop": [
     "src/careerui.js:1203"
   ],
   "🧱 CONTRAPARED SAVE!": [
-    "src/main.js:597"
+    "src/main.js:598"
   ],
   "🧱 GLASS MASTERPIECE! · +{bonus} PTS": [
-    "src/main.js:682"
+    "src/main.js:683"
   ],
   "🧱 OFF THE GLASS!": [
-    "src/main.js:599"
+    "src/main.js:600"
   ]
 }

@@ -96,7 +96,7 @@ export function renderHome() {
           <div class="hm-card-badge">${t('INSTANT PLAY')}</div>
           <div class="hm-card-icon">🎾</div>
           <div class="hm-card-title">${t('FRIENDLY MATCH')}</div>
-          <div class="hm-card-sub">${t('Play now — solo vs AI, with friends on this computer, or online with a friend.')}</div>
+          <div class="hm-card-sub">${t('Play now — solo vs AI, with friends on this device, or online with a friend.')}</div>
           <div class="hm-card-action">${t('ENTER LOBBY →')}</div>
         </button>
 

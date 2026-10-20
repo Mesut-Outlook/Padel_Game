@@ -117,7 +117,7 @@ export function initMenu() {
             <div class="pl-section-label">${t('WHERE TO PLAY?')}</div>
             <div class="pl-where-grid" id="pl-where-grid">
               <button type="button" class="pl-card pl-where-card is-selected" data-where="local">
-                <div class="pl-card-title">🖥️ ${t('On this computer')}</div>
+                <div class="pl-card-title">🖥️ ${t('On this device')}</div>
                 <div class="pl-card-sub">${t('Local couch match · Keyboard or gamepads')}</div>
                 <span class="pl-check">✓</span>
               </button>
