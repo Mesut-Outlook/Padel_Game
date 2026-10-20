@@ -14,7 +14,11 @@ const HAIR_COLORS = ['#2b1d14', '#4a2f1d', '#7a5230', '#c9a15e', '#111111', '#8e
 const TEX_SKIN = new THREE.Color(0.61, 0.43, 0.31); // average of the base skin texture
 
 // locomotion clips; quaternion tracks only so body-shape bone scales survive. Strokes are procedural poses (below).
-const CLIPS = { idle: 'Sword_Idle', walk: 'Walk_Loop', run: 'Jog_Fwd_Loop' };
+const CLIPS = {
+  idle: 'Sword_Idle', walk: 'Walk_Loop', run: 'Jog_Fwd_Loop',
+  sit: 'Sitting_Idle_Loop', sitTalk: 'Sitting_Talking_Loop',
+  cheer: 'Jump_Loop', dance: 'Dance_Loop'
+};
 let clipsP;
 const clips = () => (clipsP ||= load('assets/anims/UAL1_Standard.glb').then(g => {
   const out = {};

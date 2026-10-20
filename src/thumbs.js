@@ -130,7 +130,7 @@ async function renderVenue(venue) {
   r.setClearColor(venue.sky || '#0b1520', 1);
 
   const scene = new THREE.Scene();
-  buildVenue(scene, venue);
+  buildVenue(scene, venue, { crowd: false });
 
   const camera = new THREE.PerspectiveCamera(42, W / H, 0.5, 200);
   camera.position.set(13.2, 11.2, 16.2);

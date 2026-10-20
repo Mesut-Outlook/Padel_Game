@@ -22,6 +22,7 @@ Bu not, 2026-10-19/20 tarihlerinde ev dizininden açılan bir Claude Code oturum
 - Git `origin` HTTPS'ten SSH'ye çevrildi.
 - `.claude/agents/security-auditor.md` (salt okunur denetçi) oluşturuldu ve ilk denetim yapıldı: `agents/reports/security-2026-10-20.md` (yerel dosya, git'te yok).
 - `CLAUDE.md`'ye gizlilik, push ve denetim kuralları eklendi.
+- Seyirciler (agy-23): oyunun kendi karakterlerinden üretilen billboard atlası, koltuklar, saha ve oyuncu ülkelerinin bayrakları.
 
 ## Bekleyenler (kullanıcıdan)
 - Yönlendirme testi: Gmail **dışındaki** bir adresten contact@ adresine mail atılacak. Gmail'den Gmail'e yapılan test görünmüyor, bu normal.
@@ -35,7 +36,7 @@ Ayrıntılar ve satır numaraları yerel güvenlik raporunda (`agents/reports/se
 3. ~~**GitHub**~~ **Bitti (2026-10-20):** ruleset "protect main" (aktif, varsayılan dal): silme ve force-push yasak; PR ya da status check zorunluluğu yok, normal push ve Pages yayını çalışıyor. Oluştururken GitHub "Confirm access" istiyor, onayı kullanıcı verir.
 4. ~~**Oyun sunucusunu sağlamlaştırma**~~ **Bitti (2026-10-20):** ayrıntılar `docs/online-server.md` adım 1'de. `ws` 8.22.0. Hosting seçilince `TRUST_PROXY` notunu unutma.
 5. **Oyunu online'a taşıma** (`docs/online-server.md` adım 0 → 4):
-   - Önce Cloudflare tüneliyle arkadaş testi. Sonra stat adaleti kararı (önerim: önce yalnızca arkadaş maçı).
+   - Önce Cloudflare tüneliyle arkadaş testi. **Sürüyor (2026-10-20):** tünelin sunucusu ayrı ve temiz bir kopyadan (`git worktree`, scratchpad) çalışıyor, çünkü agy'nin `npx vite build`'i ana `dist/`'i yarım kodla değiştirdi. Testte bulunan ve düzeltilen hatalar: Copy Link düğmesi oda kutusundan taşıyordu (`cc895c2`); odayı kuran tek başınayken ikinci START maçı yapay zekâyla başlatıyordu, arkadaş "oda dolu" alıyordu (`bb51c34`); başka adımda START'a basınca oda görünmeden kuruluyordu, artık Match adımı açılıyor (`8d0fec2`). Sonra stat adaleti kararı (önerim: önce yalnızca arkadaş maçı).
    - Ardından hosting: Fly.io (yaklaşık 2 $/ay, kolay) ya da Hetzner (AB, yaklaşık 5,5 €/ay, yönetimi bizde). Fiyatları seçim anında kontrol et.
    - `server.padellegends.eu` DNS kaydı, `DEFAULT_SERVER` ayarı, gizlilik sayfası güncellemesi.
    - Son olarak `security-auditor` yeniden çalıştırılsın.

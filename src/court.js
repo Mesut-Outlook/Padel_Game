@@ -3,10 +3,13 @@ import * as THREE from 'three';
 import { buildSkyline } from './skyline.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { DOOR } from './physics.js';
+import { crowdPlan, railingFlags } from './crowdplan.js';
+import { getCrowdAtlas, isAtlasReady } from './crowdatlas.js';
+import { createFlagTexture, getFlagsAtlas } from './flags.js';
 
 const SURF = { 'turf-blue': 0x2f6fb5, 'turf-green': 0x3f8f4a, 'turf-terracotta': 0xb5603a };
 
-export function buildVenue(scene, venue) {
+export function buildVenue(scene, venue, opts = {}) {
   const g = new THREE.Group();
   const sky = buildSkyline(g, venue);  // city landmarks on a ring around the venue
   scene.background = new THREE.Color(venue.type === 'indoor' ? '#1b2129' : sky.top);
@@ -116,65 +119,336 @@ export function buildVenue(scene, venue) {
       const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.3, 0.3), new THREE.MeshBasicMaterial({ color: 0xffffee })); lamp.position.set(x * 0.95, 7, z); g.add(lamp);
     }
   }
-  if (venue.crowd > 0) {
-    // low-poly standing spectators: 4 instanced parts = 4 draw calls (HD 620 budget)
-    const part = (...geos) => mergeGeometries(geos.map(([geo, x, y, z]) => geo.translate(x, y, z).toNonIndexed()));
-    const cyl = (r, h) => new THREE.CylinderGeometry(r, r * 0.9, h, 8);
-    const parts = [
-      [part([cyl(0.07, 0.82), -0.1, 0.41, 0], [cyl(0.07, 0.82), 0.1, 0.41, 0]), () => col.setHSL(0.6, 0.3, 0.1 + Math.random() * 0.25)],  // legs
-      [part([cyl(0.19, 0.6), 0, 1.13, 0], [cyl(0.05, 0.55), -0.25, 1.15, 0], [cyl(0.05, 0.55), 0.25, 1.15, 0]), () => col.setHSL(Math.random(), 0.65, 0.5)],  // shirt + arms
-      [part([new THREE.SphereGeometry(0.11, 10, 8), 0, 1.57, 0]), () => col.setHSL(0.07, 0.45, 0.25 + Math.random() * 0.5)],  // head
-      [part([new THREE.SphereGeometry(0.115, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), 0, 1.6, -0.01]), () => col.setHSL(0.08, 0.5, 0.05 + Math.random() * 0.35)],  // hair
-    ];
-    const seats = [];
-    for (const side of [1, -1]) for (let row = 0; row < 5; row++) for (let z = -13; z <= 13; z += 0.65) seats.push([side, row, z]);
-    seats.sort(() => Math.random() - 0.5);
-    const n = Math.min(seats.length, Math.round(venue.crowd * 300));
-    const meshes = parts.map(([geo]) => { const m = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial(), n); g.add(m); return m; });
-    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), col = new THREE.Color();
-    const baseSpec = [];
-    for (let i = 0; i < n; i++) {
-      const [side, row, z] = seats[i], k = 0.9 + Math.random() * 0.15;
-      const px = side * (7.5 + row * 0.9), py = row * 0.5, pz = z + (Math.random() - 0.5) * 0.15;
-      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -side * Math.PI / 2 + (Math.random() - 0.5) * 0.6);  // face the court
-      m4.compose(p.set(px, py, pz), q, s.set(k, k, k));
-      meshes.forEach((m, j) => { m.setMatrixAt(i, m4); m.setColorAt(i, parts[j][1]()); });
-      baseSpec.push({ px, py, pz, q: q.clone(), k, phase: Math.random() * Math.PI * 2, speed: 12 + Math.random() * 6 });
-    }
-    let crowdT = 0, crowdAmp = 0, crowdClock = 0, wasActive = false;
-    g.userData.exciteCrowd = (intensity = 0.6) => {
-      crowdT = Math.max(crowdT, 0.9 + intensity * 0.9);
-      crowdAmp = Math.max(crowdAmp, Math.min(1, intensity));
-    };
-    g.userData.updateCrowd = (dt) => {
-      if (crowdT <= 0) {
-        if (wasActive) {
-          for (let i = 0; i < n; i++) {
-            const b = baseSpec[i];
-            m4.compose(p.set(b.px, b.py, b.pz), b.q, s.set(b.k, b.k, b.k));
-            for (const m of meshes) m.setMatrixAt(i, m4);
-          }
-          for (const m of meshes) m.instanceMatrix.needsUpdate = true;
-          wasActive = false; crowdAmp = 0;
-        }
-        return;
-      }
-      wasActive = true;
-      crowdT = Math.max(0, crowdT - dt);
-      crowdClock += dt;
-      const env = Math.min(1, crowdT / 0.35) * crowdAmp;
-      for (let i = 0; i < n; i++) {
-        const b = baseSpec[i];
-        const hop = Math.max(0, Math.sin(crowdClock * b.speed + b.phase)) * 0.14 * env;
-        m4.compose(p.set(b.px, b.py + hop, b.pz), b.q, s.set(b.k, b.k, b.k));
-        for (const m of meshes) m.setMatrixAt(i, m4);
-      }
-      for (const m of meshes) m.instanceMatrix.needsUpdate = true;
-    };
+  if (venue.crowd > 0 && opts.crowd !== false) {
+    // Grandstand steps
     for (const side of [1, -1]) for (let row = 0; row < 5; row++) {
       const step = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5 * (row + 1), 28), new THREE.MeshLambertMaterial({ color: 0x3a3f44 }));
       step.position.set(side * (7.5 + row * 0.9), 0.25 * (row + 1) - 0.5, 0); g.add(step);
     }
+
+    // Instanced stadium seats (cushion + backrest in venue/court theme color)
+    const seatColor = {
+      'turf-blue': 0x183b63,
+      'turf-green': 0x1d472c,
+      'turf-terracotta': 0x6e2c1e
+    }[venue.surface] || 0x223246;
+
+    const seatBase = new THREE.BoxGeometry(0.46, 0.08, 0.44).translate(0, 0.26, 0).toNonIndexed();
+    const seatBack = new THREE.BoxGeometry(0.06, 0.38, 0.44).translate(0.20, 0.45, 0).toNonIndexed();
+    const seatGeo = mergeGeometries([seatBase, seatBack]);
+    const seatMat = new THREE.MeshLambertMaterial({ color: seatColor });
+
+    const allSeats = [];
+    for (const side of [1, -1]) {
+      for (let row = 0; row < 5; row++) {
+        const px = side * (7.5 + row * 0.9);
+        const py = row * 0.5;
+        for (let z = -12.6; z <= 12.6; z += 0.7) {
+          allSeats.push({ side, row, px, py, pz: z });
+        }
+      }
+    }
+
+    const seatsMesh = new THREE.InstancedMesh(seatGeo, seatMat, allSeats.length);
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(1, 1, 1), p = new THREE.Vector3();
+    const yAxis = new THREE.Vector3(0, 1, 0);
+
+    for (let i = 0; i < allSeats.length; i++) {
+      const st = allSeats[i];
+      q.setFromAxisAngle(yAxis, st.side > 0 ? 0 : Math.PI);
+      m4.compose(p.set(st.px, st.py, st.pz), q, s);
+      seatsMesh.setMatrixAt(i, m4);
+    }
+    seatsMesh.instanceMatrix.needsUpdate = true;
+    g.add(seatsMesh);
+
+    // 4-6 large hanging banners on the stand railing: venue country + players countries
+    const playerFlags = Array.isArray(opts.flags) ? opts.flags : [];
+    const banners = railingFlags({
+      venueCC: venue.countryCode,
+      playerCCs: playerFlags,
+      count: 6
+    });
+    const bannerZs = [-7, 0, 7];
+    let bannerIdx = 0;
+    for (const side of [1, -1]) {
+      for (const bz of bannerZs) {
+        if (bannerIdx >= banners.length) break;
+        const code = banners[bannerIdx++];
+        const tex = createFlagTexture(code, 256, 160);
+        if (tex) {
+          const bannerMesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.6, 0.65),
+            new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide })
+          );
+          bannerMesh.position.set(side * 6.98, 0.45, bz);
+          bannerMesh.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+          g.add(bannerMesh);
+        }
+      }
+    }
+
+    // Seating occupancy plan (0.4 + 0.6 * crowd filled) & flag assignments
+    const plan = crowdPlan(allSeats.length, {
+      crowd: venue.crowd,
+      venueCC: venue.countryCode,
+      playerCCs: playerFlags
+    });
+
+    const occupied = [];
+    for (let i = 0; i < plan.length; i++) {
+      if (plan[i]) occupied.push({ seat: allSeats[i], plan: plan[i] });
+    }
+    const n = occupied.length;
+
+    // Small hand flags held by ~15-20% of spectators (1 InstancedMesh draw call for the stadium)
+    const flagsAtlas = getFlagsAtlas();
+    const flagHolders = [];
+    if (flagsAtlas) {
+      for (let i = 0; i < n; i++) {
+        const item = occupied[i];
+        if (item.plan.flag) {
+          const uvIdx = flagsAtlas.getUvIndex(item.plan.flag);
+          if (uvIdx >= 0) {
+            flagHolders.push({
+              occIdx: i,
+              seat: item.seat,
+              flagCC: item.plan.flag,
+              uvIdx,
+              speed: 10 + Math.random() * 8,
+              phase: Math.random() * Math.PI * 2
+            });
+          }
+        }
+      }
+    }
+
+    let flagMesh = null;
+    let aFlagCell = null;
+    if (flagHolders.length > 0 && flagsAtlas) {
+      const fCloth = new THREE.PlaneGeometry(0.32, 0.20).translate(0.16, 0.10, 0).toNonIndexed();
+      const fPole = new THREE.CylinderGeometry(0.005, 0.005, 0.35, 6).translate(0, 0.175, 0).toNonIndexed();
+      const fGeo = mergeGeometries([fCloth, fPole]);
+
+      const fMat = new THREE.MeshLambertMaterial({
+        map: flagsAtlas.texture,
+        side: THREE.DoubleSide,
+        transparent: true
+      });
+
+      fMat.onBeforeCompile = (shader) => {
+        shader.vertexShader = `
+          attribute float aFlagCell;
+          varying vec2 vFlagUv;
+          ${shader.vertexShader}
+        `.replace(
+          '#include <uv_vertex>',
+          `
+          #include <uv_vertex>
+          float col = mod(aFlagCell, 4.0);
+          float row = floor(aFlagCell / 4.0);
+          vFlagUv = vec2((uv.x + col) * 0.25, (uv.y + (3.0 - row)) * 0.25);
+          `
+        );
+        shader.fragmentShader = `
+          varying vec2 vFlagUv;
+          ${shader.fragmentShader}
+        `.replace(
+          '#include <map_fragment>',
+          `
+          #ifdef USE_MAP
+            vec4 sampledDiffuseColor = texture2D(map, vFlagUv);
+            diffuseColor *= sampledDiffuseColor;
+          #endif
+          `
+        );
+      };
+      fMat.customProgramCacheKey = () => 'flag_atlas_v1';
+
+      flagMesh = new THREE.InstancedMesh(fGeo, fMat, flagHolders.length);
+      aFlagCell = new THREE.InstancedBufferAttribute(new Float32Array(flagHolders.length), 1);
+
+      for (let j = 0; j < flagHolders.length; j++) {
+        const fh = flagHolders[j];
+        aFlagCell.setX(j, fh.uvIdx);
+        const fx = fh.seat.px + (fh.seat.side > 0 ? -0.25 : 0.25);
+        const fy = fh.seat.py + 0.65;
+        const fz = fh.seat.pz + 0.22;
+        q.setFromAxisAngle(yAxis, fh.seat.side > 0 ? -Math.PI / 2 : Math.PI / 2);
+        m4.compose(p.set(fx, fy, fz), q, s);
+        flagMesh.setMatrixAt(j, m4);
+      }
+      fGeo.setAttribute('aFlagCell', aFlagCell);
+      flagMesh.instanceMatrix.needsUpdate = true;
+      g.add(flagMesh);
+    }
+
+    // Base spec for spectator positions and hop phases
+    const baseSpec = [];
+    for (let i = 0; i < n; i++) {
+      const occ = occupied[i];
+      const px = occ.seat.px;
+      const py = occ.seat.py + 0.26;
+      const pz = occ.seat.pz + (Math.random() - 0.5) * 0.05;
+      baseSpec.push({
+        px, py, pz,
+        k: 0.95 + Math.random() * 0.1,
+        phase: Math.random() * Math.PI * 2,
+        speed: 12 + Math.random() * 6
+      });
+    }
+
+    // Billboard quad (0.85m wide x 1.35m tall, bottom centered on seat)
+    const quadGeo = new THREE.PlaneGeometry(0.85, 1.35).translate(0, 0.675, 0);
+    const aCell = new THREE.InstancedBufferAttribute(new Float32Array(n), 1);
+    for (let i = 0; i < n; i++) aCell.setX(i, occupied[i].plan.lookIndex);
+    quadGeo.setAttribute('aCell', aCell);
+
+    let crowdMesh = null;
+    let placeholderMeshes = null;
+
+    const setupImpostorMesh = (atlasMat) => {
+      if (placeholderMeshes) {
+        for (const m of placeholderMeshes) g.remove(m);
+        placeholderMeshes = null;
+      }
+      crowdMesh = new THREE.InstancedMesh(quadGeo, atlasMat, n);
+      for (let i = 0; i < n; i++) {
+        const b = baseSpec[i];
+        m4.compose(p.set(b.px, b.py, b.pz), q.identity(), s.set(b.k, b.k, b.k));
+        crowdMesh.setMatrixAt(i, m4);
+      }
+      crowdMesh.instanceMatrix.needsUpdate = true;
+      g.add(crowdMesh);
+    };
+
+    if (isAtlasReady()) {
+      getCrowdAtlas().then((atlas) => {
+        if (atlas) setupImpostorMesh(atlas.material);
+      });
+    } else {
+      // Temporary fallback while atlas renders in background
+      const part = (...geos) => mergeGeometries(geos.map(([geo, x, y, z]) => geo.translate(x, y, z).toNonIndexed()));
+      const cyl = (r, h) => new THREE.CylinderGeometry(r, r * 0.9, h, 8);
+      const col = new THREE.Color();
+      const parts = [
+        [part([cyl(0.07, 0.82), -0.1, 0.41, 0], [cyl(0.07, 0.82), 0.1, 0.41, 0]), () => col.setHSL(0.6, 0.3, 0.1 + Math.random() * 0.25)],
+        [part([cyl(0.19, 0.6), 0, 1.13, 0], [cyl(0.05, 0.55), -0.25, 1.15, 0], [cyl(0.05, 0.55), 0.25, 1.15, 0]), () => col.setHSL(Math.random(), 0.65, 0.5)],
+        [part([new THREE.SphereGeometry(0.11, 10, 8), 0, 1.57, 0]), () => col.setHSL(0.07, 0.45, 0.25 + Math.random() * 0.5)],
+        [part([new THREE.SphereGeometry(0.115, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), 0, 1.6, -0.01]), () => col.setHSL(0.08, 0.5, 0.05 + Math.random() * 0.35)],
+      ];
+      placeholderMeshes = parts.map(([geo]) => {
+        const m = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial(), n);
+        g.add(m);
+        return m;
+      });
+      for (let i = 0; i < n; i++) {
+        const b = baseSpec[i], side = occupied[i].seat.side;
+        q.setFromAxisAngle(yAxis, -side * Math.PI / 2 + (Math.random() - 0.5) * 0.6);
+        m4.compose(p.set(b.px, b.py, b.pz), q, s.set(b.k, b.k, b.k));
+        placeholderMeshes.forEach((m, j) => {
+          m.setMatrixAt(i, m4);
+          m.setColorAt(i, parts[j][1]());
+        });
+      }
+
+      // Background atlas generation: replace placeholder once ready
+      getCrowdAtlas().then((atlas) => {
+        if (atlas && g.parent) {
+          setupImpostorMesh(atlas.material);
+        }
+      });
+    }
+
+    let crowdT = 0, crowdAmp = 0, crowdClock = 0, wasActive = false;
+    g.userData.exciteCrowd = (intensity = 0.6) => {
+      crowdT = Math.max(crowdT, 0.9 + intensity * 0.9);
+      crowdAmp = Math.max(crowdAmp, Math.min(1, intensity));
+      if (crowdMesh) {
+        for (let i = 0; i < n; i++) {
+          aCell.setX(i, occupied[i].plan.lookIndex + 16);
+        }
+        aCell.needsUpdate = true;
+      }
+    };
+
+    g.userData.updateCrowd = (dt) => {
+      if (crowdT <= 0) {
+        if (wasActive) {
+          if (crowdMesh) {
+            for (let i = 0; i < n; i++) {
+              aCell.setX(i, occupied[i].plan.lookIndex);
+              const b = baseSpec[i];
+              m4.compose(p.set(b.px, b.py, b.pz), q.identity(), s.set(b.k, b.k, b.k));
+              crowdMesh.setMatrixAt(i, m4);
+            }
+            crowdMesh.instanceMatrix.needsUpdate = true;
+            aCell.needsUpdate = true;
+          } else if (placeholderMeshes) {
+            for (let i = 0; i < n; i++) {
+              const b = baseSpec[i], side = occupied[i].seat.side;
+              q.setFromAxisAngle(yAxis, -side * Math.PI / 2);
+              m4.compose(p.set(b.px, b.py, b.pz), q, s.set(b.k, b.k, b.k));
+              for (const m of placeholderMeshes) m.setMatrixAt(i, m4);
+            }
+            for (const m of placeholderMeshes) m.instanceMatrix.needsUpdate = true;
+          }
+          if (flagMesh) {
+            for (let j = 0; j < flagHolders.length; j++) {
+              const fh = flagHolders[j];
+              const fx = fh.seat.px + (fh.seat.side > 0 ? -0.25 : 0.25);
+              const fy = fh.seat.py + 0.65;
+              const fz = fh.seat.pz + 0.22;
+              q.setFromAxisAngle(yAxis, fh.seat.side > 0 ? -Math.PI / 2 : Math.PI / 2);
+              m4.compose(p.set(fx, fy, fz), q, s.set(1, 1, 1));
+              flagMesh.setMatrixAt(j, m4);
+            }
+            flagMesh.instanceMatrix.needsUpdate = true;
+          }
+          wasActive = false; crowdAmp = 0;
+        }
+        return;
+      }
+
+      wasActive = true;
+      crowdT = Math.max(0, crowdT - dt);
+      crowdClock += dt;
+      const env = Math.min(1, crowdT / 0.35) * crowdAmp;
+
+      if (crowdMesh) {
+        for (let i = 0; i < n; i++) {
+          const b = baseSpec[i];
+          const hop = Math.max(0, Math.sin(crowdClock * b.speed + b.phase)) * 0.16 * env;
+          m4.compose(p.set(b.px, b.py + hop, b.pz), q.identity(), s.set(b.k, b.k, b.k));
+          crowdMesh.setMatrixAt(i, m4);
+        }
+        crowdMesh.instanceMatrix.needsUpdate = true;
+      } else if (placeholderMeshes) {
+        for (let i = 0; i < n; i++) {
+          const b = baseSpec[i], side = occupied[i].seat.side;
+          const hop = Math.max(0, Math.sin(crowdClock * b.speed + b.phase)) * 0.14 * env;
+          q.setFromAxisAngle(yAxis, -side * Math.PI / 2);
+          m4.compose(p.set(b.px, b.py + hop, b.pz), q, s.set(b.k, b.k, b.k));
+          for (const m of placeholderMeshes) m.setMatrixAt(i, m4);
+        }
+        for (const m of placeholderMeshes) m.instanceMatrix.needsUpdate = true;
+      }
+
+      if (flagMesh) {
+        for (let j = 0; j < flagHolders.length; j++) {
+          const fh = flagHolders[j];
+          const occHop = Math.max(0, Math.sin(crowdClock * baseSpec[fh.occIdx].speed + baseSpec[fh.occIdx].phase)) * 0.16 * env;
+          const fx = fh.seat.px + (fh.seat.side > 0 ? -0.25 : 0.25);
+          const fy = fh.seat.py + 0.65 + occHop;
+          const fz = fh.seat.pz + 0.22;
+          const wave = Math.sin(crowdClock * fh.speed + fh.phase) * 0.28 * env;
+          q.setFromAxisAngle(yAxis, (fh.seat.side > 0 ? -Math.PI / 2 : Math.PI / 2) + wave);
+          m4.compose(p.set(fx, fy, fz), q, s.set(1, 1, 1));
+          flagMesh.setMatrixAt(j, m4);
+        }
+        flagMesh.instanceMatrix.needsUpdate = true;
+      }
+    };
   }
   if (venue.type === 'beach') {
     const sea = new THREE.Mesh(new THREE.PlaneGeometry(200, 60), new THREE.MeshLambertMaterial({ color: 0x2a8fbf }));

@@ -212,7 +212,8 @@ async function setupScene(venue, ids, roster, rk) {
   disposeMenu();
   $('msg').textContent = t('Loading…');
   scene.clear();
-  venueGroup = buildVenue(scene, venue);
+  const playerFlags = ids.map(id => roster[id]?.countryCode).filter(Boolean);
+  venueGroup = buildVenue(scene, venue, { crowd: true, flags: playerFlags });
   ballView = buildBall(scene);
   fx = createFx(scene);
   marker = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.17, 24), new THREE.MeshBasicMaterial({ color: 0xd8f53a, transparent: true, opacity: 0.8 }));
