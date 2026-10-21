@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { buildSkyline } from './skyline.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { DOOR } from './physics.js';
-import { crowdPlan, railingFlags } from './crowdplan.js';
+import { crowdPlan, railingFlags, crowdYaw } from './crowdplan.js';
 import { getCrowdAtlas, isAtlasReady } from './crowdatlas.js';
 import { createFlagTexture, getFlagsAtlas } from './flags.js';
 
@@ -292,6 +292,7 @@ export function buildVenue(scene, venue, opts = {}) {
       const pz = occ.seat.pz + (Math.random() - 0.5) * 0.05;
       baseSpec.push({
         px, py, pz,
+        yaw: crowdYaw(px, pz, occ.seat.side) + (Math.random() - 0.5) * 0.10,
         k: 0.95 + Math.random() * 0.1,
         phase: Math.random() * Math.PI * 2,
         speed: 12 + Math.random() * 6
@@ -315,7 +316,8 @@ export function buildVenue(scene, venue, opts = {}) {
       crowdMesh = new THREE.InstancedMesh(quadGeo, atlasMat, n);
       for (let i = 0; i < n; i++) {
         const b = baseSpec[i];
-        m4.compose(p.set(b.px, b.py, b.pz), q.identity(), s.set(b.k, b.k, b.k));
+        q.setFromAxisAngle(yAxis, b.yaw);
+        m4.compose(p.set(b.px, b.py, b.pz), q, s.set(b.k, b.k, b.k));
         crowdMesh.setMatrixAt(i, m4);
       }
       crowdMesh.instanceMatrix.needsUpdate = true;
@@ -343,8 +345,8 @@ export function buildVenue(scene, venue, opts = {}) {
         return m;
       });
       for (let i = 0; i < n; i++) {
-        const b = baseSpec[i], side = occupied[i].seat.side;
-        q.setFromAxisAngle(yAxis, -side * Math.PI / 2 + (Math.random() - 0.5) * 0.6);
+        const b = baseSpec[i];
+        q.setFromAxisAngle(yAxis, b.yaw);
         m4.compose(p.set(b.px, b.py, b.pz), q, s.set(b.k, b.k, b.k));
         placeholderMeshes.forEach((m, j) => {
           m.setMatrixAt(i, m4);
@@ -379,15 +381,16 @@ export function buildVenue(scene, venue, opts = {}) {
             for (let i = 0; i < n; i++) {
               aCell.setX(i, occupied[i].plan.lookIndex);
               const b = baseSpec[i];
-              m4.compose(p.set(b.px, b.py, b.pz), q.identity(), s.set(b.k, b.k, b.k));
+              q.setFromAxisAngle(yAxis, b.yaw);
+              m4.compose(p.set(b.px, b.py, b.pz), q, s.set(b.k, b.k, b.k));
               crowdMesh.setMatrixAt(i, m4);
             }
             crowdMesh.instanceMatrix.needsUpdate = true;
             aCell.needsUpdate = true;
           } else if (placeholderMeshes) {
             for (let i = 0; i < n; i++) {
-              const b = baseSpec[i], side = occupied[i].seat.side;
-              q.setFromAxisAngle(yAxis, -side * Math.PI / 2);
+              const b = baseSpec[i];
+              q.setFromAxisAngle(yAxis, b.yaw);
               m4.compose(p.set(b.px, b.py, b.pz), q, s.set(b.k, b.k, b.k));
               for (const m of placeholderMeshes) m.setMatrixAt(i, m4);
             }
@@ -419,15 +422,16 @@ export function buildVenue(scene, venue, opts = {}) {
         for (let i = 0; i < n; i++) {
           const b = baseSpec[i];
           const hop = Math.max(0, Math.sin(crowdClock * b.speed + b.phase)) * 0.16 * env;
-          m4.compose(p.set(b.px, b.py + hop, b.pz), q.identity(), s.set(b.k, b.k, b.k));
+          q.setFromAxisAngle(yAxis, b.yaw);
+          m4.compose(p.set(b.px, b.py + hop, b.pz), q, s.set(b.k, b.k, b.k));
           crowdMesh.setMatrixAt(i, m4);
         }
         crowdMesh.instanceMatrix.needsUpdate = true;
       } else if (placeholderMeshes) {
         for (let i = 0; i < n; i++) {
-          const b = baseSpec[i], side = occupied[i].seat.side;
+          const b = baseSpec[i];
           const hop = Math.max(0, Math.sin(crowdClock * b.speed + b.phase)) * 0.14 * env;
-          q.setFromAxisAngle(yAxis, -side * Math.PI / 2);
+          q.setFromAxisAngle(yAxis, b.yaw);
           m4.compose(p.set(b.px, b.py + hop, b.pz), q, s.set(b.k, b.k, b.k));
           for (const m of placeholderMeshes) m.setMatrixAt(i, m4);
         }

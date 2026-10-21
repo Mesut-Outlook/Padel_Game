@@ -57,6 +57,7 @@ Kullanıcı acemi: her adımı sade anlat, şifre ve ödeme bilgisini **kullanı
 5. **Kullanıcı:** sunucu oluştur: konum Nürnberg ya da Falkenstein, Ubuntu 24.04, CX23 (fiyatı o gün kontrol et), IPv4 + IPv6, SSH anahtarı ve firewall seçili, isim `padel-1`. IPv4 ve IPv6 adreslerini Claude'a ver.
 6. **Kullanıcı (Namecheap → Advanced DNS):** `A` kaydı `server` → IPv4, `AAAA` kaydı `server` → IPv6. Diğer kayıtlara (MX, SPF, DMARC, CAA, GitHub TXT) dokunma.
 7. **Opus (SSH, anahtarla):** roadmap Faz E adım 2–7: güncellemeler + `unattended-upgrades`, root/parola girişi kapalı, Node 22, `padel` kullanıcısıyla systemd servisi (`HOST=127.0.0.1`, `TRUST_PROXY=1`), journald 7 gün, Caddy (Let's Encrypt, CAA'ya uygun) `server.padellegends.eu` → `127.0.0.1:8080`, IP başına yeni bağlantı hızı sınırı, `DEFAULT_SERVER = 'wss://server.padellegends.eu'`, `privacy.html` (Hetzner, saklama süresi; "henüz sunucu yok" cümlesi kalkar), `security-auditor`, sonra gerçek sunucuda arkadaş testi.
+8. ~~**Antigravity (agy-25)**~~ **Bitti (2026-10-21):** Seyircilerin sahaya bakacak şekilde yönlendirilmesi (kullanıcının ekran görüntüsü). `src/court.js` içindeki `crowdMesh` billboard quadvaryasyonlarının `q.identity()` yerine tribünün bulunduğu tarafa (`-side * Math.PI / 2`) göre sahaya ve kort içine bakması sağlanacak. Görev dosyası: `agents/tasks/agy-25-crowd-facing.md`.
 
 ## Açık konular (sonraya)
 - Stat adaleti (online'da kariyer statları) ve açık lobi isim filtresi: kullanıcı kararı.

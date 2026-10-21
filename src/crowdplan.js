@@ -250,3 +250,9 @@ export function railingFlags({ venueCC, playerCCs, count = 6 } = {}) {
   }
   return out;
 }
+
+// Y rotation of a spectator card (plane normal +Z) on stand `side` (+1 = x > 0):
+// faces the court, turned a little towards the net (z = 0).
+export function crowdYaw(px, pz, side) {
+  return -side * (Math.PI / 2 + Math.atan2(pz, Math.abs(px)) * 0.18);
+}
