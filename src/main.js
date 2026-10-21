@@ -125,6 +125,7 @@ initHome({
 });
 
 window.addEventListener('hashchange', () => {
+  if (menuDisposed) return toMenu();  // browser Back mid-match: the wizard is gone, so leave like pause → Main menu (reloads)
   applyRoute();
 });
 
@@ -212,6 +213,7 @@ async function setupScene(venue, ids, roster, rk) {
   loadingScene = true;
   $('menu').hidden = true;
   disposeMenu();
+  menuDisposed = true;
   $('msg').textContent = t('Loading…');
   scene.clear();
   const playerFlags = ids.map(id => roster[id]?.countryCode).filter(Boolean);
@@ -417,7 +419,7 @@ const pace = () => {
   const games = world.match.sets.reduce((n, s) => n + s[0] + s[1], 0);
   return Math.min(1.05, gameSpeed * (LEVEL_PACE[aiLevel] || 1) * (1 + Math.min(0.12, games * 0.015)));
 };
-let fx = null, tut = null, looping = false;
+let fx = null, tut = null, looping = false, menuDisposed = false;
 let freeze = 0, shake = 0, lastHitter = null;
 const shakeOff = new THREE.Vector3(), ballHold = new THREE.Vector3(), tmpV = new THREE.Vector3();
 // smash: brief slow motion + smash cam (for your own smashes, or every smash when only AIs play)
