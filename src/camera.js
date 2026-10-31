@@ -4,6 +4,16 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 const names = ['tv', 'behind', 'side', 'top', 'ball', 'drone', 'free'];
 const TAU_MOVE = 0.2; // s; position/lookAt damping, ~0.6s to settle after a mode switch
 
+// TV view: a long lens from further back and higher up, so the far half is not tiny and both baselines stay in frame.
+const TV = { y: 10, z: 26, lookY: 0.4 };
+const NEAR_FIT = 0.38;  // tan of the half-width the near baseline (±5 m) needs: narrow windows widen the lens by this
+
+// Lens and aim of the TV view for a screen shape. Phones in landscape are short, so the sky is cropped for a bigger court.
+export function tvLens(aspect) {
+  if (aspect >= 1.95) return { fov: 29, lookZ: -1.5 };
+  return { fov: Math.max(32, 2 * Math.atan(NEAR_FIT / aspect) * 180 / Math.PI), lookZ: -4 };
+}
+
 export function createCameraRig(camera, domElement) {
   const controls = new OrbitControls(camera, domElement);
   controls.enabled = false;
@@ -29,7 +39,7 @@ export function createCameraRig(camera, domElement) {
       if (mode === 'free') { pos.copy(camera.position); look.copy(controls.target); }
       mode = n;
       controls.enabled = n === 'free';
-      if (n === 'free') controls.target.set(0, 0, 0);
+      if (n === 'free') { controls.target.set(0, 0, 0); camera.fov = baseFov; camera.updateProjectionMatrix(); }
     },
     next() { rig.set(names[(names.indexOf(mode) + 1) % names.length]); return mode; },
     punch(p, team, dur = 1) {
@@ -58,13 +68,12 @@ export function createCameraRig(camera, domElement) {
 
       if (mode === 'free') { controls.update(); return; }
 
+      let wantFov = baseFov;
       if (punchT > 0) {
         punchT -= dt;
         wantPos.copy(punchPos);
         wantLook.copy(punchLook).lerp(prevBall, 0.35);
-        camera.fov = baseFov - 12 * Math.max(0, punchT / punchDur);
-        camera.updateProjectionMatrix();
-        if (punchT <= 0) { camera.fov = baseFov; camera.updateProjectionMatrix(); }
+        wantFov = baseFov - 12 * Math.max(0, punchT / punchDur);
       } else if (povT > 0) {
         povT -= dt;
         wantPos.set(me[0] + (me[0] > 0 ? -0.5 : 0.5), 1.85, me[1] + 2.4 * s);
@@ -72,11 +81,11 @@ export function createCameraRig(camera, domElement) {
       } else switch (mode) {
         case 'tv': {
           followX = sm(followX, bx * 0.35, 0.45);
-          followZ = sm(followZ, bz * 0.15, 0.6);
-          const elevated = Math.max(0, by - 1.8) * 0.35;
-          const deadZoom = view.state === 'dead' || view.state === 'over' ? -1.2 : 0;
-          wantPos.set(followX * 0.6, 7.2 + elevated, (16.8 + deadZoom) * s);
-          wantLook.set(followX * 0.85, 0.6 + by * 0.15, (-1.5 + followZ) * s);
+          followZ = sm(followZ, bz * 0.05, 0.6);
+          wantPos.set(followX * 0.6, TV.y + Math.max(0, by - 1.8) * 0.2, TV.z * s);
+          const lens = tvLens(camera.aspect);
+          wantLook.set(followX * 0.85, TV.lookY + by * 0.06, (lens.lookZ + followZ) * s);
+          wantFov = lens.fov;
           break;
         }
         case 'behind':
@@ -107,11 +116,13 @@ export function createCameraRig(camera, domElement) {
           break;
       }
 
-      if (snapNext) { pos.copy(wantPos); look.copy(wantLook); snapNext = false; }
+      if (snapNext) { pos.copy(wantPos); look.copy(wantLook); camera.fov = wantFov; snapNext = false; }
       else {
         const k = 1 - Math.exp(-dt / TAU_MOVE);
         pos.lerp(wantPos, k); look.lerp(wantLook, k);
+        camera.fov = punchT > 0 ? wantFov : camera.fov + (wantFov - camera.fov) * k;
       }
+      camera.updateProjectionMatrix();
       camera.position.copy(pos);
       camera.lookAt(look);
     },

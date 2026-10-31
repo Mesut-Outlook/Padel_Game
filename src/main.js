@@ -1099,6 +1099,7 @@ function loop(now) {
     lastD = d;
   }
   venueGroup?.userData.updateCrowd?.(dt);
+  venueGroup?.userData.fadeEnds?.(camera.position.z);
   rig.update(dt, { ball: view.b, players: view.pl.map(s => ({ p: [s[0], s[1]], f: s[2] })), focus, team: focus < 2 ? 0 : 1 });
   if (camShown !== rig.name + device) {  // also follows the replay's camera and the input device
     camShown = rig.name + device;

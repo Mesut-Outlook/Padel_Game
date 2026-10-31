@@ -5,6 +5,7 @@ import * as THREE from 'three';
 
 const W = 1024, H = 256, R = 60, TOP = 22, BOTTOM = -6;   // panel canvas, ring radius and world height span
 const BASE = Math.round((TOP - 0) / (TOP - BOTTOM) * H) - 6; // canvas row of street level
+const DROP = 8;  // the venue stands above the city, so the whole roofline fits under the top of the raised TV view
 
 const mix = (a, b, t) => '#' + new THREE.Color(a).lerp(new THREE.Color(b), t).getHexString();
 function rng(seed) { let s = seed; return () => ((s = (s * 16807) % 2147483647) / 2147483647); }
@@ -191,16 +192,20 @@ export function buildSkyline(group, venue) {
   Object.entries(dirs).forEach(([dir, a], i) => {
     const geo = new THREE.CylinderGeometry(R, R, TOP - BOTTOM, 24, 1, true, a - Math.PI / 4, Math.PI / 2);
     const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: panel(venue, c, dir, seed + i * 977), side: THREE.BackSide, fog: false, depthWrite: false }));
-    m.position.y = (TOP + BOTTOM) / 2; m.renderOrder = -1;
+    m.position.y = (TOP + BOTTOM) / 2 - DROP; m.renderOrder = -1;
     group.add(m);
   });
+  // water or city mass from the venue's edge out to the panels, so the raised TV view sees no gap under the city
+  const def = CITY[venue.city] || CITY.Madrid;
+  const base = new THREE.Mesh(new THREE.CircleGeometry(R + 1, 32), new THREE.MeshBasicMaterial({ color: venue.type === 'indoor' ? '#1b2129' : def.water ? c.water : c.near, fog: false }));
+  base.rotation.x = -Math.PI / 2; base.position.y = -0.5 - DROP; group.add(base);
   if (venue.type === 'indoor') {  // hall ceiling with light strips
     const cv = document.createElement('canvas'); cv.width = cv.height = 256;
     const x = cv.getContext('2d'); x.fillStyle = '#20262e'; x.fillRect(0, 0, 256, 256);
     x.fillStyle = '#f4f6ff'; for (let i = 16; i < 256; i += 32) x.fillRect(i, 0, 4, 256);
     const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(6, 6); t.colorSpace = THREE.SRGBColorSpace;
     const ceil = new THREE.Mesh(new THREE.CircleGeometry(R, 32), new THREE.MeshBasicMaterial({ map: t, fog: false }));
-    ceil.rotation.x = Math.PI / 2; ceil.position.y = TOP; group.add(ceil);
+    ceil.rotation.x = Math.PI / 2; ceil.position.y = TOP - DROP; group.add(ceil);
   }
   return c;
 }

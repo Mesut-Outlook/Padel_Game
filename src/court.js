@@ -26,7 +26,7 @@ export function buildVenue(scene, venue, opts = {}) {
 
   // ground around court + court surface
   const outer = venue.type === 'beach' ? 0xe2cf9c : venue.type === 'rooftop' ? 0x777777 : 0x556066;
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshLambertMaterial({ color: outer }));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(27, 42), new THREE.MeshLambertMaterial({ color: outer }));
   ground.rotation.x = -Math.PI / 2; ground.position.y = -0.01; ground.receiveShadow = true;
   const turf = new THREE.Mesh(new THREE.PlaneGeometry(10, 20), new THREE.MeshLambertMaterial({ color: SURF[venue.surface] || 0x2f6fb5 }));
   turf.rotation.x = -Math.PI / 2; turf.receiveShadow = true;
@@ -60,17 +60,25 @@ export function buildVenue(scene, venue, opts = {}) {
   const meshTex = new THREE.CanvasTexture(mc); meshTex.wrapS = meshTex.wrapT = THREE.RepeatWrapping; meshTex.anisotropy = 4;
   const mesh = new THREE.MeshBasicMaterial({ map: meshTex, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false });
   const frame = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
-  const panel = (w, h, x, y, z, rotY, mat) => {
+  // the two end walls have their own materials: the one between the camera and the court is faded (g.userData.fadeEnds)
+  const ends = Object.fromEntries([1, -1].map(zs => [zs, { glass: glass.clone(), mesh: mesh.clone(), edge: glassEdge.clone() }]));
+  const panel = (w, h, x, y, z, rotY, mat, edge = glassEdge) => {
     const geo = new THREE.PlaneGeometry(w, h), uv = geo.attributes.uv;
-    if (mat === mesh) for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w * 8, uv.getY(i) * h * 8);  // 12.5 cm cells
+    if (mat.map === meshTex) for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w * 8, uv.getY(i) * h * 8);  // 12.5 cm cells
     const p = new THREE.Mesh(geo, mat);
-    if (mat === glass) p.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), glassEdge));  // panel seams
+    if (mat.isMeshPhongMaterial) p.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), edge));  // panel seams
     p.position.set(x, y, z); p.rotation.y = rotY; g.add(p);
+  };
+  g.userData.fadeEnds = (camZ) => {
+    for (const zs of [1, -1]) {
+      const k = camZ * zs > 10 ? 0.25 : 1, e = ends[zs];
+      e.glass.opacity = glass.opacity * k; e.mesh.opacity = mesh.opacity * k; e.edge.opacity = glassEdge.opacity * k;
+    }
   };
   const post = (h, x, y, z, sx = 0.08, sz = 0.08) => { const c = new THREE.Mesh(new THREE.BoxGeometry(sx, h, sz), frame); c.position.set(x, y, z); g.add(c); };
   for (const zs of [1, -1]) {
-    for (let x = -4; x <= 4; x += 2) panel(2, 3, x, 1.5, zs * 10, 0, glass);  // back glass, 2 m panels
-    panel(10, 1, 0, 3.5, zs * 10, 0, mesh);           // back mesh 3-4m
+    for (let x = -4; x <= 4; x += 2) panel(2, 3, x, 1.5, zs * 10, 0, ends[zs].glass, ends[zs].edge);  // back glass, 2 m panels
+    panel(10, 1, 0, 3.5, zs * 10, 0, ends[zs].mesh);           // back mesh 3-4m
     for (const xs of [1, -1]) {
       panel(2, 3, xs * 5, 1.5, zs * 9, Math.PI / 2, glass);
       panel(2, 1, xs * 5, 3.5, zs * 9, Math.PI / 2, mesh);
@@ -453,10 +461,6 @@ export function buildVenue(scene, venue, opts = {}) {
         flagMesh.instanceMatrix.needsUpdate = true;
       }
     };
-  }
-  if (venue.type === 'beach') {
-    const sea = new THREE.Mesh(new THREE.PlaneGeometry(200, 60), new THREE.MeshLambertMaterial({ color: 0x2a8fbf }));
-    sea.rotation.x = -Math.PI / 2; sea.position.set(0, 0, -60); g.add(sea);
   }
   scene.add(g);
   return g;
