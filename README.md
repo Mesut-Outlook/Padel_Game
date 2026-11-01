@@ -42,6 +42,8 @@ Sayfa ziyaretlerine ek olarak oyun olayları (`src/track.js`, panelde `event` sa
 | `career-open` · `career-create` | kariyer açıldı · karakter yaratıldı |
 | `career-tournament/<turnuva id>` · `career-shop-buy/<racket\|shoes\|ball\|kit\|headwear>` · `career-training/<özellik>` | turnuvaya girildi · marketten alındı · antrenman |
 | `online-click` · `online-create` · `online-join` | Online'a basıldı (menü veya kariyer) · oda kuruldu · koda katılındı |
+| `online-interest` · `online-interest/<friendly\|career\|cup>` | online'ı merak eden oturum (toplam · nereden: Online sekmesi, kariyerde Online, Friends Cup kartı), oturumda bir kez |
+| `online-noserver` | oda kurmayı ya da katılmayı denedi ama sunucu yok, oturumda bir kez (online'ı gerçekten isteyenler) |
 | `input/<keyboard\|xbox\|playstation\|touch\|other>` | oturumda ilk kullanılan giriş aygıtı (her biri bir kez) |
 | `settings-change/<control\|speed>` | hangi ayar değişti (değeri değil) |
 | `fullscreen-on` | tam ekrana geçildi |

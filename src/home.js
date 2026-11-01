@@ -6,6 +6,7 @@ import { padDir, spatialFocus } from './padnav.js';
 import { loadProfile } from './career.js';
 import { toggleFullscreen } from './fullscreen.js';
 import { t } from './i18n.js';
+import { trackOnlineInterest } from './track.js';
 
 // ways to play, pictured on HOME (public/assets/howto/), each linking to its part of kontroller.html; ready = shown.
 const HOWTO = [
@@ -150,6 +151,7 @@ export function renderHome() {
   const cupBtn = homeEl.querySelector('#hm-card-cup');
   const cupToast = homeEl.querySelector('#hm-cup-toast');
   cupBtn.onclick = () => {
+    trackOnlineInterest('cup');
     if (cupToast) {
       cupToast.hidden = false;
       setTimeout(() => { if (cupToast) cupToast.hidden = true; }, 3200);

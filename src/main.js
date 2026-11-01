@@ -256,7 +256,7 @@ export function startOnline({ url, code, create = false, players = 4, venue = 0,
     $('lobby').innerHTML = t; document.querySelectorAll('.pl-lobby-status').forEach(e => { e.innerHTML = t; }); status?.(t, l, err);
   };
   url ||= serverUrl(location);  // null on the static web build unless ?server= points at one
-  if (!url) { say(t(NO_SERVER), null, true); return null; }
+  if (!url) { trackOnce('online-noserver'); say(t(NO_SERVER), null, true); return null; }
   if (!allowServer(url)) { say(t(NOT_CONNECTED), null, true); return null; }
   code = String(code || '').trim().toUpperCase();
   if (!code && !create) { say(t('Enter a room code first.'), null, true); return null; }  // create: the server picks the code

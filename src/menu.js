@@ -1,7 +1,7 @@
 // Broadcast-quality visual menu for Padel Legends.
 // Integrates with existing HTML form inputs (#mode, #char, #venue, #racket, etc.) as the single source of truth.
 // Styles are authored in index.html under the .pl-* class hierarchy.
-import { track } from './track.js';
+import { track, trackOnlineInterest } from './track.js';
 import * as THREE from 'three';
 import characters from '../data/characters.json';
 import venues from '../data/venues.json';
@@ -836,7 +836,11 @@ export function initMenu() {
   }
 
   shell.querySelectorAll('#pl-where-seg [data-where]').forEach(card => {
-    card.onclick = () => { if (!lobby) setWhere(card.dataset.where); };  // in a room: Leave first
+    card.onclick = () => {
+      if (lobby) return;  // in a room: Leave first
+      if (card.dataset.where === 'online') trackOnlineInterest('friendly');
+      setWhere(card.dataset.where);
+    };
   });
 
   // connect: no code = a new room (the server names it), a code = that room

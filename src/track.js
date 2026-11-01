@@ -13,3 +13,9 @@ export function trackOnce(name) {
   sent.add(name);
   if (!seen) track(name);
 }
+
+// a visitor showed they want online (once per session): the plain event is the total, the suffix says where
+export function trackOnlineInterest(where) {
+  trackOnce('online-interest');
+  trackOnce(`online-interest/${where}`);
+}
