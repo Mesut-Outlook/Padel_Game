@@ -18,9 +18,10 @@ const LOOK_MAX = 2048;
 const CHARACTERS = JSON.parse(fs.readFileSync(new URL('../data/characters.json', import.meta.url))).length;
 const VENUES = JSON.parse(fs.readFileSync(new URL('../data/venues.json', import.meta.url))).length;
 const AI_LEVELS = ['rookie', 'club', 'pro', 'legend'];
-// abuse limits (startServer(port, { ...LIMITS }) overrides them in tests): rooms on the server, sockets per visitor IP,
-// messages per socket per second (beyond it they are dropped; the client sends ~60/s at most), largest message in bytes
-export const LIMITS = { rooms: 100, perIp: 8, msgsPerSec: 120, payload: 4096, rejoinMs: 60000 };  // rejoinMs: a dropped player's seat waits this long
+// abuse limits (startServer(port, { ...LIMITS }) overrides them in tests): rooms on the server, sockets on the server, sockets per visitor IP,
+// rooms one visitor holds at a time (a room outlives its socket while seats wait for a rejoin), messages per socket per second
+// (beyond it they are dropped; the client sends ~60/s at most), largest message in bytes. Sized for the home Raspberry Pi: raise them on a bigger host.
+export const LIMITS = { rooms: 10, clients: 40, perIp: 8, roomsPerIp: 3, msgsPerSec: 120, payload: 4096, rejoinMs: 60000, lobbyMs: 900000 };  // rejoinMs: a dropped player's seat waits this long; lobbyMs: a room nobody starts closes
 // pages that may open a socket here: the site, local dev, and any page served by this same host (npm run online, a tunnel)
 const ORIGINS = ['padellegends.eu', 'www.padellegends.eu', 'localhost', '127.0.0.1', ...(process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean)];
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // no 0/O or 1/I: codes are read aloud and typed
@@ -93,6 +94,15 @@ function clientIp(req) {
   return String(req.headers['cf-connecting-ip'] || req.headers['fly-client-ip'] || String(req.headers['x-forwarded-for'] || '').split(',')[0]).trim() || peer;
 }
 
+// the key the per-visitor limits count: one home or phone network holds a whole IPv6 /64, so counting full addresses limits nothing
+export function ipKey(ip) {
+  if (ip.startsWith('::ffff:')) return ip.slice(7);  // an IPv4 visitor, however the socket shows it
+  if (!ip.includes(':')) return ip;
+  const [left, right] = ip.toLowerCase().split('::').map(s => (s ? s.split(':') : []));
+  const groups = right ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill('0'), ...right] : left;
+  return groups.slice(0, 4).map(g => g.replace(/^0+(?=.)/, '')).join(':') + '::/64';
+}
+
 // browsers send Origin: refuse sockets opened by other sites' pages (non-browser clients send none)
 function originOk(req) {
   const o = req.headers.origin;
@@ -120,15 +130,23 @@ export function startServer(port, limits = {}) {
   const wss = new WebSocketServer({ server: httpServer, maxPayload: lim.payload });
   const rooms = new Map(); // code -> room
   const perIp = new Map(); // ip -> open sockets
+  const wrong = new Map(); // ip -> wrong room codes or rejoin tokens in the last 30 s
+  let badLines = 0;  // 'bad message' log lines this minute: one visitor must not be able to fill the disk
 
   // a dead connection (phone went to sleep, network gone) never sends close: ping every 30 s, drop what did not answer
   const heartbeat = setInterval(() => {
     for (const ws of wss.clients) { if (ws.alive === false) ws.terminate(); else { ws.alive = false; ws.ping(); } }
+    wrong.clear();
     sweep();
   }, 30000);
   // seats kept for dropped players run out; a room nobody came back to closes
   function sweep(now = Date.now()) {
     for (const room of rooms.values()) {
+      if (!room.started && now - room.born > lim.lobbyMs) {  // an open socket must not hold a room slot for ever
+        clearInterval(room.timer); rooms.delete(room.code);
+        for (const ws of room.clients.keys()) ws.close(1000, 'lobby timed out');
+        continue;
+      }
       for (const s in room.away) if (room.away[s].until < now) delete room.away[s];
       if (!room.clients.size && !Object.keys(room.away).length) { clearInterval(room.timer); rooms.delete(room.code); }
     }
@@ -143,7 +161,7 @@ export function startServer(port, limits = {}) {
       const cu = process.cpuUsage(lastCpu), wall = performance.now() - lastWall;
       console.log(statusLine({ rooms: rooms.size, clients, tickAvg: tickAvg(), tickMax: tMax, cpu: wall > 0 ? (cu.user + cu.system) / 1000 / wall * 100 : 0, rss: process.memoryUsage.rss() }));
     }
-    lastCpu = process.cpuUsage(); lastWall = performance.now(); tSum = tN = tMax = 0;
+    lastCpu = process.cpuUsage(); lastWall = performance.now(); tSum = tN = tMax = badLines = 0;
   }
   const statusTimer = setInterval(status, 60000);
 
@@ -153,10 +171,10 @@ export function startServer(port, limits = {}) {
     return code;
   }
 
-  function makeRoom(code, cfg) {
+  function makeRoom(code, cfg, ip) {
     const players = cfg.players === 2 ? 2 : 4;
     const room = {
-      code, cfg, seats: players === 2 ? [0, 2] : [0, 2, 1, 3], clients: new Map(), inputs: {}, started: false, host: null, frame: 0,
+      code, cfg, ip, born: Date.now(), seats: players === 2 ? [0, 2] : [0, 2, 1, 3], clients: new Map(), inputs: {}, started: false, host: null, frame: 0,
       world: newWorld({ players, match: { sets: cfg.sets, goldenPoint: cfg.goldenPoint, starPoint: cfg.starPoint, superTiebreak: cfg.superTiebreak }, stats: {}, rackets: {}, outdoor: cfg.outdoor, holdReplay: true }),  // every client shows a highlight before the next serve
       chars: {}, looks: {}, names: {}, timer: null, tokens: {}, away: {},  // away: seat -> { token, until, name, look } of a dropped player
     };
@@ -170,19 +188,20 @@ export function startServer(port, limits = {}) {
 
   function tick(room) {
     if (!room.started || !room.clients.size) return;  // nobody connected: the match waits for a rejoin instead of playing on
-    const w = room.world, taken = new Set(room.clients.values());
-    const inp = {};
-    for (const pl of w.players) if (pl.active) inp[pl.id] = taken.has(pl.id) ? room.inputs[pl.id] || {} : aiInput(w, pl.id, room.cfg.ai);
-    try { stepWorld(w, inp, 1 / 60); } catch (e) {  // a broken match ends its own room, never the whole server
+    try {
+      const w = room.world, taken = new Set(room.clients.values());
+      const inp = {};
+      for (const pl of w.players) if (pl.active) inp[pl.id] = taken.has(pl.id) ? room.inputs[pl.id] || {} : aiInput(w, pl.id, room.cfg.ai);
+      stepWorld(w, inp, 1 / 60);
+      for (const id in room.inputs) if (room.inputs[id]) { room.inputs[id].swing = null; room.inputs[id].eat = room.inputs[id].skip = false; } // edge events
+      const events = w.events.splice(0);
+      if (++room.frame % 2 && !events.some(e => e.type !== 'contact')) return; // 30 Hz unless something happened
+      const msg = JSON.stringify({ type: 'state', snap: snapshot(w), score: scoreText(w.match), events, winner: w.match.winner });
+      for (const ws of room.clients.keys()) ws.readyState === 1 && ws.send(msg);
+    } catch (e) {  // a broken match ends its own room, never the whole server
       console.error('room stopped', e); clearInterval(room.timer); rooms.delete(room.code);
       for (const ws of room.clients.keys()) ws.close(1011, 'match error');
-      return;
     }
-    for (const id in room.inputs) if (room.inputs[id]) { room.inputs[id].swing = null; room.inputs[id].eat = room.inputs[id].skip = false; } // edge events
-    const events = w.events.splice(0);
-    if (++room.frame % 2 && !events.some(e => e.type !== 'contact')) return; // 30 Hz unless something happened
-    const msg = JSON.stringify({ type: 'state', snap: snapshot(w), score: scoreText(w.match), events, winner: w.match.winner });
-    for (const ws of room.clients.keys()) ws.readyState === 1 && ws.send(msg);
   }
 
   function lobby(room) {
@@ -192,20 +211,26 @@ export function startServer(port, limits = {}) {
 
   wss.on('connection', (ws, req) => {
     ws.on('error', () => {});  // e.g. an oversized message: ws closes the socket itself; unhandled, the error would end the process
-    const ip = clientIp(req);
-    if (!originOk(req) || (perIp.get(ip) || 0) >= lim.perIp) { ws.close(1008, 'not allowed'); return; }
+    const ip = ipKey(clientIp(req));
+    if (!originOk(req) || wss.clients.size > lim.clients || (perIp.get(ip) || 0) >= lim.perIp) { ws.close(1008, 'not allowed'); return; }
     perIp.set(ip, (perIp.get(ip) || 0) + 1);
+    ws.ip = ip;
     ws.alive = true;
     ws.on('pong', () => { ws.alive = true; });
     const fail = (msg) => ws.send(JSON.stringify({ type: 'error', msg }));
-    let room = null, win = 0, count = 0, misses = 0;
+    let room = null, win = 0, count = 0;
+    // no guessing: wrong codes count per visitor, so opening a new socket does not start over
+    const missed = () => { const n = (wrong.get(ip) || 0) + 1; wrong.set(ip, n); if (n >= 5) ws.close(1008, 'too many wrong codes'); };
     ws.on('message', (raw) => {
       const now = Date.now();
       if (now - win >= 1000) { win = now; count = 0; }
       if (++count > lim.msgsPerSec) return;  // flood: drop
       let m; try { m = JSON.parse(raw); } catch { return; }
       if (!m || typeof m !== 'object') return;
-      try { onMessage(m); } catch (e) { console.error('bad message', e); }  // one bad message never takes the server down
+      try { onMessage(m); } catch (e) {  // one bad message never takes the server down; our client never sends one, so the socket goes
+        if (badLines++ < 10) console.error('bad message', e.message);
+        ws.close(1008, 'bad message');
+      }
     });
     function onMessage(m) {
       if (m.type === 'ping') ws.send(JSON.stringify({ type: 'pong', t: Number.isFinite(m.t) ? m.t : null, tick: tickAvg() }));
@@ -216,18 +241,20 @@ export function startServer(port, limits = {}) {
         if (room) return fail('Already in a room');  // one room per connection
         let target;
         if (m.create === true && m.rejoin === undefined) {  // the server picks the code: never guessable, never someone else's room
-          if (rooms.size >= lim.rooms) return fail('The server is full. Try again later.');
-          target = makeRoom(newCode(), sanitizeCfg(m.cfg, m));
+          const mine = [...rooms.values()].filter(r => r.ip === ip).length;
+          if (rooms.size >= lim.rooms || mine >= lim.roomsPerIp) return fail('The server is full. Try again later.');
+          target = makeRoom(newCode(), sanitizeCfg(m.cfg, m), ip);
         } else {
+          if ((wrong.get(ip) || 0) >= 5) return ws.close(1008, 'too many wrong codes');  // even a right code: each new socket would be a free guess
           target = rooms.get(String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6));
-          if (!target) { if (++misses >= 5) ws.close(1008, 'too many wrong codes'); return fail('Room not found'); }  // no code guessing
+          if (!target) { fail('Room not found'); return missed(); }
         }
         if (typeof m.rejoin === 'string') {  // back after a dropped connection: the same seat, even in a match that has started
           const seat = Number(Object.keys(target.tokens).find(s => target.tokens[s] === m.rejoin));
           const a = target.away[seat];
           // a phone that switched networks comes back before the server noticed the old socket is dead: the token replaces it
           const old = target.started && !a && [...target.clients].find(([, s]) => s === seat)?.[0];
-          if (!(a?.until >= Date.now()) && !old) { if (++misses >= 5) ws.close(1008, 'too many wrong codes'); return fail('Could not get back into the match'); }
+          if (!(a?.until >= Date.now()) && !old) { fail('Could not get back into the match'); return missed(); }
           if (old) { target.clients.delete(old); old.terminate(); }
           delete target.away[seat];
           room = target;
@@ -265,12 +292,13 @@ export function startServer(port, limits = {}) {
         lobby(room);
       } else if (!room) return;
       else if (m.type === 'start') {  // only the room creator (or whoever took over after they left)
-        if (room.clients.get(ws) !== room.host || room.started) return;
+        if (room.clients.get(ws) !== room.host || room.started || room.clients.size < 2) return;  // two people: the wizard asks the same
         room.started = true; lobby(room);
       } else if (m.type === 'input') {
         const seat = room.clients.get(ws);
         const prev = room.inputs[seat];
-        const mv = Array.isArray(m.move) ? m.move.slice(0, 2).map(v => Math.max(-1, Math.min(1, +v || 0))) : [0, 0];
+        const axis = (v) => Math.max(-1, Math.min(1, +v || 0));
+        const mv = Array.isArray(m.move) ? [axis(m.move[0]), axis(m.move[1])] : [0, 0];  // always two numbers: a missing axis would turn hydration into NaN
         const shot = m.swing === 'auto' || (typeof m.swing === 'string' && Object.hasOwn(SHOTS, m.swing) && m.swing !== 'serve') ? m.swing : null;
         room.inputs[seat] = { move: mv, swing: shot || prev?.swing || null, aim: Math.max(-1, Math.min(1, +m.aim || 0)), eat: m.eat === true || !!prev?.eat, skip: m.skip === true || !!prev?.skip };
       }
@@ -287,6 +315,7 @@ export function startServer(port, limits = {}) {
       if (room.started && room.world.match.winner == null) room.away[seat] = { token: room.tokens[seat], until: Date.now() + lim.rejoinMs, name: room.names[seat], look: room.looks[seat] };
       delete room.looks[seat]; delete room.names[seat];
       if (!room.clients.size) { if (!Object.keys(room.away).length) { clearInterval(room.timer); rooms.delete(room.code); } return; }
+      if (ip === room.ip) room.ip = room.clients.keys().next().value.ip;  // the room counts for who is still in it: a visitor who left leaves no IP behind
       if (seat === room.host) room.host = room.clients.values().next().value;  // the next player may start the match
       lobby(room);  // seat falls back to AI
     });
@@ -301,5 +330,5 @@ export function startServer(port, limits = {}) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { port } = await startServer(+(process.argv[2] || process.env.PORT || 8080));
-  console.log(`padel server on http://0.0.0.0:${port} (game + websocket)`);
+  console.log(`padel server on http://${process.env.HOST || '0.0.0.0'}:${port} (game + websocket)`);
 }

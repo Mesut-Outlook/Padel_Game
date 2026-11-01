@@ -2648,8 +2648,8 @@ function setOnlineStatus(text, lobby, err = false) {
   if (go) go.hidden = !canStartOnline();
 }
 
-// only the room creator may start (the server ignores everyone else)
-const canStartOnline = () => !!onlineState.lobby && !onlineState.lobby.started && onlineState.lobby.host === onlineState.net?.seat;
+// only the room creator may start, with at least two people in the room (the server ignores anything else)
+const canStartOnline = () => !!onlineState.lobby && !onlineState.lobby.started && onlineState.lobby.host === onlineState.net?.seat && onlineState.lobby.taken?.length >= 2;
 
 function leaveOnline() {
   if (onlineState.net) {  // a joined room lives in main.js state: reload to drop it cleanly

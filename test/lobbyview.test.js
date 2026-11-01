@@ -26,3 +26,9 @@ test('lobbyHtml: escapes player names and says what to do next', () => {
   assert.match(lobbyHtml(lobbyView(lobby(), 0, chars, venues)), /Send the invite link/);
   assert.match(lobbyHtml(lobbyView(lobby({ away: [2], taken: [0], names: { 0: 'A', 2: 'B' } }), 0, chars, venues)), /reconnecting/);
 });
+
+test('lobbyView: a hostile server cannot put markup in the rules line', () => {
+  const v = lobbyView({ seats: [0], taken: [0], cfg: { sets: '<img src=x onerror=alert(1)>' } }, 0);
+  assert.equal(v.rules.sets, 3);
+  assert.ok(!lobbyHtml(v).includes('<img'));
+});

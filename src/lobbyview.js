@@ -19,7 +19,7 @@ export function lobbyView(l, seat, characters = [], venues = []) {
   const host = seats.find(s => s.host);
   return {
     code: l.code, started: !!l.started, seats,
-    rules: { venue: venues[c.venue]?.name || '', players: c.players === 2 ? 2 : 4, sets: c.sets || 3, superTiebreak: !!c.superTiebreak, deuce: c.starPoint ? 'star' : c.goldenPoint === false ? 'adv' : 'golden' },
+    rules: { venue: venues[c.venue]?.name || '', players: c.players === 2 ? 2 : 4, sets: [1, 3, 5].includes(c.sets) ? c.sets : 3, superTiebreak: !!c.superTiebreak, deuce: c.starPoint ? 'star' : c.goldenPoint === false ? 'adv' : 'golden' },
     amHost: seat != null && seat === l.host,
     hostName: host?.name || '',
     humans: taken.length,

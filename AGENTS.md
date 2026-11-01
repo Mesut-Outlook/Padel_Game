@@ -7,6 +7,7 @@ Read `CLAUDE.md` — it is the shared guide for every agent (Claude, Antigravity
 3. Claude Opus reviews Antigravity work: put task results in `agents/reports/<task-id>.md` and list changed files there.
 4. Never copy code or assets from commercial games; rea is for behaviour analysis only.
 5. Roles (user, 2026-10-19 and 2026-10-21): Claude Opus is the manager and senior developer. Work Antigravity can do goes to Antigravity (task file in `agents/tasks/`); Claude Sonnet 5.5 subagents take well-specified modules and Claude Haiku 5.5 subagents take data or mechanical edits whenever useful. Opus keeps game rules, physics, shared client/server code and server work, reviews everything, and is the only one who commits and pushes.
+6. Online server (user, 2026-11-01): the home Raspberry Pi 3 is the planned host, Hetzner stays postponed. Status: `docs/online-server.md` "Raspberry Pi". Server work stays with Opus. Never write the Pi's addresses, username or the home IP in tracked files.
 
 ## Task Status
 

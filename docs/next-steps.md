@@ -48,6 +48,8 @@ Ayrıntılar ve satır numaraları yerel güvenlik raporunda (`agents/reports/se
 4. ~~**Oyun sunucusunu sağlamlaştırma**~~ **Bitti (2026-10-20):** ayrıntılar `docs/online-server.md` adım 1'de. `ws` 8.22.0. Hosting seçilince `TRUST_PROXY` notunu unutma.
 5. **Oyunu online'a taşıma: ertelendi (kullanıcı kararı, 2026-11-01).** Cloudflare tüneliyle arkadaş testi yapıldı (2026-10-20), bulunan hatalar düzeltildi. Hosting tercihi yine **Hetzner**, ama sunucu kiralanmadı: ekranda aylık 7,25 € göründü (büyük olasılıkla CX23 5,49 € + IPv4 0,50 € + %21 KDV) ve oyun henüz gelir getirmiyor. O zamana kadar arkadaş testleri ücretsiz tünelle yapılır (`docs/online-server.md` adım 0). Kullanıcı istemeden sunucu kurulumunu gündeme getirme.
 
+**Güncelleme (2026-11-01, kullanıcı isteği):** Kullanıcı evdeki Raspberry Pi 3'ü sunucu yapmak istiyor, aylık ücret yok. Sunucu Pi'de kısıtlı servis olarak kuruldu, arkadaş testleri için elle başlatılan geçici tünelle açılıyor; kalıcı adres yok. Sonuçlar, riskler ve bekleyen kararlar `docs/online-server.md` "Raspberry Pi" bölümünde. Bu iş kullanıcı istediği için konuşulabilir; aşağıdaki ölçütler Hetzner için geçerli.
+
 **Yeniden bakma ölçütleri:** arkadaş testlerinde düzenli oynamak isteyenler çıkarsa, GoatCounter'da düzenli ziyaretçi görülürse ya da tanımadık kişilerin siteden doğrudan online oynaması istenirse.
 
 **Online ilgisini ölçme (2026-11-01):** GoatCounter'da toplam ziyaretçiye karşı `online-interest` (merak eden oturum) ve `online-noserver` (oda kurmayı ya da katılmayı denedi) satırlarına bakılır; olaylar README "Ziyaret sayacı" tablosunda. Başlangıç ölçütü: en az 100 ziyaretçiden sonra `online-noserver` ziyaretçilerin %10'unu geçerse sunucuyu yeniden konuş. Oran Opus'un önerisi, veri geldikçe kullanıcıyla ayarlanır.

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
-import { startServer, statusLine } from '../server/server.js';
+import { startServer, statusLine, ipKey } from '../server/server.js';
 import { readFileSync } from 'node:fs';
 
 const ROSTER = JSON.parse(readFileSync(new URL('../data/characters.json', import.meta.url))).length;
@@ -26,11 +26,13 @@ test('room list shows public open rooms only, and drops them once started', asyn
     const { code } = await create(host, { public: true, name: 'Mesut', cfg: { players: 2, venue: 3 } });
     await create(priv, { cfg: { players: 2 } });
     assert.deepEqual(await list(srv.port), [{ code, players: 2, venue: 3, free: 1, host: 'Mesut' }]);
+    const guest = client(srv.port);
+    await join(guest, code);
     const lob = host.next('lobby');
     await host.send({ type: 'start' });
     await lob;
     assert.deepEqual(await list(srv.port), []);
-    host.ws.close(); priv.ws.close();
+    host.ws.close(); priv.ws.close(); guest.ws.close();
   } finally { await srv.close(); }
 });
 
@@ -240,13 +242,16 @@ test('only the room creator starts the match; the next player takes over when th
     await b.send({ type: 'start' });
     await new Promise(r => setTimeout(r, 50));
     assert.equal(srv.rooms.get(code).started, false);
+    const c = client(srv.port), seen = b.next('lobby');
+    await join(c, code);
+    await seen;
     const lob = b.next('lobby');
     a.ws.close();
     assert.equal((await lob).host, 2);
     const go = b.next('lobby');
     await b.send({ type: 'start' });
     assert.equal((await go).started, true);
-    b.ws.close();
+    b.ws.close(); c.ws.close();
   } finally { await srv.close(); }
 });
 
@@ -431,7 +436,9 @@ test('client: a connection that drops mid-match reconnects by itself and gets it
   try {
     const url = `ws://127.0.0.1:${srv.port}`;
     const host = client(srv.port);
-    const { code } = await create(host, { cfg: { players: 2 } });
+    const { code } = await create(host, { cfg: { players: 4 } });
+    const third = client(srv.port);
+    await join(third, code);
     const status = [];
     let backed;
     const back = new Promise(r => { backed = r; });
@@ -445,7 +452,7 @@ test('client: a connection that drops mid-match reconnects by itself and gets it
     assert.deepEqual(status, ['reconnecting', 'back']);
     assert.equal(net.seat, seat);
     assert.notEqual(net.ws, first);
-    net.ws.onclose = null; net.ws.close(); host.ws.close();
+    net.ws.onclose = null; net.ws.close(); host.ws.close(); third.ws.close();
   } finally { await srv.close(); }
 });
 
@@ -473,5 +480,143 @@ test('rejoin hardening: create + rejoin makes no room, an empty match waits, a l
     await new Promise(r => setTimeout(r, 60));
     assert.equal(room.world.t, t, 'no one connected: the match is paused');
     x.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('ipKey: an IPv6 visitor counts as its /64, IPv4 stays whole', () => {
+  assert.equal(ipKey('203.0.113.9'), '203.0.113.9');
+  assert.equal(ipKey('::ffff:203.0.113.9'), '203.0.113.9');
+  assert.equal(typeof ipKey('1:2:3:4:5:6:7:8:9::1'), 'string');  // a broken address never throws
+  assert.equal(ipKey('2001:db8:1:2:aaaa:bbbb:cccc:dddd'), ipKey('2001:DB8:1:2::1'));
+  assert.notEqual(ipKey('2001:db8:1:2::1'), ipKey('2001:db8:1:3::1'));
+  assert.equal(ipKey('2001:db8::1'), ipKey('2001:db8:0:0:5::'));
+  assert.equal(ipKey('::1'), ipKey('0:0:0:0:0:0:0:1'));
+});
+
+test('limits: one visitor holds a few rooms, and the server has a total socket cap', async () => {
+  const srv = await startServer(0, { roomsPerIp: 2, clients: 3 });
+  try {
+    const a = client(srv.port), b = client(srv.port), c = client(srv.port);
+    await create(a, { cfg: { players: 2 } });
+    await create(b, { cfg: { players: 2 } });
+    const full = c.next('error');
+    await c.send({ type: 'join', create: true });
+    assert.equal((await full).msg, 'The server is full. Try again later.');
+    assert.equal(srv.rooms.size, 2);
+    const d = client(srv.port);
+    assert.equal(await new Promise(r => d.ws.once('close', (code) => r(code))), 1008);  // 4th socket on the server
+    a.ws.close(); b.ws.close(); c.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('a message that throws closes its socket, and the seat it half took is free again', async () => {
+  const srv = await startServer(0);
+  try {
+    const a = client(srv.port), b = client(srv.port);
+    const { code } = await create(a, { cfg: { players: 2 } });
+    const closed = new Promise(r => b.ws.once('close', (c) => r(c)));
+    await b.send({ type: 'join', code, char: { toString: 1, valueOf: 1 } });
+    assert.equal(await closed, 1008);
+    await new Promise(r => setTimeout(r, 20));
+    assert.equal(srv.rooms.get(code).clients.size, 1);
+    a.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('wrong room codes count per visitor, so a new socket does not reset them', async () => {
+  const srv = await startServer(0);
+  try {
+    for (let i = 0; i < 4; i++) {
+      const a = client(srv.port), err = a.next('error');
+      await a.send({ type: 'join', code: 'ZZZZZ' + i });
+      await err; a.ws.close();
+    }
+    const b = client(srv.port);
+    const closed = new Promise(r => b.ws.once('close', (c) => r(c)));
+    await b.send({ type: 'join', code: 'ZZZZZ9' });
+    assert.equal(await closed, 1008);
+  } finally { await srv.close(); }
+});
+
+test('after too many wrong codes even the right code is refused, so a new socket is no free guess', async () => {
+  const srv = await startServer(0);
+  try {
+    const host = client(srv.port);
+    const { code } = await create(host, { cfg: { players: 2 } });
+    for (let i = 0; i < 5; i++) {
+      const a = client(srv.port), err = a.next('error');
+      await a.send({ type: 'join', code: 'ZZZZZ' + i });
+      await err; a.ws.close();
+    }
+    const c = client(srv.port);
+    const closed = new Promise(r => c.ws.once('close', (x) => r(x)));
+    await c.send({ type: 'join', code });
+    assert.equal(await closed, 1008);
+    assert.equal(srv.rooms.get(code).clients.size, 1);
+    host.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('a broken client address header does not take the server down', async () => {
+  const srv = await startServer(0);
+  try {
+    const ws = new WebSocket(`ws://127.0.0.1:${srv.port}`, { headers: { 'cf-connecting-ip': '1:2:3:4:5:6:7:8:9::1' } });
+    await new Promise(r => ws.once('open', r));
+    ws.close();
+    assert.equal((await list(srv.port)).length, 0);  // still answering
+  } finally { await srv.close(); }
+});
+
+test('a match needs two people, and a lobby nobody starts closes', async () => {
+  const srv = await startServer(0, { lobbyMs: 1000 });
+  try {
+    const a = client(srv.port);
+    const { code } = await create(a, { cfg: { players: 2 } });
+    await a.send({ type: 'start' });
+    await new Promise(r => setTimeout(r, 30));
+    assert.equal(srv.rooms.get(code).started, false);
+    const closed = new Promise(r => a.ws.once('close', (c) => r(c)));
+    srv.sweep(Date.now() + 500);
+    assert.ok(srv.rooms.has(code));
+    srv.sweep(Date.now() + 2000);
+    assert.equal(srv.rooms.has(code), false);
+    assert.equal(await closed, 1000);
+  } finally { await srv.close(); }
+});
+
+test('a room does not keep the IP of a creator who left: it moves to who is still there', async () => {
+  const srv = await startServer(0);
+  try {
+    const open = (ip) => {
+      const ws = new WebSocket(`ws://127.0.0.1:${srv.port}`, { headers: { 'cf-connecting-ip': ip } });
+      const send = async (m) => { if (ws.readyState !== 1) await new Promise(r => ws.once('open', r)); ws.send(JSON.stringify(m)); };
+      const next = () => new Promise(r => { const on = (raw) => { const m = JSON.parse(raw); if (m.type === 'lobby') { ws.off('message', on); r(m); } }; ws.on('message', on); });
+      return { ws, send, next };
+    };
+    const a = open('203.0.113.1'), b = open('203.0.113.2');
+    let lob = a.next();
+    await a.send({ type: 'join', create: true, cfg: { players: 2 } });
+    const { code } = await lob;
+    lob = b.next();
+    await b.send({ type: 'join', code });
+    await lob;
+    assert.equal(srv.rooms.get(code).ip, '203.0.113.1');
+    lob = b.next();
+    a.ws.close();
+    await lob;
+    assert.equal(srv.rooms.get(code).ip, '203.0.113.2');
+    b.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('input move is always two numbers', async () => {
+  const srv = await startServer(0);
+  try {
+    const a = client(srv.port);
+    const { code } = await create(a, { cfg: { players: 2 } });
+    await a.send({ type: 'input', move: [0.5] });
+    await new Promise(r => setTimeout(r, 30));
+    assert.deepEqual(srv.rooms.get(code).inputs[0].move, [0.5, 0]);
+    a.ws.close();
   } finally { await srv.close(); }
 });
