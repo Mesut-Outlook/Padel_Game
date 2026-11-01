@@ -1,4 +1,4 @@
-# Durum ve sıradaki işler (devir notu, son güncelleme 2026-10-21)
+# Durum ve sıradaki işler (devir notu, son güncelleme 2026-11-01)
 
 Bu not, 2026-10-19/20 tarihlerinde ev dizininden açılan bir Claude Code oturumunda yapılanları ve alınan kararları özetler. Kullanıcı bundan sonra **Antigravity IDE içinden** devam ediyor. Yeni oturum önce bunu, `CLAUDE.md`'yi ve `docs/online-server.md`'yi okusun.
 
@@ -46,9 +46,15 @@ Ayrıntılar ve satır numaraları yerel güvenlik raporunda (`agents/reports/se
 2. ~~**DNS**~~ **Bitti (2026-10-20):** Namecheap'e TXT `_dmarc` = `v=DMARC1; p=reject; adkim=s; aspf=s` ve CAA `@` = `0 issue "letsencrypt.org"` eklendi. MX/SPF ve GitHub TXT kayıtlarına dokunulmadı. İleride oyun sunucusu Let's Encrypt dışında bir sertifika kullanırsa CAA'ya o da eklenmeli.
 3. ~~**GitHub**~~ **Bitti (2026-10-20):** ruleset "protect main" (aktif, varsayılan dal): silme ve force-push yasak; PR ya da status check zorunluluğu yok, normal push ve Pages yayını çalışıyor. Oluştururken GitHub "Confirm access" istiyor, onayı kullanıcı verir.
 4. ~~**Oyun sunucusunu sağlamlaştırma**~~ **Bitti (2026-10-20):** ayrıntılar `docs/online-server.md` adım 1'de. `ws` 8.22.0. Hosting seçilince `TRUST_PROXY` notunu unutma.
-5. **Oyunu online'a taşıma:** Cloudflare tüneliyle arkadaş testi yapıldı (2026-10-20), bulunan hatalar düzeltildi. Hosting kararı **Hetzner**. Kurulum: roadmap Faz E.
+5. **Oyunu online'a taşıma: ertelendi (kullanıcı kararı, 2026-11-01).** Cloudflare tüneliyle arkadaş testi yapıldı (2026-10-20), bulunan hatalar düzeltildi. Hosting tercihi yine **Hetzner**, ama sunucu kiralanmadı: ekranda aylık 7,25 € göründü (büyük olasılıkla CX23 5,49 € + IPv4 0,50 € + %21 KDV) ve oyun henüz gelir getirmiyor. O zamana kadar arkadaş testleri ücretsiz tünelle yapılır (`docs/online-server.md` adım 0). Kullanıcı istemeden sunucu kurulumunu gündeme getirme.
 
-## Yarın (kullanıcı 2026-10-21'de Hetzner'i yapacak)
+**Yeniden bakma ölçütleri:** arkadaş testlerinde düzenli oynamak isteyenler çıkarsa, GoatCounter'da düzenli ziyaretçi görülürse ya da tanımadık kişilerin siteden doğrudan online oynaması istenirse.
+
+**Online ilgisini ölçme (2026-11-01):** GoatCounter'da toplam ziyaretçiye karşı `online-interest` (merak eden oturum) ve `online-noserver` (oda kurmayı ya da katılmayı denedi) satırlarına bakılır; olaylar README "Ziyaret sayacı" tablosunda. Başlangıç ölçütü: en az 100 ziyaretçiden sonra `online-noserver` ziyaretçilerin %10'unu geçerse sunucuyu yeniden konuş. Oran Opus'un önerisi, veri geldikçe kullanıcıyla ayarlanır.
+
+## Hetzner kurulum adımları (ertelendi, yeniden başlarsa buradan)
+Durum 2026-11-01: hesap açıldı, kredi kartı bağlandı. İki adımlı doğrulama, proje ve SSH anahtarı adımları yapıldı mı bilinmiyor; kullanıcıya sor. Sunucu açılmadı. Başlamadan önce fiyatı yeniden kontrol et.
+
 Kullanıcı acemi: her adımı sade anlat, şifre ve ödeme bilgisini **kullanıcı** girer, ajan girmez. Sırayla:
 1. **Kullanıcı:** hetzner.com → Cloud → hesap aç (e-posta + şifre), e-postayı onayla, ödeme yöntemi ekle (kimlik doğrulaması isteyebilir). **İki adımlı doğrulamayı aç.**
 2. **Kullanıcı:** Cloud Console → yeni proje `padel`.
