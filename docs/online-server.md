@@ -34,9 +34,7 @@ Bütçe kare başına 16,67 ms; işlemci payı rahat. Bu sayılar yalnızca sim�
 - Dışarı açmadan önce yerel güvenlik raporundaki koşullar tamamlanır (repo herkese açık, ayrıntılar buraya yazılmaz).
 - Herkese açık kullanımda `privacy.html` güncellenmeli (Cloudflare ziyaretçi IP'sini görür).
 
-**Sıradaki kararlar (kullanıcı):**
-1. Pi'den ücretsiz quick tunnel ile arkadaş testi: DNS değişmez, ama adres her açılışta değişir ve link `?server=` ile paylaşılır.
-2. Kalıcı `wss://server.padellegends.eu`: Cloudflare adlandırılmış tünel, alan adının DNS'ini Namecheap'ten Cloudflare'a taşımayı gerektirir. MX, SPF, DMARC, CAA ve `_github-pages-challenge` kayıtları eksiksiz taşınmalı; `DEFAULT_SERVER` ancak bundan sonra değişir.
+**Karar (2026-11-01, kullanıcı kararı Opus'a bıraktı):** Şimdilik quick tunnel ile arkadaş testi: DNS değişmez, adres her açılışta değişir, link `?server=` ile paylaşılır, tünel test bitince kapatılır. Kalıcı `wss://server.padellegends.eu` ertelendi: alan adının DNS'ini Namecheap'ten Cloudflare'a taşımayı gerektirir ve e-posta yönlendirmesini bozabilir. Arkadaş testi online ilgisini göstermeden ya da `contact@` için plan yapılmadan DNS taşınmaz. Taşınırsa MX, SPF, DMARC, CAA ve `_github-pages-challenge` kayıtları eksiksiz taşınmalı; `DEFAULT_SERVER` ancak bundan sonra değişir.
 
 ## Adımlar
 0. **Ücretsiz deneme (sunucu kiralamadan):** `npm run online` ile bir Cloudflare quick tunnel aç (`cloudflared tunnel --url http://localhost:8080`), ardından arkadaşa `https://padellegends.eu/?server=wss://<tünel>` linkini gönder. Sorulacak sorular: online oyun eğlenceli mi, gecikme vuruş zamanlamasını bozuyor mu?
