@@ -67,3 +67,21 @@ test('deep lob forces AI to defend rather than smash', () => {
 });
 
 
+
+test('waiting AI players do not flicker between idle and walk (jitter)', () => {
+  const w = newWorld({ players: 4 });
+  const prev = w.players.map(p => p.anim), run = w.players.map(() => 0);
+  let flicker = 0;
+  for (let i = 0; i < 60 * 120; i++) {
+    const inp = {};
+    for (const p of w.players) inp[p.id] = aiInput(w, p.id, 'pro');
+    stepWorld(w, inp, 1 / 60);
+    w.players.forEach((p, k) => {
+      run[k]++;
+      if (p.anim === prev[k]) return;
+      if (run[k] < 6 && /^(idle|walk)$/.test(prev[k]) && /^(idle|walk)$/.test(p.anim)) flicker++;  // a step shorter than 0.1 s
+      run[k] = 0; prev[k] = p.anim;
+    });
+  }
+  assert.ok(flicker < 120, `idle/walk flips under 0.1 s: ${flicker}`);  // ~680 before the stop hysteresis in moveTo
+});

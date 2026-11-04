@@ -161,9 +161,11 @@ function aimFor(w, pl, L) {
   return clamp(best + gauss() * L.aim, -1, 1);
 }
 
-function moveTo(pl, x, z) {
+// hysteresis: once there, stay put until the spot drifts 0.45 m away, or the walk clip restarts every few frames (jitter)
+function moveTo(pl, x, z, st) {
   const dx = x - pl.p[0], dz = z - pl.p[1], d = Math.hypot(dx, dz);
-  if (d < 0.15) return [0, 0];
+  if (d < 0.2 || (st.still && d < 0.45)) { st.still = true; return [0, 0]; }  // 0.2: m stays above stepWorld's 0.05 dead zone, so "there" means the same to both
+  st.still = false;
   const m = Math.min(1, (d - 0.15) / 0.5);
   return [dx / d * m, dz / d * m];
 }
@@ -210,6 +212,7 @@ export function aiInput(w, pid, level = 'club') {
 
   let tgt;
   if (an.incoming && an.taker === pid) {
+    st.still = false;                                // the hitter keeps fine-tuning; only waiting players hold their spot
     const sel = an.sel[pid], waitT = sel ? an.t + sel.c.t - w.t : 0;
     if (sel) { const k = waitT > 0.35 ? 1 : 0.5; tgt = [sel.c.x + st.off[0] * k, sel.c.z + st.off[1] * k]; }
     else tgt = [b.p[0], b.p[2]];
@@ -226,7 +229,7 @@ export function aiInput(w, pid, level = 'club') {
     }
   } else tgt = formation(w, s, pl);
 
-  out.move = moveTo(pl, clamp(tgt[0], -4.8, 4.8), zs * clamp(tgt[1] * zs, 0.4, 9.8));
+  out.move = moveTo(pl, clamp(tgt[0], -4.8, 4.8), zs * clamp(tgt[1] * zs, 0.4, 9.8), st);
   st.move = out.move;
   return out;
 }
