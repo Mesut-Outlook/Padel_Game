@@ -35,7 +35,8 @@ function pollPadKeys() {
 }
 
 // drop queued presses (e.g. the key that skipped a replay must not become a swing afterwards)
-export function clearPressed() { pressed.clear(); }
+// a pad button still held (Start that began the match) counts as seen, so it does not fire on the first frame
+export function clearPressed() { pollPadKeys(); pressed.clear(); }
 
 // touch controls (src/touch.js): the virtual stick adds to the keyboard's direction (its buttons send key events)
 let touchMove = [0, 0];

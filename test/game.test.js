@@ -368,6 +368,17 @@ test('LT (edge) asks to eat, once', async () => {
   delete navigator.getGamepads;
 });
 
+test('Start held from the menu does not pause the match it started', async () => {
+  const { consumePressed, clearPressed } = await import('../src/input.js');
+  let start = true;  // pressed on the wizard, still down when the match begins
+  navigator.getGamepads = () => [{ index: 0, axes: [0, 0], buttons: Array.from({ length: 16 }, (_, i) => ({ pressed: i === 9 && start })) }];
+  clearPressed();  // what main.js does at match start
+  assert.equal(consumePressed('Pause'), false);
+  start = false; consumePressed('Pause'); start = true;
+  assert.equal(consumePressed('Pause'), true);  // a fresh press still pauses
+  delete navigator.getGamepads;
+});
+
 test('key E (edge) asks to eat', async () => {  // fresh module with a fake window, as the browser would feed it
   let down; globalThis.addEventListener = (t, f) => { if (t === 'keydown') down = f; };
   const { readKeyboard } = await import('../src/input.js?kbd');

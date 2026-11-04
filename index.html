@@ -654,6 +654,15 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
     box-shadow: 0 6px 20px rgba(216, 245, 58, 0.25);
     transition: transform 160ms ease, box-shadow 160ms ease;
   }
+  .pl-start-btn[data-pad]:not([data-pad=""])::after {
+    content: attr(data-pad);
+    margin-left: 10px;
+    padding: 1px 7px;
+    border: 2px solid currentColor;
+    border-radius: 6px;
+    font-size: 0.6em;
+    vertical-align: middle;
+  }
   .pl-start-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 26px rgba(216, 245, 58, 0.38);

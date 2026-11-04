@@ -1023,6 +1023,9 @@ export function initMenu() {
     if (padHint) padHint.textContent = statusText;
     if (liveHint) liveHint.textContent = gps.length > 0 ? padText(t('🎮 {n} controller(s) connected · A to choose', { n: gps.length })) : t('🎮 Checking controller…');
 
+    const padStart = gps.length ? padText('Start') : '';  // START MATCH shows the pad's button for a one-press start
+    if (startBtn && startBtn.dataset.pad !== padStart) startBtn.dataset.pad = padStart;
+
     if (careerPadHandler) {
       if (gps.length > 0) careerPadHandler(gps[0]);
       gpTimer = requestAnimationFrame(pollGamepads);
@@ -1037,7 +1040,7 @@ export function initMenu() {
       const rb = pad.buttons[5]?.pressed;
       const start = pad.buttons[9]?.pressed;
 
-      if (start && !lastPadStart) { cleanUp(); startBtn?.click(); }
+      if (start && !lastPadStart) startBtn?.click();
       const prevStep = curStep;
       if (lb && !lastPadLB) switchStep(curStep - 1);
       if (rb && !lastPadRB) switchStep(curStep + 1);
