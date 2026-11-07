@@ -432,10 +432,7 @@ export function initMenu() {
     const req = ++previewReqId;
 
     // If same character, simply switch the held racket
-    if (!force && previewAvatar && previewAvatar.ch.id === ch.id) {
-      turntable = -(stance.yaw || 0) * Math.PI / 180;  // stance.yaw > 0 = toward screen-right
-      previewAvatar.playIdle(STANCE_CLIPS[stance.idle]);
-      previewAvatar.holder.rotation.y = turntable;
+    if (!force && previewAvatar && previewAvatar.ch.id === ch.id) {  // hover / racket change: keep the player's drag angle and idle
       if (previewAvatar.setRacket) previewAvatar.setRacket(rk.color, rk.shape);
       updateInfoCard(ch, rk);
       return;
