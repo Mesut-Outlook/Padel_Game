@@ -584,28 +584,38 @@ test('a match needs two people, and a lobby nobody starts closes', async () => {
   } finally { await srv.close(); }
 });
 
-test('a room does not keep the IP of a creator who left: it moves to who is still there', async () => {
+test('a room counts for its creator after they leave, and keeps no IP', async () => {
   const srv = await startServer(0);
   try {
     const open = (ip) => {
       const ws = new WebSocket(`ws://127.0.0.1:${srv.port}`, { headers: { 'cf-connecting-ip': ip } });
       const send = async (m) => { if (ws.readyState !== 1) await new Promise(r => ws.once('open', r)); ws.send(JSON.stringify(m)); };
-      const next = () => new Promise(r => { const on = (raw) => { const m = JSON.parse(raw); if (m.type === 'lobby') { ws.off('message', on); r(m); } }; ws.on('message', on); });
+      const next = (type) => new Promise(r => { const on = (raw) => { const m = JSON.parse(raw); if (m.type === type) { ws.off('message', on); r(m); } }; ws.on('message', on); });
       return { ws, send, next };
     };
-    const a = open('203.0.113.1'), b = open('203.0.113.2');
-    let lob = a.next();
-    await a.send({ type: 'join', create: true, cfg: { players: 2 } });
-    const { code } = await lob;
-    lob = b.next();
-    await b.send({ type: 'join', code });
-    await lob;
-    assert.equal(srv.rooms.get(code).ip, '203.0.113.1');
-    lob = b.next();
-    a.ws.close();
-    await lob;
-    assert.equal(srv.rooms.get(code).ip, '203.0.113.2');
-    b.ws.close();
+    const made = [];
+    for (let i = 0; i < 3; i++) {  // roomsPerIp: 3
+      const c = open('203.0.113.1'), lob = c.next('lobby');
+      await c.send({ type: 'join', create: true, cfg: { players: 2 } });
+      made.push({ c, code: (await lob).code });
+    }
+    const guests = [];
+    for (const { code } of made) {  // someone stays in each room
+      const g = open('203.0.113.2'), joined = g.next('lobby');
+      await g.send({ type: 'join', code });
+      await joined; guests.push(g);
+    }
+    for (const { c } of made) c.ws.close();
+    await new Promise(r => setTimeout(r, 50));
+    assert.ok(made.every(({ code }) => srv.rooms.has(code)));
+    const again = open('203.0.113.1'), err = again.next('error');
+    await again.send({ type: 'join', create: true, cfg: { players: 2 } });
+    assert.equal((await err).msg, 'The server is full. Try again later.');
+    const own = open('203.0.113.2'), ok = own.next('lobby');
+    await own.send({ type: 'join', create: true, cfg: { players: 2 } });
+    await ok;
+    assert.ok(!JSON.stringify([...srv.rooms.values()].map(r => [r.owner, r.ip])).includes('203.0.113'));
+    for (const x of [...guests, again, own]) x.ws.close();
   } finally { await srv.close(); }
 });
 

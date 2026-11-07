@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { randomInt, randomBytes } from 'node:crypto';
+import { randomInt, randomBytes, createHmac } from 'node:crypto';
 import { newWorld, stepWorld, snapshot, SHOTS, BAG } from '../src/game.js';
 import { scoreText } from '../src/rules.js';
 import { aiInput } from '../src/ai.js';
@@ -126,6 +126,11 @@ export function sendCapped(ws, msg, lim) {
   ws.send(msg);
 }
 
+// a room counts against the visitor who made it for as long as it lives, even after they leave; it keeps only this keyed hash,
+// never the IP (the key is made at start and lost on restart, so the hash cannot be turned back into an address)
+const OWNER_KEY = randomBytes(32);
+export const ownerKey = (ip) => createHmac('sha256', OWNER_KEY).update(ip).digest('base64url').slice(0, 22);
+
 // one status line a minute for journalctl: counts and timings only, never an IP, a name or a room code
 export const statusLine = ({ rooms, clients, tickAvg, tickMax, cpu, rss }) =>
   `status rooms=${rooms} clients=${clients} tick_avg=${tickAvg.toFixed(2)}ms tick_max=${tickMax.toFixed(2)}ms cpu=${cpu.toFixed(1)}% rss=${Math.round(rss / 1048576)}MB`;
@@ -192,10 +197,10 @@ export function startServer(port, limits = {}) {
     return code;
   }
 
-  function makeRoom(code, cfg, ip) {
+  function makeRoom(code, cfg, owner) {
     const players = cfg.players === 2 ? 2 : 4;
     const room = {
-      code, cfg, ip, born: Date.now(), seats: players === 2 ? [0, 2] : [0, 2, 1, 3], clients: new Map(), inputs: {}, started: false, host: null, frame: 0,
+      code, cfg, owner, born: Date.now(), seats: players === 2 ? [0, 2] : [0, 2, 1, 3], clients: new Map(), inputs: {}, started: false, host: null, frame: 0,
       world: newWorld({ players, match: { sets: cfg.sets, goldenPoint: cfg.goldenPoint, starPoint: cfg.starPoint, superTiebreak: cfg.superTiebreak }, stats: {}, rackets: {}, outdoor: cfg.outdoor, holdReplay: true }),  // every client shows a highlight before the next serve
       chars: {}, looks: {}, names: {}, timer: null, tokens: {}, away: {},  // away: seat -> { token, until, name, look } of a dropped player
     };
@@ -235,7 +240,6 @@ export function startServer(port, limits = {}) {
     const ip = ipKey(clientIp(req));
     if (!originOk(req) || wss.clients.size > lim.clients || (perIp.get(ip) || 0) >= lim.perIp) { ws.close(1008, 'not allowed'); return; }
     perIp.set(ip, (perIp.get(ip) || 0) + 1);
-    ws.ip = ip;
     ws.alive = true;
     ws.born = Date.now();
     ws.on('pong', () => { ws.alive = true; });
@@ -265,9 +269,9 @@ export function startServer(port, limits = {}) {
         if (n > lim.joinsPerMin) return fail('The server is full. Try again later.');
         let target;
         if (m.create === true && m.rejoin === undefined) {  // the server picks the code: never guessable, never someone else's room
-          const mine = [...rooms.values()].filter(r => r.ip === ip).length;
+          const owner = ownerKey(ip), mine = [...rooms.values()].filter(r => r.owner === owner).length;
           if (rooms.size >= lim.rooms || mine >= lim.roomsPerIp) return fail('The server is full. Try again later.');
-          target = makeRoom(newCode(), sanitizeCfg(m.cfg, m), ip);
+          target = makeRoom(newCode(), sanitizeCfg(m.cfg, m), owner);
         } else {
           if ((wrong.get(ip) || 0) >= 5) return ws.close(1008, 'too many wrong codes');  // even a right code: each new socket would be a free guess
           target = rooms.get(String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6));
@@ -340,7 +344,6 @@ export function startServer(port, limits = {}) {
       if (room.started && room.world.match.winner == null) room.away[seat] = { token: room.tokens[seat], until: Date.now() + lim.rejoinMs, name: room.names[seat], look: room.looks[seat] };
       delete room.looks[seat]; delete room.names[seat];
       if (!room.clients.size) { if (!Object.keys(room.away).length) closeRoom(room); return; }
-      if (ip === room.ip) room.ip = room.clients.keys().next().value.ip;  // the room counts for who is still in it: a visitor who left leaves no IP behind
       if (seat === room.host) room.host = room.clients.values().next().value;  // the next player may start the match
       lobby(room);  // seat falls back to AI
     });
