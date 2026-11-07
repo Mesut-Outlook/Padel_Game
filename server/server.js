@@ -21,7 +21,11 @@ const AI_LEVELS = ['rookie', 'club', 'pro', 'legend'];
 // abuse limits (startServer(port, { ...LIMITS }) overrides them in tests): rooms on the server, sockets on the server, sockets per visitor IP,
 // rooms one visitor holds at a time (a room outlives its socket while seats wait for a rejoin), messages per socket per second
 // (beyond it they are dropped; the client sends ~60/s at most), largest message in bytes. Sized for the home Raspberry Pi: raise them on a bigger host.
-export const LIMITS = { rooms: 10, clients: 40, perIp: 8, roomsPerIp: 3, msgsPerSec: 120, payload: 4096, rejoinMs: 60000, lobbyMs: 900000 };  // rejoinMs: a dropped player's seat waits this long; lobbyMs: a room nobody starts closes
+export const LIMITS = { rooms: 10, clients: 40, perIp: 8, roomsPerIp: 3, msgsPerSec: 120, payload: 4096, rejoinMs: 60000, lobbyMs: 900000,
+  ghostMs: 15000, joinsPerMin: 20, logsPerMin: 60, sendSkip: 65536, sendDrop: 524288 };
+// rejoinMs: a dropped player's seat waits this long; lobbyMs: a room nobody starts closes; ghostMs: a socket that has not joined a room by then is closed;
+// joinsPerMin: join messages per visitor; logsPerMin: join/leave/rejoin log lines; sendSkip/sendDrop: bytes a socket may have queued before it misses a
+// message / is dropped (a client that stops reading must not fill the memory)
 // pages that may open a socket here: the site, local dev, and any page served by this same host (npm run online, a tunnel)
 const ORIGINS = ['padellegends.eu', 'www.padellegends.eu', 'localhost', '127.0.0.1', ...(process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean)];
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // no 0/O or 1/I: codes are read aloud and typed
@@ -113,6 +117,14 @@ function originOk(req) {
   } catch { return false; }
 }
 
+// every message to a client goes through here: a socket that stopped reading misses messages, and one that keeps not reading is dropped
+export function sendCapped(ws, msg, lim) {
+  if (ws.readyState !== 1) return;
+  if (ws.bufferedAmount > lim.sendDrop) return ws.terminate();
+  if (ws.bufferedAmount > lim.sendSkip) return;
+  ws.send(msg);
+}
+
 // one status line a minute for journalctl: counts and timings only, never an IP, a name or a room code
 export const statusLine = ({ rooms, clients, tickAvg, tickMax, cpu, rss }) =>
   `status rooms=${rooms} clients=${clients} tick_avg=${tickAvg.toFixed(2)}ms tick_max=${tickMax.toFixed(2)}ms cpu=${cpu.toFixed(1)}% rss=${Math.round(rss / 1048576)}MB`;
@@ -131,7 +143,9 @@ export function startServer(port, limits = {}) {
   const rooms = new Map(); // code -> room
   const perIp = new Map(); // ip -> open sockets
   const wrong = new Map(); // ip -> wrong room codes or rejoin tokens in the last 30 s
-  let badLines = 0;  // 'bad message' log lines this minute: one visitor must not be able to fill the disk
+  let badLines = 0, logLines = 0;  // log lines this minute ('bad message', and join/leave/rejoin): one visitor must not be able to fill the disk
+  const joins = new Map();  // visitor -> join messages this minute
+  const logLine = (line) => { if (logLines++ < lim.logsPerMin) console.log(line); };
 
   // a dead connection (phone went to sleep, network gone) never sends close: ping every 30 s, drop what did not answer
   const heartbeat = setInterval(() => {
@@ -141,6 +155,7 @@ export function startServer(port, limits = {}) {
   }, 30000);
   // seats kept for dropped players run out; a room nobody came back to closes
   function sweep(now = Date.now()) {
+    for (const ws of wss.clients) if (!ws.inRoom && now - ws.born > lim.ghostMs) ws.close(1000, 'no room');  // a socket must join a room or go
     for (const room of rooms.values()) {
       if (!room.started && now - room.born > lim.lobbyMs) {  // an open socket must not hold a room slot for ever
         clearInterval(room.timer); rooms.delete(room.code);
@@ -161,7 +176,7 @@ export function startServer(port, limits = {}) {
       const cu = process.cpuUsage(lastCpu), wall = performance.now() - lastWall;
       console.log(statusLine({ rooms: rooms.size, clients, tickAvg: tickAvg(), tickMax: tMax, cpu: wall > 0 ? (cu.user + cu.system) / 1000 / wall * 100 : 0, rss: process.memoryUsage.rss() }));
     }
-    lastCpu = process.cpuUsage(); lastWall = performance.now(); tSum = tN = tMax = badLines = 0;
+    lastCpu = process.cpuUsage(); lastWall = performance.now(); tSum = tN = tMax = badLines = logLines = 0; joins.clear();
   }
   const statusTimer = setInterval(status, 60000);
 
@@ -197,7 +212,7 @@ export function startServer(port, limits = {}) {
       const events = w.events.splice(0);
       if (++room.frame % 2 && !events.some(e => e.type !== 'contact')) return; // 30 Hz unless something happened
       const msg = JSON.stringify({ type: 'state', snap: snapshot(w), score: scoreText(w.match), events, winner: w.match.winner });
-      for (const ws of room.clients.keys()) ws.readyState === 1 && ws.send(msg);
+      for (const ws of room.clients.keys()) sendCapped(ws, msg, lim);
     } catch (e) {  // a broken match ends its own room, never the whole server
       console.error('room stopped', e); clearInterval(room.timer); rooms.delete(room.code);
       for (const ws of room.clients.keys()) ws.close(1011, 'match error');
@@ -206,7 +221,7 @@ export function startServer(port, limits = {}) {
 
   function lobby(room) {
     const msg = JSON.stringify({ type: 'lobby', code: room.code, cfg: room.cfg, seats: room.seats, taken: [...room.clients.values()], away: Object.keys(room.away).map(Number), chars: room.chars, looks: room.looks, names: room.names, started: room.started, host: room.host });
-    for (const ws of room.clients.keys()) ws.readyState === 1 && ws.send(msg);
+    for (const ws of room.clients.keys()) sendCapped(ws, msg, lim);
   }
 
   wss.on('connection', (ws, req) => {
@@ -216,6 +231,7 @@ export function startServer(port, limits = {}) {
     perIp.set(ip, (perIp.get(ip) || 0) + 1);
     ws.ip = ip;
     ws.alive = true;
+    ws.born = Date.now();
     ws.on('pong', () => { ws.alive = true; });
     const fail = (msg) => ws.send(JSON.stringify({ type: 'error', msg }));
     let room = null, win = 0, count = 0;
@@ -239,6 +255,8 @@ export function startServer(port, limits = {}) {
         ws.send(JSON.stringify({ type: 'rooms', rooms: open.map(r => ({ code: r.code, players: r.seats.length, venue: r.cfg.venue, free: r.seats.length - r.clients.size, host: r.cfg.host })) }));
       } else if (m.type === 'join') {
         if (room) return fail('Already in a room');  // one room per connection
+        const n = (joins.get(ip) || 0) + 1; joins.set(ip, n);
+        if (n > lim.joinsPerMin) return fail('The server is full. Try again later.');
         let target;
         if (m.create === true && m.rejoin === undefined) {  // the server picks the code: never guessable, never someone else's room
           const mine = [...rooms.values()].filter(r => r.ip === ip).length;
@@ -257,19 +275,19 @@ export function startServer(port, limits = {}) {
           if (!(a?.until >= Date.now()) && !old) { fail('Could not get back into the match'); return missed(); }
           if (old) { target.clients.delete(old); old.terminate(); }
           delete target.away[seat];
-          room = target;
+          room = target; ws.inRoom = true;
           room.clients.set(ws, seat);
           if (room.host == null) room.host = seat;
           if (a?.name) room.names[seat] = a.name;
           if (a?.look) room.looks[seat] = a.look;
-          console.log(`rejoin seat=${seat}`);
+          logLine(`rejoin seat=${seat}`);
           ws.send(JSON.stringify({ type: 'seat', seat, code: room.code, token: m.rejoin }));
           return lobby(room);
         }
         const taken = new Set(target.clients.values());
         const seat = target.seats.find(s => !taken.has(s));
         if (seat == null || target.started) return fail('Room is full or match already started');
-        room = target;
+        room = target; ws.inRoom = true;
         const fresh = !room.clients.size;
         room.clients.set(ws, seat);
         if (room.host == null) room.host = seat;
@@ -287,7 +305,7 @@ export function startServer(port, limits = {}) {
         const look = sanitizeLook(m.look);
         if (look) room.looks[seat] = look;
         room.tokens[seat] = randomBytes(16).toString('base64url');  // lets this player back into the seat if the connection drops
-        console.log(`join seat=${seat}`);
+        logLine(`join seat=${seat}`);
         ws.send(JSON.stringify({ type: 'seat', seat, code: room.code, token: room.tokens[seat] }));
         lobby(room);
       } else if (!room) return;
@@ -310,7 +328,7 @@ export function startServer(port, limits = {}) {
       const seat = room.clients.get(ws);
       if (seat === undefined) return;  // replaced by the same player's new connection (rejoin)
       room.clients.delete(ws);
-      console.log(`leave seat=${seat} code=${code} started=${+room.started}`);  // why a player left; never an IP or a room code
+      logLine(`leave seat=${seat} code=${code} started=${+room.started}`);  // why a player left; never an IP or a room code
       // mid-match the AI plays the seat while it waits for its player (rejoin); in the lobby the seat is simply free
       if (room.started && room.world.match.winner == null) room.away[seat] = { token: room.tokens[seat], until: Date.now() + lim.rejoinMs, name: room.names[seat], look: room.looks[seat] };
       delete room.looks[seat]; delete room.names[seat];

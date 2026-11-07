@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
-import { startServer, statusLine, ipKey } from '../server/server.js';
+import { startServer, statusLine, ipKey, sendCapped } from '../server/server.js';
 import { readFileSync } from 'node:fs';
 
 const ROSTER = JSON.parse(readFileSync(new URL('../data/characters.json', import.meta.url))).length;
@@ -626,4 +626,43 @@ test('client: a server address the browser refuses shows the connect error inste
   const errors = [];
   connect({ url: 'not a url', code: 'ABCDEF', char: 0, onError: (e) => errors.push(e) });
   assert.deepEqual(errors, ['Could not connect to the game server.']);
+});
+
+test('a socket that never joins a room is closed after ghostMs', async () => {
+  const srv = await startServer(0, { ghostMs: 50 });
+  try {
+    const c = client(srv.port);
+    await new Promise(r => c.ws.once('open', r));
+    const closed = new Promise(r => c.ws.once('close', (code) => r(code)));
+    await new Promise(r => setTimeout(r, 80));
+    srv.sweep();
+    assert.equal(await closed, 1000);
+    // a socket in a room is never a ghost
+    const host = client(srv.port); await create(host, { cfg: { players: 2 } });
+    srv.sweep(Date.now() + 1000);
+    await new Promise(r => setTimeout(r, 20));
+    assert.equal(host.ws.readyState, 1);
+    host.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('joins beyond joinsPerMin from one visitor are refused', async () => {
+  const srv = await startServer(0, { joinsPerMin: 3 });
+  try {
+    const host = client(srv.port);
+    const { code } = await create(host, { cfg: { players: 4 } });
+    const a = client(srv.port), b = client(srv.port), c = client(srv.port);
+    await join(a, code); await join(b, code);
+    const err = c.next('error'); await c.send({ type: 'join', code });
+    assert.equal((await err).msg, 'The server is full. Try again later.');
+    for (const x of [host, a, b, c]) x.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('a socket that stops reading is skipped, then dropped', () => {
+  const lim = { sendSkip: 65536, sendDrop: 524288 };
+  const fake = (queued) => ({ bufferedAmount: queued, readyState: 1, sent: 0, dropped: false, send() { this.sent++; }, terminate() { this.dropped = true; } });
+  const ok = fake(0), slow = fake(70000), stuck = fake(600000);
+  for (const ws of [ok, slow, stuck]) sendCapped(ws, 'x', lim);
+  assert.deepEqual([ok.sent, slow.sent, slow.dropped, stuck.sent, stuck.dropped], [1, 0, false, 0, true]);
 });
