@@ -3,6 +3,8 @@
 import { serverUrl, NO_SERVER, allowServer, NOT_CONNECTED } from './serverurl.js';
 import { track, trackOnlineInterest } from './track.js';
 import characters from '../data/characters.json';
+import { isActive } from './roster.js';
+const pickable = characters.filter(isActive);  // archived players stay for AI pools and old saves, never in a picker
 import venues from '../data/venues.json';
 import rackets from '../data/rackets.json';
 import eco from '../data/economy.json';
@@ -38,7 +40,7 @@ import {
 import { listRooms } from './net.js';
 import { TIERS, tierAt, scaleStats, aiLevel, questionnaireLevel, playtomicStart, startCredits } from './level.js';
 import { padDir, spatialFocus } from './padnav.js';
-import { createTournament, myMatch, reportResult, simulateOthers, simulateUntilMine, standings, isFinished, placement } from './tournament.js';
+import { createTournament, pairUp, myMatch, reportResult, simulateOthers, simulateUntilMine, standings, isFinished, placement } from './tournament.js';
 import {
   countryFlag,
   setCareerPreview,
@@ -184,7 +186,7 @@ let shopErrors = {}; // { [itemId]: string }
 
 // Creator state
 let creatorMode = 'create'; // 'create' | 'edit'
-let creatorTemplate = characters[Math.floor(Math.random() * characters.length)];  // a different first pick on every visit
+let creatorTemplate = pickable[Math.floor(Math.random() * pickable.length)];  // a different first pick on every visit
 let creatorState = null;
 let pendingLook = null; // look from the creator, waiting for the level step
 let lvl = { mode: 'choose', answers: [null, null, null, null, null], input: '', error: '', start: null };
@@ -591,7 +593,7 @@ function renderTemplatesScreen() {
     <div class="cr-head cr-head-tpl">
       <div>
         <h2 class="cr-title">${t('NEW CAREER · <span>CHOOSE A TEMPLATE</span>')}</h2>
-        <div class="cr-sub">${t('Pick any of the {n} players as your starting template, then customize your look.', { n: characters.length })}</div>
+        <div class="cr-sub">${t('Pick any of the {n} players as your starting template, then customize your look.', { n: pickable.length })}</div>
       </div>
       <div class="cr-banner-actions">
         <button type="button" class="cr-btn" id="cr-tpl-import">${t('Import Profile')}</button>
@@ -599,7 +601,7 @@ function renderTemplatesScreen() {
       </div>
     </div>
     <div class="pl-filter-row" id="cr-tpl-filters">
-      <button type="button" class="pl-chip ${templateFilter === 'all' ? 'is-active' : ''}" data-filter="all">${t('All ({n})', { n: characters.length })}</button>
+      <button type="button" class="pl-chip ${templateFilter === 'all' ? 'is-active' : ''}" data-filter="all">${t('All ({n})', { n: pickable.length })}</button>
       <button type="button" class="pl-chip ${templateFilter === 'f' ? 'is-active' : ''}" data-filter="f">${t('Women')}</button>
       <button type="button" class="pl-chip ${templateFilter === 'm' ? 'is-active' : ''}" data-filter="m">${t('Men')}</button>
     </div>
@@ -624,7 +626,7 @@ function renderTemplatesScreen() {
 
   const grid = careerPanel.querySelector('#cr-tpl-grid');
   characters.forEach((ch, idx) => {
-    if (templateFilter !== 'all' && ch.gender !== templateFilter) return;
+    if (!isActive(ch) || (templateFilter !== 'all' && ch.gender !== templateFilter)) return;
     const card = document.createElement('button');
     card.type = 'button';
     card.className = `pl-card pl-char-card ${ch.id === creatorTemplate?.id ? 'is-selected' : ''}`;
@@ -1255,10 +1257,11 @@ function renderHubScreen() {
 }
 
 // Filter out the player's template character and any AI with the same name so the player never partners or plays against a clone of themselves
-function availablePartners(prof = profile) {
+// all = AI pools (tournament draws need ~30 players); otherwise only the active players a person may pick
+function availablePartners(prof = profile, all = false) {
   const tid = prof?.player?.templateId;
   const pname = prof?.player?.name;
-  return characters.filter(c => (!tid || c.id !== tid) && (!pname || c.name !== pname));
+  return characters.filter(c => (all || isActive(c)) && (!tid || c.id !== tid) && (!pname || c.name !== pname));
 }
 
 // 4. Career Play Screen
@@ -2232,7 +2235,7 @@ const isPairFormat = (f) => f === 'knockout' || f === 'league';
 const avgStats = (s) => Object.values(s).reduce((a, b) => a + b, 0) / Object.values(s).length;
 const myRating = (p = profile) => avgStats(p.stats);
 const aiRating = (c, entry) => avgStats(c.stats) + (AI_OFFSET[entry.ai] ?? 0);
-const aiTable = aiRankingTable(characters);
+const aiTable = aiRankingTable(characters.filter(c => c.ranked !== false));  // newcomers stay out: no saved career loses its place
 const myWorldRank = (p = profile) => worldRanking(p, aiTable).findIndex(r => r.id === 'me') + 1;
 const entryById = (id) => tournaments.circuit.find(e => e.id === id);
 const charById = (id) => characters.find(c => c.id === id);
@@ -2323,7 +2326,7 @@ function renderTournamentsScreen() {
       if (!canEnter(profile, entry, myWorldRank()).ok) return;
       if (isPairFormat(entry.format)) {
         // suggest the strongest roster character
-        const best = characters.slice().sort((a, b) => avgStats(b.stats) - avgStats(a.stats))[0];
+        const best = availablePartners(profile).sort((a, b) => avgStats(b.stats) - avgStats(a.stats))[0];
         tState = { entry, partnerId: best.id };
         showScreen('tpartner');
       } else {
@@ -2337,7 +2340,7 @@ function renderTournamentsScreen() {
 function startTournament() {
   const { entry, partnerId } = tState;
   if (!entry || !canEnter(profile, entry, myWorldRank()).ok) { showScreen('tournaments'); return; }
-  const pool = availablePartners(profile).filter(c => c.id !== partnerId);
+  const pool = availablePartners(profile, true).filter(c => c.id !== partnerId);
   let entrants, T;
   if (!isPairFormat(entry.format)) {
     const sortedPool = pool.slice().sort(() => Math.random() - 0.5);
@@ -2350,18 +2353,9 @@ function startTournament() {
     for (let attempt = 0; attempt < 50; attempt++) {
       const p = pool.slice().sort(() => Math.random() - 0.5);
       const candEntrants = [{ id: 'me', name: `${profile.player.name} / ${partner.name}`, rating: (myRating() + aiRating(partner, entry)) / 2, members: [partnerId] }];
-      for (let i = 0; i < entry.drawSize - 1; i++) {
-        let a, b;
-        if (i < 12 && 2 * i + 1 < p.length) {
-          a = p[2 * i];
-          b = p[2 * i + 1];
-        } else {
-          const offset = (i - 12) * 2;
-          a = p[(offset + 5) % p.length];
-          b = p[(offset + 17) % p.length];
-        }
+      pairUp(p, entry.drawSize - 1).forEach(([a, b], i) => {
         candEntrants.push({ id: `p${i}`, name: `${a.name} / ${b.name}`, rating: (aiRating(a, entry) + aiRating(b, entry)) / 2, members: [a.id, b.id] });
-      }
+      });
       const testT = createTournament({ format: entry.format, entrants: candEntrants });
       const hasClash = testT.rounds[0]?.some(m => {
         const e1 = candEntrants.find(e => e.id === m.a);

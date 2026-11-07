@@ -3,6 +3,17 @@
 // The human is 'me' (or the pair with id 'me'); their match is played for real, every other match is simulated from ratings.
 const SCORING = { americano: { pointsTo: 16 }, mexicano: { pointsTo: 16 }, knockout: { sets: 1 }, league: { sets: 1 } };
 
+// AI pairs for a draw: every player once while the pool lasts; a pool too small wraps round (never a player with themselves)
+export function pairUp(pool, count) {
+  const n = pool.length, out = [];
+  for (let i = 0; i < count; i++) {
+    if (2 * i + 1 < n) { out.push([pool[2 * i], pool[2 * i + 1]]); continue; }
+    const a = (2 * i) % n, b = (a + 1 + (i % Math.max(1, n - 1))) % n;
+    out.push([pool[a], pool[b]]);
+  }
+  return out;
+}
+
 export function createTournament({ format, entrants, rng = Math.random }) {
   const T = { format, scoring: SCORING[format], entrants, rounds: [], round: 0, done: false };
   T.rounds.push(pairings(T, rng));

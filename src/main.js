@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import venues from '../data/venues.json';
 import characters from '../data/characters.json';
+import { isActive, resolvePick, aiSeatChar } from './roster.js';
 import rackets from '../data/rackets.json';
 import { newWorld, stepWorld, snapshot, serveX, REPLAY } from './game.js';
 import { scoreText, serverId } from './rules.js';
@@ -41,7 +42,7 @@ const $ = (id) => document.getElementById(id);
 const matchOpts = () => ({ sets: parseInt($('sets').value), superTiebreak: $('sets').value === '3s', goldenPoint: $('golden').value === '1', starPoint: $('golden').value === 'star' });
 const fill = (sel, items, label) => { sel.innerHTML = items.map((x, i) => `<option value="${i}">${label(x)}</option>`).join(''); };
 fill($('char'), characters, c => `${c.name} (${c.countryCode}, ${c.gender === 'f' ? 'F' : 'M'})`);
-$('char').value = Math.floor(Math.random() * characters.length);  // a different starting player on every visit
+$('char').value = resolvePick(-1, characters);  // a different starting player on every visit, one of the active ones
 fill($('venue'), venues, v => `${v.name} — ${v.city}`);
 fill($('racket'), rackets, r => `${r.name} · ${r.shape} · P${r.stats.power}/C${r.stats.control}`);
 initMenu();
@@ -285,7 +286,7 @@ export function startOnline({ url, code, create = false, players = 4, venue = 0,
       if (l.started && !avatars.length) {
         const ids = l.seats, roster = {}, rk = {};
         for (const id of ids) {
-          const base = characters[l.chars[id] ?? (id * 3 + 1) % characters.length], { stats: _ignored, ...lk } = l.looks?.[id] || {};
+          const base = characters[l.chars[id] ?? aiSeatChar(id, characters)], { stats: _ignored, ...lk } = l.looks?.[id] || {};
           roster[id] = { ...base, ...lk, ...(l.names?.[id] ? { name: l.names[id] } : {}) };
           const foundRk = (lk.racket && rackets.find(r => r.id === lk.racket)) || rackets[id % rackets.length];
           rk[id] = {
@@ -330,7 +331,7 @@ $('start').onclick = async () => {
 
   // roster: humans first fill team 0 then team 1 (P1 per menu choice, the others take the remaining pads)
   const ids = players === 2 ? [0, 2] : [0, 2, 1, 3];
-  const others = characters.filter(c => c !== me).sort(() => Math.random() - 0.5);
+  const others = characters.filter(c => c !== me && isActive(c)).sort(() => Math.random() - 0.5);
   const roster = {}, rk = {};
   ids.forEach((id, i) => { roster[id] = i === 0 ? me : others[i]; rk[id] = i === 0 ? myRacket : rackets[Math.floor(Math.random() * rackets.length)]; });
 

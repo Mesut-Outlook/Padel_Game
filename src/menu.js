@@ -16,6 +16,7 @@ import { toggleFullscreen } from './fullscreen.js';
 import { charCard } from './charcard.js';
 import { t, N_ } from './i18n.js';
 import { loadPicks, savePicks } from './friendlypicks.js';
+import { isActive, resolvePick } from './roster.js';
 
 // the stat pills below call t(name.toUpperCase()); these make the keys findable
 const STAT_PILL_NAMES = [N_('SPEED'), N_('POWER'), N_('CONTROL'), N_('VOLLEY'), N_('SMASH'), N_('STAMINA')];
@@ -62,6 +63,7 @@ export function initMenu() {
     racketCount: rackets.length,
   });
   if (savedPicks.char != null && $('char')) $('char').value = String(savedPicks.char);
+  if ($('char')) $('char').value = String(resolvePick(parseInt($('char').value, 10), characters));  // an archived player (old save) becomes one of the active ones
   if (savedPicks.venue != null && $('venue')) $('venue').value = String(savedPicks.venue);
   if (savedPicks.racket != null && $('racket')) $('racket').value = String(savedPicks.racket);
   if (savedPicks.sets != null && $('sets')) $('sets').value = savedPicks.sets;
@@ -551,8 +553,8 @@ export function initMenu() {
     const grid = shell.querySelector('#pl-char-grid');
     if (!grid) return;
     grid.innerHTML = '';
-    characters.forEach((ch, idx) => {
-      if (filter !== 'all' && ch.gender !== filter) return;
+    characters.forEach((ch, idx) => {  // idx stays the full-list index: saved picks and online seats use it
+      if (!isActive(ch) || (filter !== 'all' && ch.gender !== filter)) return;
       const card = document.createElement('button');
       card.type = 'button';
       card.className = `pl-card pl-char-card ${idx === selectedCharIdx ? 'is-selected' : ''}`;
