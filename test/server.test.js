@@ -311,8 +311,8 @@ test('a flood of messages from one socket is cut at the per-second limit', async
   try {
     const a = client(srv.port);
     let answers = 0;
-    a.ws.on('message', (raw) => { if (JSON.parse(raw).type === 'rooms') answers++; });
-    for (let i = 0; i < 6; i++) await a.send({ type: 'list' });
+    a.ws.on('message', (raw) => { if (JSON.parse(raw).type === 'pong') answers++; });
+    for (let i = 0; i < 6; i++) await a.send({ type: 'ping', t: i });
     await new Promise(r => setTimeout(r, 100));
     assert.equal(answers, 3);
     a.ws.close();
@@ -789,5 +789,18 @@ test('client: a room the server closes for good is reported once, without trying
     await new Promise(r => setTimeout(r, 1500));
     assert.deepEqual([errors, status], [['The match was closed.'], []]);
     host.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('a socket gets at most one room list a second', async () => {
+  const srv = await startServer(0);
+  try {
+    const c = client(srv.port);
+    let n = 0;
+    c.ws.on('message', (raw) => { if (JSON.parse(raw).type === 'rooms') n++; });
+    for (let i = 0; i < 5; i++) await c.send({ type: 'list' });
+    await new Promise(r => setTimeout(r, 200));
+    assert.equal(n, 1);
+    c.ws.close();
   } finally { await srv.close(); }
 });

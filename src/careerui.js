@@ -2704,7 +2704,7 @@ function joinOnlineRoom(code, create) {
         lines: reward.lines, mult: reward.mult, credits: reward.credits, won: result.won, ai: result.ai || 'online',
         score: safeScore(result.score?.sets),
       };
-      persistProfile(withRating(updated, result, result.mates || [], result.opps?.length ? result.opps : [null]));
+      persistProfile(withRating(updated, { ...result, ai: 'online' }, result.mates || [], result.opps?.length ? result.opps : [null]));
     },
   });
   if (!net) {

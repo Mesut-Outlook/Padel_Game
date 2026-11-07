@@ -260,7 +260,9 @@ export function startServer(port, limits = {}) {
     ws.alive = true;
     ws.born = Date.now();
     ws.on('pong', () => { ws.alive = true; });
-    const fail = (msg) => ws.send(JSON.stringify({ type: 'error', msg }));
+    const reply = (m) => sendCapped(ws, JSON.stringify(m), lim);  // replies too: a client that stops reading must not pile them up
+    const fail = (msg) => reply({ type: 'error', msg });
+    let lastList = 0;
     let room = null, win = 0, count = 0;
     // no guessing: wrong codes count per visitor, so opening a new socket does not start over
     const missed = () => { const n = (wrong.get(ip) || 0) + 1; wrong.set(ip, n); if (n >= 5) ws.close(1008, 'too many wrong codes'); };
@@ -276,10 +278,12 @@ export function startServer(port, limits = {}) {
       }
     });
     function onMessage(m) {
-      if (m.type === 'ping') ws.send(JSON.stringify({ type: 'pong', t: Number.isFinite(m.t) ? m.t : null, tick: tickAvg() }));
-      else if (m.type === 'list') {  // public lobbies that still have a free seat
+      if (m.type === 'ping') reply({ type: 'pong', t: Number.isFinite(m.t) ? m.t : null, tick: tickAvg() });
+      else if (m.type === 'list') {  // public lobbies that still have a free seat; one list a second per socket
+        if (Date.now() - lastList < 1000) return;
+        lastList = Date.now();
         const open = [...rooms.values()].filter(r => r.cfg.public && !r.started && r.clients.size < r.seats.length);
-        ws.send(JSON.stringify({ type: 'rooms', rooms: open.map(r => ({ code: r.code, players: r.seats.length, venue: r.cfg.venue, free: r.seats.length - r.clients.size, host: r.cfg.host })) }));
+        reply({ type: 'rooms', rooms: open.map(r => ({ code: r.code, players: r.seats.length, venue: r.cfg.venue, free: r.seats.length - r.clients.size, host: r.cfg.host })) });
       } else if (m.type === 'join') {
         if (room) return fail('Already in a room');  // one room per connection
         const n = (joins.get(ip) || 0) + 1; joins.set(ip, n);
@@ -308,7 +312,7 @@ export function startServer(port, limits = {}) {
           if (a?.name) room.names[seat] = a.name;
           if (a?.look) room.looks[seat] = a.look;
           logLine(`rejoin seat=${seat}`);
-          ws.send(JSON.stringify({ type: 'seat', seat, code: room.code, token: m.rejoin }));
+          reply({ type: 'seat', seat, code: room.code, token: m.rejoin });
           return lobby(room);
         }
         const taken = new Set(target.clients.values());
@@ -333,7 +337,7 @@ export function startServer(port, limits = {}) {
         if (look) room.looks[seat] = look;
         room.tokens[seat] = randomBytes(16).toString('base64url');  // lets this player back into the seat if the connection drops
         logLine(`join seat=${seat}`);
-        ws.send(JSON.stringify({ type: 'seat', seat, code: room.code, token: room.tokens[seat] }));
+        reply({ type: 'seat', seat, code: room.code, token: room.tokens[seat] });
         lobby(room);
       } else if (!room) return;
       else if (m.type === 'start') {  // only the room creator (or whoever took over after they left)
