@@ -2653,7 +2653,7 @@ function setOnlineStatus(text, lobby, err = false) {
 const canStartOnline = () => !!onlineState.lobby && !onlineState.lobby.started && onlineState.lobby.host === onlineState.net?.seat && onlineState.lobby.taken?.length >= 2;
 
 function leaveOnline() {
-  if (onlineState.net) {  // a joined room lives in main.js state: reload to drop it cleanly
+  if (onlineState.net?.ws) {  // a joined room lives in main.js state: reload to drop it cleanly
     onlineState.net.ws.onclose = onlineState.net.ws.onerror = null;
     onlineState.net.ws.close();
     history.replaceState(history.state, '', '#career');  // keep history.state (storage-blocked backup)

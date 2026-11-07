@@ -11,7 +11,8 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError,
   const net = { seat: null, lobby: null, snaps: [], events: [], score: null, winner: null, ws: null, token: null };
   let tries = 0, lastSent = '';
   function open(join) {
-    const ws = net.ws = new WebSocket(url);
+    let ws;
+    try { ws = net.ws = new WebSocket(url); } catch { onError?.('Could not connect to the game server.'); return; }  // e.g. a malformed address
     ws.onopen = () => ws.send(JSON.stringify(join));
     ws.onerror = () => { if (!net.lobby) onError?.('Could not connect to the game server.'); };
     ws.onclose = () => {
@@ -38,14 +39,14 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError,
   }
   open({ type: 'join', code, cfg, char, stats, racket, ...extra });
   // debug panel only: RTT + the server's tick time
-  if (debugOn()) setInterval(() => net.ws.readyState === 1 && net.ws.send(JSON.stringify({ type: 'ping', t: performance.now() })), 2000);
+  if (debugOn()) setInterval(() => net.ws?.readyState === 1 && net.ws.send(JSON.stringify({ type: 'ping', t: performance.now() })), 2000);
   net.send = (inp) => {
     const ws = net.ws;
-    if (ws.readyState !== 1) return;
+    if (ws?.readyState !== 1) return;
     const s = JSON.stringify({ type: 'input', ...inp });
     if (s !== lastSent || inp.swing || inp.eat || inp.skip) { ws.send(s); lastSent = s; }
   };
-  net.start = () => net.ws.readyState === 1 && net.ws.send(JSON.stringify({ type: 'start' }));
+  net.start = () => net.ws?.readyState === 1 && net.ws.send(JSON.stringify({ type: 'start' }));
   // render ~70ms in the past, interpolating between buffered server snapshots
   net.view = () => {
     const S = net.snaps;

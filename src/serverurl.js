@@ -31,12 +31,19 @@ export function allowServer(url, loc = globalThis.location) {
   if (!answers.has(url)) {
     let host = '';
     try { host = new URL(url).protocol.startsWith('ws') ? new URL(url).host : ''; } catch { /* not a URL */ }
+    if (loc?.protocol === 'https:' && url.startsWith('ws:')) host = '';  // a secure page cannot use an unencrypted server: no question
     answers.set(url, !!host && !!globalThis.confirm?.([
       t('This link uses a game server that Padel Legends does not run: {host}', { host }),
       t('That server will receive your IP address and the player you play with: name, look, level, stats and equipment.'),
       t('Connect anyway?'),
     ].join('\n\n')));
+    if (!answers.get(url)) forgetServer();
   }
   return answers.get(url);
+}
+// a refused ?server= address must not come back on the next reload of this tab (index.html keeps it in sessionStorage)
+function forgetServer() {
+  try { globalThis.sessionStorage?.removeItem('padel.server'); } catch { /* storage blocked */ }
+  try { delete globalThis.__padelServer; } catch { /* not deletable */ }
 }
 export const NOT_CONNECTED = N_('Not connected: you did not allow that game server.');

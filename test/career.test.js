@@ -341,3 +341,10 @@ test('safeScore keeps a set score and drops anything else', () => {
   assert.equal(safeScore({ sets: '6-4' }), '');
   assert.equal(safeScore('6'.repeat(41)), '');
 });
+
+test('an online opponent\'s claimed level moves the rating no more than a 1.5-level gap', () => {
+  const p = newProfile(chars[0], {}, { level: 3, reliability: 0.5 });
+  const far = applyRating(p, 3, 0.5, { won: true, ai: 'online', games: [6, 3] });
+  const near = applyRating(p, 3, 1.5, { won: true, ai: 'online', games: [6, 3] });
+  assert.equal(far.profile.level, near.profile.level);
+});

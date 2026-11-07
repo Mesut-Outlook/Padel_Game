@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { serverUrl, trustedServer } from '../src/serverurl.js';
+import { serverUrl, trustedServer, allowServer } from '../src/serverurl.js';
 
 const loc = (href) => new URL(href);
 
@@ -32,4 +32,21 @@ test('only our own, same-host and local servers connect without asking', () => {
   assert.equal(trustedServer('wss://server.padellegends.eu.evil.example', site, 'wss://server.padellegends.eu'), false);
   assert.equal(trustedServer('https://padellegends.eu', site, null), false);
   assert.equal(trustedServer('not a url', site, null), false);
+});
+
+test('an https page never connects to a plain ws: server and does not ask', () => {
+  let asked = false; globalThis.confirm = () => { asked = true; return true; };
+  assert.equal(allowServer('ws://example.org:8080', loc('https://padellegends.eu/')), false);
+  assert.equal(asked, false);
+  delete globalThis.confirm;
+});
+
+test('a refused ?server= is forgotten for the tab', () => {
+  const store = new Map([['padel.server', 'wss://evil.example']]);
+  globalThis.sessionStorage = { removeItem: (k) => store.delete(k), getItem: (k) => store.get(k) ?? null };
+  globalThis.__padelServer = 'wss://evil.example'; globalThis.confirm = () => false;
+  assert.equal(allowServer('wss://evil.example', loc('https://padellegends.eu/')), false);
+  assert.equal(store.has('padel.server'), false);
+  assert.equal(globalThis.__padelServer, undefined);
+  delete globalThis.confirm; delete globalThis.sessionStorage;
 });

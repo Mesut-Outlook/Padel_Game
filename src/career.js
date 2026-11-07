@@ -95,6 +95,10 @@ export const safeScore = (s) => (typeof s === 'string' && /^[0-9 -]{0,40}$/.test
 // a new best tier pays tierUpCredits × its number (economy.json tierUp), once, and puts tierUpBag into the bag
 export function applyRating(profile, myPair, oppPair, result, now = new Date(), tierUpCredits = 0, tierUpBag = {}) {
   const idle = profile.lastCareerMatch ? (now - new Date(profile.lastCareerMatch)) / 864e5 : 0;
+  if (result.ai === 'online') {  // another player's level comes from their own browser: a fake one moves the rating at most this far
+    const near = (l) => Math.max(profile.level - 1.5, Math.min(profile.level + 1.5, l));
+    myPair = near(myPair); oppPair = near(oppPair);
+  }
   const r = rateMatch({ level: profile.level, reliability: idleReliability(profile.reliability, idle) }, myPair, oppPair, !!result.won, matchShare(result));
   const tier = tierAt(r.level), bestTier = Math.max(profile.bestTier || 1, tier.index);
   const old = profile.bestTier || 1, tierUp = bestTier > old ? tier : null;

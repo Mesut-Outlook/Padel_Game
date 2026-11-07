@@ -620,3 +620,10 @@ test('input move is always two numbers', async () => {
     a.ws.close();
   } finally { await srv.close(); }
 });
+
+test('client: a server address the browser refuses shows the connect error instead of throwing', async () => {
+  const { connect } = await import('../src/net.js');
+  const errors = [];
+  connect({ url: 'not a url', code: 'ABCDEF', char: 0, onError: (e) => errors.push(e) });
+  assert.deepEqual(errors, ['Could not connect to the game server.']);
+});
