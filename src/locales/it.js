@@ -1050,6 +1050,7 @@ export default {
   "Room is full or match already started": "La stanza è piena o la partita è già iniziata",
   "Room not found": "Stanza non trovata",
   "Send the invite link to your friends. You can start as soon as someone has joined.": "Manda il link di invito ai tuoi amici. Puoi iniziare appena è entrato qualcuno.",
+  "The match was closed.": "La partita è stata chiusa.",
   "Server did not answer": "Il server non ha risposto",
   "Team {n}": "Squadra {n}",
   "The match has started.": "La partita è iniziata.",

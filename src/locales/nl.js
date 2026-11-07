@@ -1050,6 +1050,7 @@ export default {
   "Room is full or match already started": "Kamer is vol of de wedstrijd is al begonnen",
   "Room not found": "Kamer niet gevonden",
   "Send the invite link to your friends. You can start as soon as someone has joined.": "Stuur de uitnodigingslink naar je vrienden. Je kunt beginnen zodra iemand is toegetreden.",
+  "The match was closed.": "De wedstrijd is gesloten.",
   "Server did not answer": "De server reageerde niet",
   "Team {n}": "Team {n}",
   "The match has started.": "De wedstrijd is begonnen.",

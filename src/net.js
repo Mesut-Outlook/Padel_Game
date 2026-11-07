@@ -5,7 +5,7 @@ import { N_ } from './i18n.js';
 const RETRY = [1000, 2000, 4000, 8000, 15000];
 // what the server (server/server.js fail()) and this file report through onError: fixed sentences, so the UI can translate them
 export const NET_TEXTS = [N_('Room not found'), N_('Room is full or match already started'), N_('Already in a room'), N_('The server is full. Try again later.'),
-  N_('Could not get back into the match'), N_('Connection closed'), N_('Could not connect to the game server.'), N_('Server did not answer')];
+  N_('Could not get back into the match'), N_('Connection closed'), N_('The match was closed.'), N_('Could not connect to the game server.'), N_('Server did not answer')];
 
 export function connect({ url, code, cfg, char, stats, racket, onLobby, onError, onStatus, ...extra }) {  // extra: public, name, look, shoes, ball, bag
   const net = { seat: null, lobby: null, snaps: [], events: [], score: null, winner: null, ws: null, token: null };
@@ -15,8 +15,9 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError,
     try { ws = net.ws = new WebSocket(url); } catch { onError?.('Could not connect to the game server.'); return; }  // e.g. a malformed address
     ws.onopen = () => ws.send(JSON.stringify(join));
     ws.onerror = () => { if (!net.lobby) onError?.('Could not connect to the game server.'); };
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
       if (net.ws !== ws || net.winner != null) return;  // a finished match's room closes: nothing to report
+      if (ev?.code >= 4000) return onError?.('The match was closed.');  // the server ended the room for good (idle, too long, error): no rejoin
       if (net.lobby?.started && net.winner == null && net.token && tries < RETRY.length) {  // mid-match: get the seat back
         onStatus?.('reconnecting');
         setTimeout(() => open({ type: 'join', code: net.lobby.code, rejoin: net.token }), RETRY[tries++]);
@@ -27,7 +28,11 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError,
       if (m.type === 'seat') { net.seat = m.seat; net.token = m.token; lastSent = ''; if (tries) { tries = 0; onStatus?.('back'); } }
       else if (m.type === 'pong') { net.rtt = performance.now() - m.t; net.srvTick = m.tick; }
       else if (m.type === 'lobby') { net.lobby = m; onLobby?.(m); }
-      else if (m.type === 'error') { if (join.rejoin) tries = RETRY.length; onError?.(m.msg); }  // the seat is gone: stop trying
+      else if (m.type === 'error') {
+        if (join.rejoin) tries = RETRY.length;  // the seat is gone: stop trying
+        if (!net.lobby || join.rejoin) { ws.onclose = null; ws.close(); }  // this join failed: the socket has nothing left to do
+        onError?.(m.msg);
+      }
       else if (m.type === 'state') {
         m.snap.rt = performance.now();
         net.snaps.push(m.snap);

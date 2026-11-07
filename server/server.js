@@ -22,13 +22,14 @@ const AI_LEVELS = ['rookie', 'club', 'pro', 'legend'];
 // rooms one visitor holds at a time (a room outlives its socket while seats wait for a rejoin), messages per socket per second
 // (beyond it they are dropped; the client sends ~60/s at most), largest message in bytes. Sized for the home Raspberry Pi: raise them on a bigger host.
 export const LIMITS = { rooms: 10, clients: 40, perIp: 8, roomsPerIp: 3, msgsPerSec: 120, payload: 4096, rejoinMs: 60000, lobbyMs: 900000,
-  ghostMs: 15000, idleMs: 180000, overMs: 60000, matchMs: 5400000, joinsPerMin: 20, logsPerMin: 60, sendSkip: 65536, sendDrop: 524288 };
+  ghostMs: 15000, idleMs: 600000, overMs: 60000, matchMs: 5400000, joinsPerMin: 20, logsPerMin: 60, sendSkip: 65536, sendDrop: 524288 };
 // rejoinMs: a dropped player's seat waits this long; lobbyMs: a room nobody starts closes; ghostMs: a socket that has not joined a room by then is closed;
 // idleMs: a started room where no player sent input closes; overMs: a finished match's room closes after this; matchMs: no room plays longer;
 // joinsPerMin: join messages per visitor; logsPerMin: join/leave/rejoin log lines; sendSkip/sendDrop: bytes a socket may have queued before it misses a
 // message / is dropped (a client that stops reading must not fill the memory)
 // pages that may open a socket here: the site, local dev, and any page served by this same host (npm run online, a tunnel)
 const ORIGINS = ['padellegends.eu', 'www.padellegends.eu', 'localhost', '127.0.0.1', ...(process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean)];
+const CLOSED_FOR_GOOD = 4000;  // close code for a started room the server ended (idle, too long, error): the client does not try to rejoin
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // no 0/O or 1/I: codes are read aloud and typed
 const LOOPBACK = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
 // remote looks are shown to other players: only known appearance keys with safe values get through
@@ -182,7 +183,7 @@ export function startServer(port, limits = {}) {
       if (!room.started && now - room.born > lim.lobbyMs) { closeRoom(room, 'lobby timed out'); continue; }  // an open socket must not hold a room slot for ever
       if (room.started) {  // a match ends: after its result, after a long spell with no player input, or at the length cap
         if (room.overAt != null && now - room.overAt > lim.overMs) { closeRoom(room, 'match over'); continue; }
-        if (now - room.startedAt > lim.matchMs || now - room.lastInput > lim.idleMs) { closeRoom(room, 'match closed'); continue; }
+        if (now - room.startedAt > lim.matchMs || now - room.lastInput > lim.idleMs) { closeRoom(room, 'match closed', CLOSED_FOR_GOOD); continue; }
       }
       for (const s in room.away) if (room.away[s].until < now) delete room.away[s];
       if (!room.clients.size && !Object.keys(room.away).length) closeRoom(room);
@@ -242,7 +243,7 @@ export function startServer(port, limits = {}) {
       const msg = JSON.stringify({ type: 'state', snap: snapshot(w), score: scoreText(w.match), events, winner: w.match.winner });
       for (const ws of room.clients.keys()) sendCapped(ws, msg, lim);
     } catch (e) {  // a broken match ends its own room, never the whole server
-      console.error('room stopped', e); closeRoom(room, 'match error', 1011);
+      console.error('room stopped', e); closeRoom(room, 'match error', CLOSED_FOR_GOOD);
     }
   }
 

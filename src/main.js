@@ -261,10 +261,12 @@ export function startOnline({ url, code, create = false, players = 4, venue = 0,
   code = String(code || '').trim().toUpperCase();
   if (!code && !create) { say(t('Enter a room code first.'), null, true); return null; }  // create: the server picks the code
   onEnd = end || null; pointsWon = [0, 0]; bagLeft = bag ? { ...bag } : null; tally = end ? newTally() : null;
-  net = connect({
+  let me;
+  net = me = connect({
     url, code, create, char, stats, racket, public: isPublic, name, look, shoes, ball, bag,
     cfg: { players, ...match, ai, venue, outdoor: venues[venue]?.type === 'outdoor' },
     onError: (e) => {  // server texts are fixed English sentences (marked in net.js), so they translate
+      if (me && net !== me) return;  // a connection this page already replaced
       say(escapeText(t(e)), null, true);
       if (!net?.lobby?.started) { net = null; setWizardLobby(null); } else flash(t(e), 4);  // not in a match yet: START can try again
     },

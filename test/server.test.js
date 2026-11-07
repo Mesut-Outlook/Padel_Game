@@ -745,3 +745,49 @@ test('clientIp trusts only the configured proxy header from a local peer', () =>
   assert.equal(clientIp(req('127.0.0.1', { 'x-forwarded-for': '1.2.3.4' })), '127.0.0.1');
   assert.equal(clientIp(req('203.0.113.9', { 'cf-connecting-ip': '1.2.3.4' })), '203.0.113.9');
 });
+
+test('client: a failed join closes its own socket, so a later sweep adds no second error', async () => {
+  const { connect } = await import('../src/net.js');
+  const srv = await startServer(0, { ghostMs: 0 });
+  try {
+    const errors = [];
+    const net = connect({ url: `ws://127.0.0.1:${srv.port}`, code: 'ZZZZZZ', char: 0, onError: (e) => errors.push(e) });
+    while (!errors.length) await new Promise(r => setTimeout(r, 10));
+    await new Promise(r => setTimeout(r, 20));
+    srv.sweep(Date.now() + 1);
+    await new Promise(r => setTimeout(r, 50));
+    assert.deepEqual(errors, ['Room not found']);
+    assert.notEqual(net.ws.readyState, 1);
+  } finally { await srv.close(); }
+});
+
+test('a match paused for five minutes is not closed with the default limits', async () => {
+  const srv = await startServer(0);
+  try {
+    const a = client(srv.port), b = client(srv.port);
+    const { code } = await create(a, { cfg: { players: 2 } }); await join(b, code);
+    await a.send({ type: 'start' });
+    while (!srv.rooms.get(code).started) await new Promise(r => setTimeout(r, 10));
+    srv.sweep(srv.rooms.get(code).lastInput + 5 * 60000);
+    assert.ok(srv.rooms.has(code));
+    a.ws.close(); b.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('client: a room the server closes for good is reported once, without trying to rejoin', async () => {
+  const { connect } = await import('../src/net.js');
+  const srv = await startServer(0, { idleMs: 1000 });
+  try {
+    const host = client(srv.port);
+    const { code } = await create(host, { cfg: { players: 2 } });
+    const errors = [], status = [];
+    const net = connect({ url: `ws://127.0.0.1:${srv.port}`, code, char: 0, onError: (e) => errors.push(e), onStatus: (s) => status.push(s) });
+    while (!net.lobby) await new Promise(r => setTimeout(r, 10));
+    await host.send({ type: 'start' });
+    while (!srv.rooms.get(code)?.started) await new Promise(r => setTimeout(r, 10));
+    srv.sweep(srv.rooms.get(code).lastInput + 1001);
+    await new Promise(r => setTimeout(r, 1500));
+    assert.deepEqual([errors, status], [['The match was closed.'], []]);
+    host.ws.close();
+  } finally { await srv.close(); }
+});

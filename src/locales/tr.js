@@ -1050,6 +1050,7 @@ export default {
   "Room is full or match already started": "Oda dolu ya da maç çoktan başladı",
   "Room not found": "Oda bulunamadı",
   "Send the invite link to your friends. You can start as soon as someone has joined.": "Davet linkini arkadaşlarına gönder. Biri katılır katılmaz başlayabilirsin.",
+  "The match was closed.": "Maç kapatıldı.",
   "Server did not answer": "Sunucu yanıt vermedi",
   "Team {n}": "Takım {n}",
   "The match has started.": "Maç başladı.",
