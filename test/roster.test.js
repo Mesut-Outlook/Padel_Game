@@ -63,3 +63,10 @@ test('every stance idle names a clip in the animation file', () => {
 test('an empty online seat played by the AI shows one of the active players', () => {
   for (const id of [0, 1, 2, 3]) assert.ok(isActive(chars[aiSeatChar(id, chars)]), String(id));
 });
+
+import { portraitKey } from '../src/roster.js';
+test('a stance change makes a new portrait key', () => {
+  const c = chars.find(x => x.id === 'p27');
+  assert.notEqual(portraitKey(c), portraitKey({ ...c, stance: { ...c.stance, yaw: 0 } }));
+});
+

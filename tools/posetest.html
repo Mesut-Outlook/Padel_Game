@@ -87,6 +87,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { createAvatar, PREP, SWINGS, SERVE_READY, SERVE_BACK, SERVE_SWING } from '/src/player.js';
+import { STANCE_CLIPS } from '/src/roster.js';
 
 const STROKES = [
   ['forehand', 'Forehand'],
@@ -102,6 +103,9 @@ const STROKES = [
   ['prep:low', 'Low Ball Lunge'],
   ['serveReady', 'Serve Ready'],
   ['serveToss', 'Serve Crouch'],
+  ['stance:ready', 'Stance: Ready'],
+  ['stance:relaxed', 'Stance: Relaxed'],
+  ['stance:talk', 'Stance: Talk'],
 ];
 
 const PHASES = [
@@ -337,6 +341,13 @@ function applyAvatar(av, xPos, dt) {
     for (let i = 0; i < 6; i++) {
       av.update(0.05, [xPos, 0, 0, state.clip, null, 0, 0], [xPos + sideX * 0.5, py, 0.9 + (5 - i) * 0.25], sub === 'overhead');
     }
+  } else if (st.startsWith('stance:')) {
+    const idleKey = st.slice(7);
+    const yaw = (av.ch.stance?.yaw || 30) * Math.PI / 180;
+    av.holder.position.set(xPos, 0, 0);
+    av.holder.rotation.y = idleKey === 'ready' ? 0 : yaw;
+    av.playIdle(STANCE_CLIPS[idleKey]);
+    av.mixer.update(dt);
   } else if (st === 'serveReady' || st === 'serveToss') {
     av.update(0.08, [xPos, 0, 0, st, null, 0, 0], [bx, 0.7, bz], false);
   } else {

@@ -16,7 +16,7 @@ import { toggleFullscreen } from './fullscreen.js';
 import { charCard } from './charcard.js';
 import { t, N_ } from './i18n.js';
 import { loadPicks, savePicks } from './friendlypicks.js';
-import { isActive, resolvePick } from './roster.js';
+import { isActive, resolvePick, STANCE_CLIPS } from './roster.js';
 
 // the stat pills below call t(name.toUpperCase()); these make the keys findable
 const STAT_PILL_NAMES = [N_('SPEED'), N_('POWER'), N_('CONTROL'), N_('VOLLEY'), N_('SMASH'), N_('STAMINA')];
@@ -410,7 +410,6 @@ export function initMenu() {
       animFrameId = requestAnimationFrame(loop);
       const w = stage.clientWidth, h = stage.clientHeight;  // built while hidden or before layout settled: follow the stage
       if (w && h && (w !== fitW || h !== fitH)) { fitW = w; fitH = h; previewRenderer.setSize(w, h); previewCamera.aspect = w / h; previewCamera.updateProjectionMatrix(); }
-      if (!isDragging) turntable += 0.006;
       if (previewAvatar?.holder) {
         previewAvatar.holder.rotation.y = turntable;
         previewAvatar.mixer.update(0.016);
@@ -429,10 +428,14 @@ export function initMenu() {
     if (!previewScene) initPreview();
     const ch = characters[chIdx] || characters[0];
     const rk = rackets[racketIdx] || rackets[0];
+    const stance = ch.stance || { yaw: 0, idle: 'ready' };
     const req = ++previewReqId;
 
     // If same character, simply switch the held racket
     if (!force && previewAvatar && previewAvatar.ch.id === ch.id) {
+      turntable = -(stance.yaw || 0) * Math.PI / 180;  // stance.yaw > 0 = toward screen-right
+      previewAvatar.playIdle(STANCE_CLIPS[stance.idle]);
+      previewAvatar.holder.rotation.y = turntable;
       if (previewAvatar.setRacket) previewAvatar.setRacket(rk.color, rk.shape);
       updateInfoCard(ch, rk);
       return;
@@ -450,6 +453,9 @@ export function initMenu() {
       av.dispose?.();
       return;
     }
+    turntable = -(stance.yaw || 0) * Math.PI / 180;  // stance.yaw > 0 = toward screen-right
+    av.playIdle(STANCE_CLIPS[stance.idle]);
+    av.holder.rotation.y = turntable;
     previewAvatar = av;
     previewAvatar.holder.traverse(o => { if (o.isSprite) o.visible = false; });
     updateInfoCard(ch, rk);
@@ -474,12 +480,16 @@ export function initMenu() {
       previewAvatar = null;
     }
     if (!ch) return;
+    const stance = ch.stance || { yaw: 0, idle: 'ready' };
     const av = await createAvatar(previewScene, ch, rk?.color || '#7FB3D5', rk?.shape || 'round');
     if (req !== previewReqId) {
       previewScene.remove(av.holder);
       av.dispose?.();
       return;
     }
+    turntable = -(stance.yaw || 0) * Math.PI / 180;  // stance.yaw > 0 = toward screen-right
+    av.playIdle(STANCE_CLIPS[stance.idle]);
+    av.holder.rotation.y = turntable;
     previewAvatar = av;
     previewAvatar.holder.traverse(o => { if (o.isSprite) o.visible = false; });
   }

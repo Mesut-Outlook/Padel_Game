@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { createAvatar, makeRacket } from './player.js';
 import { buildVenue } from './court.js';
+import { STANCE_CLIPS, portraitKey } from './roster.js';
 
 const cache = new Map();
 const queue = [];
@@ -55,18 +56,23 @@ async function renderPortrait(ch) {
   rim.position.set(-1.5, 2.0, -1.2);
   scene.add(hemi, key, rim);
 
-  const avatar = await createAvatar(scene, ch, ch.outfit?.shirt || '#d8f53a', 'round');
+  const stance = ch.stance || { yaw: 0, idle: 'ready' };
+  // portraits stand in a head-up clip: the match's ready clip pitches the head down and to the side, so a front stance would not look
+  // into the lens; 'talk' keeps its own clip
+  const idleClip = stance.idle === 'talk' ? STANCE_CLIPS.talk : STANCE_CLIPS.relaxed;
+  const yaw = -(stance.yaw || 0) * Math.PI / 180;  // stance.yaw > 0 = toward screen-right, which is a negative turn about y here
+  const avatar = await createAvatar(scene, ch, ch.outfit?.shirt || '#d8f53a', 'round', { idle: idleClip });
   // Hide floating name/speech sprites and hand racket so portrait is clean head-and-shoulders
   avatar.holder.traverse((o) => { if (o.isSprite) o.visible = false; });
   const hand = avatar.bones[ch.hand === 'left' ? 'hand_l' : 'hand_r'];
   if (hand) hand.children.forEach((c) => { if (!c.isBone) c.visible = false; });
 
-  // portrait: body squarely to the camera, then the neck turned so the face looks straight into the lens
-  // (the ready stance pitches and turns the head; bind pose faces +z, so the head's rotation since bind gives its gaze)
+  // portrait: body in the player's stance, then the neck turned so a front stance looks into the lens and a turned stance follows the body halfway
   const head = avatar.bones.Head || avatar.bones.head, neck = avatar.bones.neck_01;  // UE rig: "Head"
   avatar.holder.updateMatrixWorld(true);
   const qBind = head ? head.getWorldQuaternion(new THREE.Quaternion()) : null;
-  avatar.update(0.05, [0, 0, 0, 'idle', null, 0, false]);
+  avatar.update(0.05, [0, 0, yaw, idleClip, null, 0, false]);
+  avatar.holder.rotation.y = yaw;
   avatar.holder.updateMatrixWorld(true);
 
   const headPos = new THREE.Vector3(0, 1.55, 0);
@@ -75,7 +81,7 @@ async function renderPortrait(ch) {
   camera.position.set(headPos.x, headPos.y + 0.02, headPos.z + 0.95);
   if (head && neck && qBind) {
     const gaze = new THREE.Vector3(0, 0, 1).applyQuaternion(head.getWorldQuaternion(new THREE.Quaternion()).multiply(qBind.invert()));
-    const lens = camera.position.clone().add(new THREE.Vector3(0, 0.3, 0));  // aim a little high: the rig's eyes sit low in the skull's forward axis
+    const lens = camera.position.clone().add(new THREE.Vector3(Math.tan(yaw) * 0.95, 0.3, 0));  // aim a little high; a turned stance looks the way its body turns (screen-right)
     const fix = new THREE.Quaternion().setFromUnitVectors(gaze, lens.sub(headPos).normalize());
     const parentQ = neck.parent.getWorldQuaternion(new THREE.Quaternion());
     neck.quaternion.copy(parentQ.invert().multiply(fix.multiply(neck.getWorldQuaternion(new THREE.Quaternion()))));
@@ -237,7 +243,7 @@ function enqueue(key, fn, onReady, priority = false) {
 }
 
 export function getPortraitThumb(ch, onReady, priority = false) {
-  enqueue(`char:${ch.id}`, () => renderPortrait(ch), onReady, priority);
+  enqueue(portraitKey(ch), () => renderPortrait(ch), onReady, priority);
 }
 
 export function getVenueThumb(venue, onReady, priority = false) {

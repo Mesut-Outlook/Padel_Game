@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { STANCE_CLIPS } from './roster.js';
 
 const loader = new GLTFLoader();
 const cache = {};
@@ -17,14 +18,17 @@ const TEX_SKIN = new THREE.Color(0.61, 0.43, 0.31); // average of the base skin 
 const CLIPS = {
   idle: 'Sword_Idle', walk: 'Walk_Loop', run: 'Jog_Fwd_Loop',
   sit: 'Sitting_Idle_Loop', sitTalk: 'Sitting_Talking_Loop',
-  cheer: 'Jump_Loop', dance: 'Dance_Loop'
+  cheer: 'Jump_Loop', dance: 'Dance_Loop',
+  ...STANCE_CLIPS,
 };
 let clipsP;
 const clips = () => (clipsP ||= load('assets/anims/UAL1_Standard.glb').then(g => {
   const out = {};
   for (const [k, name] of Object.entries(CLIPS)) {
     const c = g.animations.find(a => a.name === name);
-    out[k] = new THREE.AnimationClip(k, c.duration, c.tracks.filter(t => t.name.endsWith('.quaternion')));
+    const clip = new THREE.AnimationClip(k, c.duration, c.tracks.filter(t => t.name.endsWith('.quaternion')));
+    out[k] = clip;
+    out[name] ||= clip;
   }
   return out;
 }));
@@ -368,7 +372,7 @@ function shapeBody(bones, ch) {
 
 function hash(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); }
 
-export async function createAvatar(scene, ch, racketColor = '#e63946', racketShape = 'round') {
+export async function createAvatar(scene, ch, racketColor = '#e63946', racketShape = 'round', opts = {}) {
   const g = ch.gender === 'f' ? 'f' : 'm';
   // hair: 'none' (bald), one mesh name or a list; a full beard adds the beard mesh in its own colour
   const hairList = ch.hair === 'none' ? [] : [].concat(ch.hair || HAIR[g][hash(ch.id) % HAIR[g].length]);
@@ -454,10 +458,14 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
   let bubbleT = 0;
 
   const mixer = new THREE.AnimationMixer(root);
+  const rawUpdate = mixer.update.bind(mixer);
   const actions = {};
-  for (const k in anim) actions[k] = mixer.clipAction(anim[k]);
+  for (const k in anim) {
+    actions[k] = mixer.clipAction(anim[k]);
+    actions[CLIPS[k]] = actions[k];
+  }
   actions.idle.play();
-  mixer.update(0);
+  rawUpdate(0);
   const idleQuats = {};
   for (const b of ['spine_02', 'spine_03', 'neck_01', 'upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r']) {
     if (bones[b]) idleQuats[b] = bones[b].quaternion.clone();
@@ -482,8 +490,50 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
   const q = new THREE.Quaternion(), e = new THREE.Euler();
   const add = (bone, x, y, z) => { if (!bone) return; q.setFromEuler(e.set(x, y, z)); bone.quaternion.multiply(q); };
 
+  // stance clips (relaxed/talk) hang the arms close to the body: flare the shoulders slightly so hands clear wider hips
+  // and the racket stays in front of the player
+  const applyStancePose = () => {
+    const clipName = CLIPS[cur] || cur;
+    if (clipName === 'Idle_Loop') {
+      add(bones.upperarm_r, 0, 0, -0.22);
+      add(bones.upperarm_l, 0, 0, 0.18);
+    } else if (clipName === 'Idle_Talking_Loop') {
+      add(bones.upperarm_r, 0, 0, -0.22);
+      add(bones.upperarm_l, 0, 0, 0.22);
+      add(bones['lowerarm_' + R], 0, 0, 0.45 * m);
+      add(bones['hand_' + R], 0.35, 0.3 * m, 0);
+    } else {
+      return false;
+    }
+    return true;
+  };
+
+  mixer.update = (dt) => {
+    posed.forEach((b, i) => b.quaternion.copy(clipQ[i]));
+    rawUpdate(dt);
+    posed.forEach((b, i) => clipQ[i].copy(b.quaternion));
+    applyStancePose();
+    root.position.y = 0;
+    root.position.y = restFoot - lowestFoot();
+  };
+
+  function playIdle(name = 'idle') {
+    const next = actions[name] ? name : 'idle';
+    posed.forEach((b, i) => b.quaternion.copy(clipQ[i]));
+    if (actions[cur]) actions[cur].stop();
+    cur = next;
+    actions[cur].reset().play();
+    rawUpdate(0);
+    posed.forEach((b, i) => clipQ[i].copy(b.quaternion));
+    applyStancePose();
+    root.position.y = 0;
+    root.position.y = restFoot - lowestFoot();
+  }
+  if (opts?.idle) playIdle(opts.idle);
+
   return {
     holder, ch, mixer, actions, bones,
+    playIdle,
     setRacket: attachRacket,
     ballHand: (v) => bones['hand_' + B].getWorldPosition(v),
     racketEdge: (tip, throat) => { racket.localToWorld(tip.set(0, 0.46, 0)); racket.localToWorld(throat.set(0, 0.2, 0)); },
@@ -505,7 +555,7 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
       }
       const t = sw ? localSwingT : 0;
       posed.forEach((b, i) => b.quaternion.copy(clipQ[i]));
-      mixer.update(dt);
+      rawUpdate(dt);
       posed.forEach((b, i) => clipQ[i].copy(b.quaternion));
       tossT = s[3] === 'serveToss' ? tossT + dt : 0;
       // stroke preparation: blend into the right stance as the ball comes within ~3 m
@@ -566,7 +616,7 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
       }
       // ready grip: with the handle through the fist, the idle clip would rest the racket against the neck; turn the
       // wrist so the head stands up and forward, clear of the body (tuned visually, mirrored for left-handers)
-      add(bones['hand_' + R], 0, 0.9 * m, 0); add(bones['lowerarm_' + R], 0, 0, 0.3 * m);
+      if (!applyStancePose()) { add(bones['hand_' + R], 0, 0.9 * m, 0); add(bones['lowerarm_' + R], 0, 0, 0.3 * m); }
       const pose = sw === 'serve' ? track(SERVE_SWING, t)
         : sw ? track(SWINGS[swingKey], t)
         : s[3] === 'serveToss' ? lerpPose(SERVE_READY, SERVE_BACK, Math.min(1, tossT / 0.45))

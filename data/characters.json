@@ -1246,8 +1246,8 @@
     "beardColor": "#2a1a10",
     "ranked": false,
     "stance": {
-      "yaw": 30,
-      "idle": "relaxed"
+      "yaw": 32,
+      "idle": "talk"
     }
   },
   {
@@ -1373,7 +1373,7 @@
     "makeup": true,
     "ranked": false,
     "stance": {
-      "yaw": 30,
+      "yaw": 28,
       "idle": "relaxed"
     }
   }
