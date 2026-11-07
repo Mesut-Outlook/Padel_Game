@@ -33,7 +33,8 @@
     "hair": "Hair_SimpleParted",
     "hairColor": "#77716a",
     "beard": "full",
-    "beardColor": "#6f6a64"
+    "beardColor": "#6f6a64",
+    "archived": true
   },
   {
     "id": "p02",
@@ -69,7 +70,8 @@
     "beardColor": "#94603f",
     "face": {
       "width": 1.1
-    }
+    },
+    "archived": true
   },
   {
     "id": "p03",
@@ -103,7 +105,8 @@
       "type": "muscular",
       "height": 1,
       "width": 1.15
-    }
+    },
+    "archived": true
   },
   {
     "id": "p04",
@@ -136,7 +139,8 @@
       "type": "tall",
       "height": 1.1,
       "width": 0.95
-    }
+    },
+    "archived": true
   },
   {
     "id": "p05",
@@ -171,7 +175,8 @@
     },
     "hair": "Hair_Long",
     "hairColor": "#141414",
-    "hairCut": 1.56
+    "hairCut": 1.56,
+    "archived": true
   },
   {
     "id": "p07",
@@ -209,7 +214,8 @@
     "hair": "Hair_Long",
     "hairColor": "#E8C66A",
     "hairLength": 2.4,
-    "makeup": true
+    "makeup": true,
+    "archived": true
   },
   {
     "id": "p06",
@@ -250,7 +256,8 @@
     },
     "face": {
       "width": 0.93
-    }
+    },
+    "archived": true
   },
   {
     "id": "p08",
@@ -286,7 +293,8 @@
     },
     "hair": "none",
     "beard": "full",
-    "beardColor": "#2b1d14"
+    "beardColor": "#2b1d14",
+    "archived": true
   },
   {
     "id": "p09",
@@ -323,7 +331,8 @@
     "hair": "Hair_SimpleParted",
     "hairColor": "#241811",
     "beard": "stubble",
-    "beardColor": "#241811"
+    "beardColor": "#241811",
+    "archived": true
   },
   {
     "id": "p10",
@@ -354,7 +363,8 @@
       "width": 0.97
     },
     "hair": "Hair_SimpleParted",
-    "hairColor": "#a9a9a9"
+    "hairColor": "#a9a9a9",
+    "archived": true
   },
   {
     "id": "p33",
@@ -392,7 +402,8 @@
     "hairColor": "#a9a7a3",
     "ponytail": 0.4,
     "beard": "full",
-    "beardColor": "#f2f0ec"
+    "beardColor": "#f2f0ec",
+    "archived": true
   },
   {
     "id": "p11",
@@ -423,7 +434,8 @@
       "width": 1.2
     },
     "hair": "Hair_SimpleParted",
-    "hairColor": "#a0a0a0"
+    "hairColor": "#a0a0a0",
+    "archived": true
   },
   {
     "id": "p12",
@@ -460,7 +472,8 @@
     "hair": "Hair_Buzzed",
     "hairColor": "#2b1d14",
     "beard": "goatee",
-    "beardColor": "#1a120c"
+    "beardColor": "#1a120c",
+    "archived": true
   },
   {
     "id": "p18",
@@ -494,7 +507,8 @@
       "width": 1
     },
     "hair": "Hair_SimpleParted",
-    "hairColor": "#d6b46a"
+    "hairColor": "#d6b46a",
+    "archived": true
   },
   {
     "id": "p25",
@@ -531,7 +545,11 @@
     "hair": "Hair_SimpleParted",
     "hairColor": "#151010",
     "beard": "stubble",
-    "beardColor": "#151010"
+    "beardColor": "#151010",
+    "stance": {
+      "yaw": 0,
+      "idle": "ready"
+    }
   },
   {
     "id": "p26",
@@ -566,7 +584,11 @@
     "hairColor": "#3b2416",
     "hairOpacity": 0.6,
     "beard": "stubble",
-    "beardColor": "#2b1d14"
+    "beardColor": "#2b1d14",
+    "stance": {
+      "yaw": 0,
+      "idle": "ready"
+    }
   },
   {
     "id": "p14",
@@ -597,7 +619,8 @@
       "width": 1
     },
     "hair": "Hair_SimpleParted",
-    "hairColor": "#111111"
+    "hairColor": "#111111",
+    "archived": true
   },
   {
     "id": "p13",
@@ -631,7 +654,8 @@
     "hairColor": "#151515",
     "topknot": true,
     "beard": "full",
-    "beardColor": "#151515"
+    "beardColor": "#151515",
+    "archived": true
   },
   {
     "id": "p15",
@@ -670,7 +694,8 @@
       "type": "headband",
       "color": "#FFFFFF"
     },
-    "makeup": true
+    "makeup": true,
+    "archived": true
   },
   {
     "id": "p16",
@@ -702,7 +727,8 @@
     },
     "hair": "Hair_Buzzed",
     "hairColor": "#b5b5b5",
-    "hairOpacity": 0.45
+    "hairOpacity": 0.45,
+    "archived": true
   },
   {
     "id": "p17",
@@ -734,7 +760,8 @@
     },
     "hair": "Hair_Buzzed",
     "hairColor": "#2b1d14",
-    "glasses": true
+    "glasses": true,
+    "archived": true
   },
   {
     "id": "p20",
@@ -767,7 +794,8 @@
     "hair": "Hair_SimpleParted",
     "hairColor": "#3b2416",
     "beard": "stubble",
-    "beardColor": "#2b1d14"
+    "beardColor": "#2b1d14",
+    "archived": true
   },
   {
     "id": "p19",
@@ -800,7 +828,8 @@
     "hair": "Hair_SimpleParted",
     "hairColor": "#8f8f8f",
     "beard": "stubble",
-    "beardColor": "#8a8a8a"
+    "beardColor": "#8a8a8a",
+    "archived": true
   },
   {
     "id": "p22",
@@ -831,7 +860,8 @@
       "width": 0.84
     },
     "hair": "Hair_SimpleParted",
-    "hairColor": "#2b1d14"
+    "hairColor": "#2b1d14",
+    "archived": true
   },
   {
     "id": "p23",
@@ -865,7 +895,8 @@
       "width": 1
     },
     "hair": "Hair_SimpleParted",
-    "hairColor": "#2b1d14"
+    "hairColor": "#2b1d14",
+    "archived": true
   },
   {
     "id": "p21",
@@ -896,7 +927,8 @@
       "width": 0.9
     },
     "hair": "Hair_SimpleParted",
-    "hairColor": "#a5a5a5"
+    "hairColor": "#a5a5a5",
+    "archived": true
   },
   {
     "id": "p24",
@@ -929,7 +961,8 @@
     "hair": "Hair_SimpleParted",
     "hairColor": "#e2e2e2",
     "beard": "goatee",
-    "beardColor": "#e2e2e2"
+    "beardColor": "#e2e2e2",
+    "archived": true
   },
   {
     "id": "p27",
@@ -967,7 +1000,11 @@
     "hair": "Hair_Long",
     "hairColor": "#3d2416",
     "makeup": true,
-    "hairLength": 2.3
+    "hairLength": 2.3,
+    "stance": {
+      "yaw": 30,
+      "idle": "relaxed"
+    }
   },
   {
     "id": "p28",
@@ -1004,7 +1041,11 @@
     },
     "hair": "Hair_Buns",
     "hairColor": "#B4472A",
-    "makeup": true
+    "makeup": true,
+    "stance": {
+      "yaw": 0,
+      "idle": "ready"
+    }
   },
   {
     "id": "p29",
@@ -1039,7 +1080,8 @@
       "shoulders": 1.05
     },
     "hair": "Hair_SimpleParted",
-    "hairColor": "#6B4A2E"
+    "hairColor": "#6B4A2E",
+    "archived": true
   },
   {
     "id": "p30",
@@ -1081,7 +1123,8 @@
     "headwear": {
       "type": "headband",
       "color": "#FF6B00"
-    }
+    },
+    "archived": true
   },
   {
     "id": "p31",
@@ -1116,7 +1159,11 @@
       "shoulders": 1.05
     },
     "hair": "Hair_Buzzed",
-    "hairColor": "#D9B878"
+    "hairColor": "#D9B878",
+    "stance": {
+      "yaw": 0,
+      "idle": "ready"
+    }
   },
   {
     "id": "p32",
@@ -1158,6 +1205,176 @@
     "headwear": {
       "type": "visor",
       "color": "#FFFFFF"
+    },
+    "archived": true
+  },
+  {
+    "id": "p34",
+    "name": "Tomás",
+    "gender": "m",
+    "country": "Argentina",
+    "countryCode": "AR",
+    "skinTone": "#C89068",
+    "outfit": {
+      "shirt": "#75AADB",
+      "shorts": "#FFFFFF",
+      "shoes": "#1B1B1E",
+      "style": "polo",
+      "pattern": "stripes",
+      "accent": "#FFFFFF"
+    },
+    "hand": "left",
+    "position": "revés",
+    "stats": {
+      "speed": 7,
+      "power": 8,
+      "control": 7,
+      "volley": 8,
+      "smash": 7,
+      "stamina": 7
+    },
+    "aiLevel": "pro",
+    "body": {
+      "type": "athletic",
+      "height": 1.04,
+      "width": 1.02,
+      "shoulders": 1.08
+    },
+    "hair": "Hair_SimpleParted",
+    "hairColor": "#2a1a10",
+    "beard": "full",
+    "beardColor": "#2a1a10",
+    "ranked": false,
+    "stance": {
+      "yaw": 30,
+      "idle": "relaxed"
+    }
+  },
+  {
+    "id": "p35",
+    "name": "Lena",
+    "gender": "f",
+    "country": "Deutschland",
+    "countryCode": "DE",
+    "skinTone": "#F3D3BE",
+    "outfit": {
+      "shirt": "#1B1B1E",
+      "shorts": "#DD0000",
+      "shoes": "#FFCE00",
+      "style": "tank",
+      "pattern": "split",
+      "accent": "#FFCE00"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 7,
+      "power": 7,
+      "control": 8,
+      "volley": 7,
+      "smash": 6,
+      "stamina": 8
+    },
+    "aiLevel": "pro",
+    "body": {
+      "type": "slim",
+      "height": 1.04,
+      "width": 0.9,
+      "waist": 0.78,
+      "hips": 1.06
+    },
+    "hair": "Hair_Long",
+    "hairColor": "#D8B15A",
+    "ponytail": true,
+    "makeup": true,
+    "ranked": false,
+    "stance": {
+      "yaw": 0,
+      "idle": "ready"
+    }
+  },
+  {
+    "id": "p36",
+    "name": "Diogo",
+    "gender": "m",
+    "country": "Portugal",
+    "countryCode": "PT",
+    "skinTone": "#D7A27A",
+    "outfit": {
+      "shirt": "#046A38",
+      "shorts": "#DA291C",
+      "shoes": "#FFFFFF",
+      "style": "crew",
+      "pattern": "chest",
+      "accent": "#FFE900"
+    },
+    "hand": "right",
+    "position": "drive",
+    "stats": {
+      "speed": 8,
+      "power": 7,
+      "control": 6,
+      "volley": 7,
+      "smash": 7,
+      "stamina": 7
+    },
+    "aiLevel": "pro",
+    "body": {
+      "type": "muscular",
+      "height": 1.0,
+      "width": 1.05,
+      "shoulders": 1.1
+    },
+    "hair": "Hair_Buzzed",
+    "hairColor": "#1a1410",
+    "beard": "stubble",
+    "beardColor": "#1a1410",
+    "ranked": false,
+    "stance": {
+      "yaw": 0,
+      "idle": "ready"
+    }
+  },
+  {
+    "id": "p37",
+    "name": "Elin",
+    "gender": "f",
+    "country": "Sverige",
+    "countryCode": "SE",
+    "skinTone": "#FBE3D3",
+    "outfit": {
+      "shirt": "#006AA7",
+      "shorts": "#006AA7",
+      "shoes": "#FECC00",
+      "style": "vneck",
+      "pattern": "side",
+      "accent": "#FECC00"
+    },
+    "hand": "right",
+    "position": "revés",
+    "stats": {
+      "speed": 7,
+      "power": 6,
+      "control": 8,
+      "volley": 8,
+      "smash": 6,
+      "stamina": 7
+    },
+    "aiLevel": "pro",
+    "body": {
+      "type": "petite",
+      "height": 0.98,
+      "width": 0.88,
+      "waist": 0.77,
+      "hips": 1.06
+    },
+    "hair": "Hair_Buns",
+    "hairColor": "#E8C77A",
+    "makeup": true,
+    "ranked": false,
+    "stance": {
+      "yaw": 30,
+      "idle": "relaxed"
     }
   }
 ]
