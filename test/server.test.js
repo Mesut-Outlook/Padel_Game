@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
-import { startServer, statusLine, ipKey, sendCapped } from '../server/server.js';
+import { startServer, statusLine, ipKey, sendCapped, clientIp } from '../server/server.js';
 import { readFileSync } from 'node:fs';
 
 const ROSTER = JSON.parse(readFileSync(new URL('../data/characters.json', import.meta.url))).length;
@@ -737,4 +737,11 @@ test('the static server answers GET/HEAD from its start-up file list and refuses
     const h = await fetch(base + '/', { method: 'HEAD' });
     assert.ok([200, 404].includes(h.status));  // 404 when dist/ was never built
   } finally { await srv.close(); }
+});
+
+test('clientIp trusts only the configured proxy header from a local peer', () => {
+  const req = (peer, headers) => ({ socket: { remoteAddress: peer }, headers });
+  assert.equal(clientIp(req('127.0.0.1', { 'cf-connecting-ip': '198.51.100.7', 'x-forwarded-for': '1.2.3.4' })), '198.51.100.7');
+  assert.equal(clientIp(req('127.0.0.1', { 'x-forwarded-for': '1.2.3.4' })), '127.0.0.1');
+  assert.equal(clientIp(req('203.0.113.9', { 'cf-connecting-ip': '1.2.3.4' })), '203.0.113.9');
 });

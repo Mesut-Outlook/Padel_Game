@@ -91,12 +91,15 @@ export function sanitizeCfg(c, m = {}) {
   };
 }
 
-// the visitor's IP: the socket peer, or the proxy's client header when the peer is a local tunnel (cloudflared)
-// or TRUST_PROXY=1 is set (a host such as Fly.io that puts its proxy in front)
-function clientIp(req) {
+// the visitor's IP: the socket peer, or one proxy header when the peer is local (cloudflared) or TRUST_PROXY=1 is set (a proxy in front).
+// Only the header named by PROXY_HEADER counts (cf-connecting-ip by default), never a chain of fallbacks a visitor could fill in;
+// x-forwarded-for, when chosen, gives its last address: the one the proxy itself added.
+export function clientIp(req) {
   const peer = req.socket.remoteAddress || '';
   if (process.env.TRUST_PROXY !== '1' && !LOOPBACK.includes(peer)) return peer;
-  return String(req.headers['cf-connecting-ip'] || req.headers['fly-client-ip'] || String(req.headers['x-forwarded-for'] || '').split(',')[0]).trim() || peer;
+  const name = (process.env.PROXY_HEADER || 'cf-connecting-ip').toLowerCase();
+  const v = String(req.headers[name] || '');
+  return (name === 'x-forwarded-for' ? v.split(',').pop() : v).trim() || peer;
 }
 
 // the key the per-visitor limits count: one home or phone network holds a whole IPv6 /64, so counting full addresses limits nothing
