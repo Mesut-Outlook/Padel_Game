@@ -22,8 +22,9 @@ const AI_LEVELS = ['rookie', 'club', 'pro', 'legend'];
 // rooms one visitor holds at a time (a room outlives its socket while seats wait for a rejoin), messages per socket per second
 // (beyond it they are dropped; the client sends ~60/s at most), largest message in bytes. Sized for the home Raspberry Pi: raise them on a bigger host.
 export const LIMITS = { rooms: 10, clients: 40, perIp: 8, roomsPerIp: 3, msgsPerSec: 120, payload: 4096, rejoinMs: 60000, lobbyMs: 900000,
-  ghostMs: 15000, joinsPerMin: 20, logsPerMin: 60, sendSkip: 65536, sendDrop: 524288 };
+  ghostMs: 15000, idleMs: 180000, overMs: 60000, matchMs: 5400000, joinsPerMin: 20, logsPerMin: 60, sendSkip: 65536, sendDrop: 524288 };
 // rejoinMs: a dropped player's seat waits this long; lobbyMs: a room nobody starts closes; ghostMs: a socket that has not joined a room by then is closed;
+// idleMs: a started room where no player sent input closes; overMs: a finished match's room closes after this; matchMs: no room plays longer;
 // joinsPerMin: join messages per visitor; logsPerMin: join/leave/rejoin log lines; sendSkip/sendDrop: bytes a socket may have queued before it misses a
 // message / is dropped (a client that stops reading must not fill the memory)
 // pages that may open a socket here: the site, local dev, and any page served by this same host (npm run online, a tunnel)
@@ -157,13 +158,13 @@ export function startServer(port, limits = {}) {
   function sweep(now = Date.now()) {
     for (const ws of wss.clients) if (!ws.inRoom && now - ws.born > lim.ghostMs) ws.close(1000, 'no room');  // a socket must join a room or go
     for (const room of rooms.values()) {
-      if (!room.started && now - room.born > lim.lobbyMs) {  // an open socket must not hold a room slot for ever
-        clearInterval(room.timer); rooms.delete(room.code);
-        for (const ws of room.clients.keys()) ws.close(1000, 'lobby timed out');
-        continue;
+      if (!room.started && now - room.born > lim.lobbyMs) { closeRoom(room, 'lobby timed out'); continue; }  // an open socket must not hold a room slot for ever
+      if (room.started) {  // a match ends: after its result, after a long spell with no player input, or at the length cap
+        if (room.overAt != null && now - room.overAt > lim.overMs) { closeRoom(room, 'match over'); continue; }
+        if (now - room.startedAt > lim.matchMs || now - room.lastInput > lim.idleMs) { closeRoom(room, 'match closed'); continue; }
       }
       for (const s in room.away) if (room.away[s].until < now) delete room.away[s];
-      if (!room.clients.size && !Object.keys(room.away).length) { clearInterval(room.timer); rooms.delete(room.code); }
+      if (!room.clients.size && !Object.keys(room.away).length) closeRoom(room);
     }
   }
 
@@ -179,6 +180,11 @@ export function startServer(port, limits = {}) {
     lastCpu = process.cpuUsage(); lastWall = performance.now(); tSum = tN = tMax = badLines = logLines = 0; joins.clear();
   }
   const statusTimer = setInterval(status, 60000);
+
+  function closeRoom(room, reason = '', code = 1000) {
+    clearInterval(room.timer); rooms.delete(room.code);
+    for (const ws of room.clients.keys()) ws.close(code, reason);
+  }
 
   function newCode() {
     let code;
@@ -208,14 +214,14 @@ export function startServer(port, limits = {}) {
       const inp = {};
       for (const pl of w.players) if (pl.active) inp[pl.id] = taken.has(pl.id) ? room.inputs[pl.id] || {} : aiInput(w, pl.id, room.cfg.ai);
       stepWorld(w, inp, 1 / 60);
+      if (w.match.winner != null && room.overAt == null) room.overAt = Date.now();
       for (const id in room.inputs) if (room.inputs[id]) { room.inputs[id].swing = null; room.inputs[id].eat = room.inputs[id].skip = false; } // edge events
       const events = w.events.splice(0);
       if (++room.frame % 2 && !events.some(e => e.type !== 'contact')) return; // 30 Hz unless something happened
       const msg = JSON.stringify({ type: 'state', snap: snapshot(w), score: scoreText(w.match), events, winner: w.match.winner });
       for (const ws of room.clients.keys()) sendCapped(ws, msg, lim);
     } catch (e) {  // a broken match ends its own room, never the whole server
-      console.error('room stopped', e); clearInterval(room.timer); rooms.delete(room.code);
-      for (const ws of room.clients.keys()) ws.close(1011, 'match error');
+      console.error('room stopped', e); closeRoom(room, 'match error', 1011);
     }
   }
 
@@ -311,9 +317,10 @@ export function startServer(port, limits = {}) {
       } else if (!room) return;
       else if (m.type === 'start') {  // only the room creator (or whoever took over after they left)
         if (room.clients.get(ws) !== room.host || room.started || room.clients.size < 2) return;  // two people: the wizard asks the same
-        room.started = true; lobby(room);
+        room.started = true; room.startedAt = room.lastInput = Date.now(); lobby(room);
       } else if (m.type === 'input') {
         const seat = room.clients.get(ws);
+        room.lastInput = Date.now();
         const prev = room.inputs[seat];
         const axis = (v) => Math.max(-1, Math.min(1, +v || 0));
         const mv = Array.isArray(m.move) ? [axis(m.move[0]), axis(m.move[1])] : [0, 0];  // always two numbers: a missing axis would turn hydration into NaN
@@ -332,7 +339,7 @@ export function startServer(port, limits = {}) {
       // mid-match the AI plays the seat while it waits for its player (rejoin); in the lobby the seat is simply free
       if (room.started && room.world.match.winner == null) room.away[seat] = { token: room.tokens[seat], until: Date.now() + lim.rejoinMs, name: room.names[seat], look: room.looks[seat] };
       delete room.looks[seat]; delete room.names[seat];
-      if (!room.clients.size) { if (!Object.keys(room.away).length) { clearInterval(room.timer); rooms.delete(room.code); } return; }
+      if (!room.clients.size) { if (!Object.keys(room.away).length) closeRoom(room); return; }
       if (ip === room.ip) room.ip = room.clients.keys().next().value.ip;  // the room counts for who is still in it: a visitor who left leaves no IP behind
       if (seat === room.host) room.host = room.clients.values().next().value;  // the next player may start the match
       lobby(room);  // seat falls back to AI

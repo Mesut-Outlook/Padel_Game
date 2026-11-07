@@ -16,7 +16,7 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError,
     ws.onopen = () => ws.send(JSON.stringify(join));
     ws.onerror = () => { if (!net.lobby) onError?.('Could not connect to the game server.'); };
     ws.onclose = () => {
-      if (net.ws !== ws) return;
+      if (net.ws !== ws || net.winner != null) return;  // a finished match's room closes: nothing to report
       if (net.lobby?.started && net.winner == null && net.token && tries < RETRY.length) {  // mid-match: get the seat back
         onStatus?.('reconnecting');
         setTimeout(() => open({ type: 'join', code: net.lobby.code, rejoin: net.token }), RETRY[tries++]);

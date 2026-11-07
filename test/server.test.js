@@ -666,3 +666,54 @@ test('a socket that stops reading is skipped, then dropped', () => {
   for (const ws of [ok, slow, stuck]) sendCapped(ws, 'x', lim);
   assert.deepEqual([ok.sent, slow.sent, slow.dropped, stuck.sent, stuck.dropped], [1, 0, false, 0, true]);
 });
+
+test('a started room nobody plays in closes after idleMs, any input keeps it open', async () => {
+  const srv = await startServer(0, { idleMs: 1000 });
+  try {
+    const a = client(srv.port), b = client(srv.port);
+    const { code } = await create(a, { cfg: { players: 2 } }); await join(b, code);
+    await a.send({ type: 'start' });
+    while (!srv.rooms.get(code).started) await new Promise(r => setTimeout(r, 10));
+    const t0 = srv.rooms.get(code).lastInput;
+    await a.send({ type: 'input', move: [1, 0] }); await new Promise(r => setTimeout(r, 20));
+    srv.sweep(t0 + 900); assert.ok(srv.rooms.has(code));
+    srv.sweep(srv.rooms.get(code).lastInput + 1001); assert.ok(!srv.rooms.has(code));
+  } finally { await srv.close(); }
+});
+
+test('a started room closes after matchMs whatever happens', async () => {
+  const srv = await startServer(0, { matchMs: 1000 });
+  try {
+    const a = client(srv.port), b = client(srv.port);
+    const { code } = await create(a, { cfg: { players: 2 } }); await join(b, code);
+    const lob = a.next('lobby'); await a.send({ type: 'start' }); await lob;
+    const room = srv.rooms.get(code);
+    while (!room.started) await new Promise(r => setTimeout(r, 10));  // the lobby we waited for may be b's join
+    room.lastInput = room.startedAt + 5000;  // busy players
+    srv.sweep(room.startedAt + 1001); assert.ok(!srv.rooms.has(code));
+  } finally { await srv.close(); }
+});
+
+test('a finished match closes its room after overMs and the client shows no error', async () => {
+  const { connect } = await import('../src/net.js');
+  const srv = await startServer(0, { overMs: 1000 });
+  try {
+    const host = client(srv.port);
+    const { code } = await create(host, { cfg: { players: 2 } });
+    const errors = [];
+    const net = connect({ url: `ws://127.0.0.1:${srv.port}`, code, char: 0, onError: (e) => errors.push(e) });
+    while (!net.lobby) await new Promise(r => setTimeout(r, 10));
+    await host.send({ type: 'start' });
+    while (!net.lobby.started) await new Promise(r => setTimeout(r, 10));
+    const room = srv.rooms.get(code);
+    room.world.match.winner = 0;
+    while (room.overAt == null) await new Promise(r => setTimeout(r, 10));
+    while (net.winner == null) await new Promise(r => setTimeout(r, 10));
+    const closed = new Promise(r => net.ws.addEventListener('close', r));
+    srv.sweep(room.overAt + 1001);
+    await closed;
+    assert.ok(!srv.rooms.has(code));
+    assert.deepEqual(errors, []);
+    host.ws.close();
+  } finally { await srv.close(); }
+});
