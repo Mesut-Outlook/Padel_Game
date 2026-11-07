@@ -12,6 +12,20 @@
 
 Plan 2 of 5. Work split (spec "İş bölümü"): Tasks 1–2 Opus (Haiku 5.5 may write the 4 JSON entries), Task 3 goes to agy as `agents/tasks/agy-27-stances.md` (visual tuning in `tools/posetest.html`), Opus reviews and ships (Task 4).
 
+## Career needs (checked in the code, 2026-11-07)
+
+| Career place | Players it needs | Source after this plan | Enough? |
+|---|---|---|---|
+| Partner picker (match and tournament) | 1 | active players minus your template: 8 (7 if your name matches one) | yes |
+| Career quick match opponents (`careerui.js:1435`) | 3 | the partner list: 8 | yes |
+| Americano / Mexicano, 8 players (`startTournament`, single entrants) | 7 | full list minus template and partner: 35 | yes |
+| League 5–6 pairs, knockout 8 pairs | 10–14 | full list: 35 | yes |
+| Knockout 16 pairs (P2, P1, Major) | 30 | full list: 35 | yes. Today the loop reuses players for pairs 13–15 (`i < 12` branch); `pairUp` fixes that |
+| World ranking and the Premier Finals invitation (top 8) | fixed | the 33 original players (`ranked: false` on the 4 newcomers), so no saved career drops a place | yes |
+| Saved profiles and tournaments that name an archived player | — | `charById` searches the full list | yes |
+
+If the draw used only the 9 active players, a 16-pair draw would read `p[-4]` and crash. That is why the AI pools keep everyone.
+
 ## Global Constraints
 
 - The 9 players: Mesut 🇹🇷 `p26`, Lucía 🇪🇸 `p27`, Matteo 🇮🇹 `p25`, Camille 🇫🇷 `p28`, Daan 🇳🇱 `p31`, and the new Tomás 🇦🇷 (m), Lena 🇩🇪 (f), Diogo 🇵🇹 (m) and Elin 🇸🇪 (f).
@@ -39,7 +53,7 @@ Plan 2 of 5. Work split (spec "İş bölümü"): Tasks 1–2 Opus (Haiku 5.5 may
 - Test: create `test/roster.test.js`
 
 **Interfaces:**
-- Produces: every character has an optional `archived: true`. Exactly 9 lack it. Each of the 9 has `stance: { yaw: number, idle: 'ready' | 'relaxed' | 'talk' }`, where `yaw` is in degrees and positive turns toward screen-right. The defaults: front `{ yaw: 0, idle: 'ready' }`, right `{ yaw: 30, idle: 'relaxed' }`. Task 3 may tune the numbers and idles.
+- Produces: every character has an optional `archived: true`; the 4 newcomers also carry `"ranked": false` (see Task 2). Exactly 9 lack it. Each of the 9 has `stance: { yaw: number, idle: 'ready' | 'relaxed' | 'talk' }`, where `yaw` is in degrees and positive turns toward screen-right. The defaults: front `{ yaw: 0, idle: 'ready' }`, right `{ yaw: 30, idle: 'relaxed' }`. Task 3 may tune the numbers and idles.
 
 - [ ] **Step 1: Write the failing test** `test/roster.test.js`:
 
@@ -60,7 +74,7 @@ test('nine active players from nine countries, the rest archived and still in th
 });
 
 test('new players have the same fields as the old ones, and every active player has a stance', () => {
-  const keys = (c) => Object.keys(c).filter(k => !['archived', 'stance', 'beard', 'beardColor', 'hairOpacity', 'ponytail', 'topknot', 'makeup', 'glasses', 'headwear'].includes(k)).sort();
+  const keys = (c) => Object.keys(c).filter(k => !['archived', 'stance', 'ranked', 'beard', 'beardColor', 'hairOpacity', 'ponytail', 'topknot', 'makeup', 'glasses', 'headwear'].includes(k)).sort();
   const mesut = chars.find(c => c.id === 'p26');
   for (const c of chars.slice(33)) assert.deepEqual(keys(c), keys(mesut), c.id);
   const active = chars.filter(c => !c.archived);
@@ -78,6 +92,7 @@ test('new players have the same fields as the old ones, and every active player 
 
 **Files:**
 - Create: `src/roster.js`
+- Modify: `src/tournament.js` (new export `pairUp`), `src/careerui.js:2235` (`aiTable`), `src/careerui.js:2326` (suggested partner), `src/careerui.js:2350-2364` (pair loop → `pairUp`)
 - Modify: `src/menu.js:554` (`populateCharGrid`), `src/main.js:44,333` (random start, Friendly AI opponents), the place where `menu.js` applies `loadPicks()` (the picked `char` index), `src/careerui.js:187,594,602,626` (creator), `src/careerui.js:1257-1262` (`availablePartners`), `src/careerui.js:2340` (tournament pool)
 - Test: `test/roster.test.js`
 
@@ -87,12 +102,16 @@ test('new players have the same fields as the old ones, and every active player 
   - `activeIndices(list) -> number[]`
   - `resolvePick(idx, list, rnd = Math.random) -> number`: `idx` when it points at an active character, otherwise a random active index.
   - `STANCE_CLIPS = { ready: 'Sword_Idle', relaxed: 'Idle_Loop', talk: 'Idle_Talking_Loop' }`
-- Produces in `careerui.js`: `availablePartners(prof = profile, all = false)`. The partner picker calls it as it does today and gets active players only. The tournament pool (`:2340`) calls `availablePartners(profile, true)`.
+- Produces in `careerui.js`: `availablePartners(prof = profile, all = false)`. The partner picker calls it as it does today and gets active players only. The tournament pool (`:2340`) calls `availablePartners(profile, true)`. The suggested tournament partner (`:2326`, "strongest roster character") is the strongest among `availablePartners(profile)`, so the picker no longer silently resets it.
+- Produces in `src/tournament.js`: `pairUp(pool: any[], count: number) -> [a, b][]`. While the pool has enough players, every player appears once (`p[2i], p[2i+1]`). When it does not, it wraps with a non-negative index and never pairs a player with themselves (pool ≥ 2). It never returns `undefined`. `startTournament` uses it in place of the inline `i < 12` loop.
+- Produces in `careerui.js`: `aiTable = aiRankingTable(characters.filter(c => c.ranked !== false))`. Task 1 gives the 4 newcomers `"ranked": false`.
 
 - [ ] **Step 1: Write the failing tests** (append to `test/roster.test.js`):
 
 ```js
 import { isActive, activeIndices, resolvePick, STANCE_CLIPS } from '../src/roster.js';
+import { pairUp } from '../src/tournament.js';
+import { aiRankingTable } from '../src/career.js';
 
 test('a saved pick of an archived player falls back to one of the nine', () => {
   const act = activeIndices(chars);
@@ -105,6 +124,21 @@ test('a saved pick of an archived player falls back to one of the nine', () => {
 test('career tournaments still find enough AI players (16 pairs need 30 besides you and your partner)', () => {
   assert.ok(chars.length - 2 >= 30);
   assert.ok(chars.filter(isActive).length < 30);  // so the draw must use the full list, not the pickable one
+});
+
+test('pairUp gives 15 pairs of 30 different players from a big pool, and never undefined from a small one', () => {
+  const big = Array.from({ length: 35 }, (_, i) => i);
+  const pairs = pairUp(big, 15);
+  assert.equal(new Set(pairs.flat()).size, 30);
+  const small = pairUp([0, 1, 2, 3, 4, 5, 6], 15);
+  assert.equal(small.length, 15);
+  assert.ok(small.every(([a, b]) => a !== undefined && b !== undefined && a !== b));
+});
+
+test('the world ranking keeps the 33 original players, so a saved career keeps its place', () => {
+  const ranked = chars.filter(c => c.ranked !== false);
+  assert.equal(ranked.length, 33);
+  assert.deepEqual(aiRankingTable(ranked).map(r => r.id), aiRankingTable(chars.slice(0, 33)).map(r => r.id));
 });
 
 test('every stance idle names a clip in the animation file', () => {
@@ -121,8 +155,9 @@ test('every stance idle names a clip in the animation file', () => {
   - The Friendly grid shows 9 cards.
   - A saved pick `localStorage['padel.friendly.v1'] = '{"char":0}'` loads as one of the 9.
   - The career creator shows 9 templates.
-  - A career tournament with a 16-pair draw starts without an error.
-- [ ] **Step 6:** Commit `players: pickers show the nine active players; career AI, tournament draws and online seats still use everyone`.
+  - A career tournament with a 16-pair draw starts without an error, and no AI player appears in two pairs.
+  - An old career save (template = an archived player) still opens, keeps its world rank, and its partner list shows the 9 minus none (its template is archived).
+- [ ] **Step 6:** Commit `players: pickers show the nine active players; career AI, tournament draws and online seats still use everyone; a 16-pair draw no longer puts one AI player in two pairs; the world ranking keeps its 33 players`.
 
 ### Task 3 (agy-27): Stances in the preview and on the cards
 
