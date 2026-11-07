@@ -2,6 +2,21 @@
 
 Bu not, 2026-10-19/20 tarihlerinde ev dizininden açılan bir Claude Code oturumunda yapılanları ve alınan kararları özetler. Kullanıcı bundan sonra **Antigravity IDE içinden** devam ediyor. Yeni oturum önce bunu, `CLAUDE.md`'yi ve `docs/online-server.md`'yi okusun.
 
+## Güncel (2026-11-07)
+Ev dışından (telefon 5G) ilk internet maçı oynandı. Kullanıcı kurulumu ve başlamayı karışık buldu: yeni tasarım `docs/superpowers/specs/2026-11-07-live-lobby-design.md` (onaylı), 5 plan sırayla `docs/superpowers/plans/2026-11-07-*.md`. Plan 1 (güvenlik) ve plan 2 (9 oyuncu, duruşlar) yayında. Sırada plan 3 (canlı lobi), 4 (açık tema), 5 (Pi 7/24). Aşağıdaki 2026-11-01 notu geçmiş kaydı olarak duruyor.
+
+## Yarın buradan devam (yazıldı: 2026-11-01 akşamı)
+**Durum:** Evdeki iki cihazla Pi üzerinden maç sorunsuz oynandı. Tam güvenlik denetimi yapıldı, Antigravity bağımsız olarak kontrol etti, bulgular düzeltildi ve yeniden başlatmadan sonra doğrulandı (commit `aa69b32`, `2d0412a`; `npm test` 245/245, Pages başarılı). Gizlilik sayfası test sunucusunu ve Cloudflare'i anlatıyor. **Oyun sunucusu ve tünel kapalı**, 30 dakikalık kontrol iptal edildi. Evin dışından gerçek tarayıcıyla oynanış henüz denenmedi.
+
+**Yarınki sıra:**
+1. Yerel Claude hafızasındaki `raspberry_pi_sunucu.md` notunu oku; ayrıntılar, kullanıcının bekleyen iki adımı ve Pi'nin kontrol edilecek ayarları orada (repo herkese açık, burada yazılmaz). Kullanıcı önceki akşam bu iki adımı yapmamıştı: önce durumlarına bak, yapılmadıysa bir adımda bir komutla yardım et.
+2. Kullanıcı "tüneli aç" deyince: `cloudflared` sürümünü kontrol et, `sudo systemctl start padel-tunnel`, adresi `journalctl -u padel-tunnel` içinden al, siteden açılan linki ver (`https://padellegends.eu/?server=wss://<tünel>`), `/loop` ile 30 dakikada bir salt okunur güvenlik kontrolünü başlat. Kontrol bu oturuma bağlı: oturum biterse durur ama tünel açık kalır.
+3. Test sırasında `journalctl -u padel` içindeki `status` satırlarını izle: `tick_max`, oda ve bağlantı sayısı. Kullanıcıya gecikme ve takılma sor.
+4. Test bitince `sudo systemctl stop padel padel-tunnel` ile ikisini de kapat ve kontrolü iptal et. Gizlilik sayfası "tünel yalnızca test maçlarında açık" diyor, açık bırakılmaz.
+5. Sonuca göre konuşulacak: oyun internetten iyi hissettiriyorsa kalıcı adres için `contact@` planı ve DNS kararı (`docs/online-server.md`). Kullanıcı istemeden DNS'e dokunma.
+
+**Kullanıcının kararı (2026-11-01):** Pi ve sunucu güvenliğinde kararı Opus uzman olarak verir, seçenek sıralamaz, en güvenli yolu seçer. Parola ve anahtar parolasını kullanıcı kendi terminalinde yazar, ajana vermez. Kilitlenme riski olan adımda geri alma zamanlayıcısı kurulur ve yeni oturumla doğrulanır.
+
 ## Kullanıcı hakkında
 - Yazılım ve oyun sunucusu konusunda **acemi**. Türkçe konuşuyor. "Yavaş yavaş gidelim" diyor: her adımda ne yapıldığını ve nedenini sade bir dille anlat. Kıdemli yazılımcı ve oyun tasarımcısı gibi yol göster.
 - "Başımın hiçbir şekilde ağrımasını istemiyorum": gizlilik ve güvenlik konusunda temkinli ol, riskli bir şeyi önce sor.
