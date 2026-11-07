@@ -137,13 +137,26 @@ export const statusLine = ({ rooms, clients, tickAvg, tickMax, cpu, rss }) =>
 
 export function startServer(port, limits = {}) {
   const lim = { ...LIMITS, ...limits };
+  // the built client's files, read once: a request never waits on the disk to find out whether a path exists (rebuild = restart)
+  const files = new Map();
+  (function walk(dir) {
+    let entries = [];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }  // no dist/: the server only speaks websocket
+    for (const e of entries) {
+      const file = path.join(dir, e.name);
+      if (e.isDirectory()) walk(file);
+      else if (e.isFile()) files.set('/' + path.relative(DIST, file).split(path.sep).join('/'), { file, size: fs.statSync(file).size, type: TYPES[path.extname(file)] || 'application/octet-stream' });
+    }
+  })(DIST);
   const httpServer = http.createServer((req, res) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405, { allow: 'GET, HEAD' }); return res.end(); }
     let url;
     try { url = decodeURIComponent(req.url.split('?')[0]); } catch { res.writeHead(400); return res.end('bad request'); }
-    const file = path.join(DIST, url === '/' ? 'index.html' : url);
-    if (!file.startsWith(DIST + path.sep) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); return res.end('not found (run npm run build)'); }
-    res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream', 'x-content-type-options': 'nosniff' });
-    fs.createReadStream(file).on('error', () => res.destroy()).pipe(res);
+    const f = files.get(url === '/' ? '/index.html' : url);
+    if (!f) { res.writeHead(404); return res.end('not found (run npm run build)'); }
+    res.writeHead(200, { 'content-type': f.type, 'content-length': f.size, 'x-content-type-options': 'nosniff' });
+    if (req.method === 'HEAD') return res.end();
+    fs.createReadStream(f.file).on('error', () => res.destroy()).pipe(res);
   });
   const wss = new WebSocketServer({ server: httpServer, maxPayload: lim.payload });
   const rooms = new Map(); // code -> room

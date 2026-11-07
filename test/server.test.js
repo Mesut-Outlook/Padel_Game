@@ -727,3 +727,14 @@ test('a finished match closes its room after overMs and the client shows no erro
     host.ws.close();
   } finally { await srv.close(); }
 });
+
+test('the static server answers GET/HEAD from its start-up file list and refuses other methods', async () => {
+  const srv = await startServer(0);
+  try {
+    const base = `http://127.0.0.1:${srv.port}`;
+    assert.equal((await fetch(base + '/', { method: 'POST' })).status, 405);
+    assert.equal((await fetch(base + '/nope-' + Date.now())).status, 404);
+    const h = await fetch(base + '/', { method: 'HEAD' });
+    assert.ok([200, 404].includes(h.status));  // 404 when dist/ was never built
+  } finally { await srv.close(); }
+});
