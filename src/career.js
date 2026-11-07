@@ -88,6 +88,9 @@ function addToBag(profile, items) {
   return p;
 }
 
+// the reward screen's score comes from the server in online matches: only the set-score shape ('6-4  3-6') is kept
+export const safeScore = (s) => (typeof s === 'string' && /^[0-9 -]{0,40}$/.test(s) ? s : '');
+
 // after a career match: myPair / oppPair = the two sides' average levels (level.js aiLevel for AI players)
 // a new best tier pays tierUpCredits × its number (economy.json tierUp), once, and puts tierUpBag into the bag
 export function applyRating(profile, myPair, oppPair, result, now = new Date(), tierUpCredits = 0, tierUpBag = {}) {

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { newProfile, loadProfile, saveProfile, matchReward, applyReward, exportProfile, importProfile, trainCost, buyTraining, tournamentReward, canEnter, worldRanking, aiRankingTable, migrateProfile, applyRating, settleMatch, formNow, addPoints, expirePoints, expiringSoon, normalizeProfile, statCap, coachTip } from '../src/career.js';
+import { newProfile, loadProfile, saveProfile, matchReward, applyReward, exportProfile, importProfile, trainCost, buyTraining, tournamentReward, canEnter, worldRanking, aiRankingTable, migrateProfile, applyRating, settleMatch, formNow, addPoints, expirePoints, expiringSoon, normalizeProfile, statCap, coachTip, safeScore } from '../src/career.js';
 
 const eco = JSON.parse(fs.readFileSync(new URL('../data/economy.json', import.meta.url)));
 const chars = JSON.parse(fs.readFileSync(new URL('../data/characters.json', import.meta.url)));
@@ -333,4 +333,11 @@ test('coachTip: dry, exhausted, volley and smash misses, then the weakest stat; 
   const c = coachTip(tally({ volley: [1, 5] }), capped, eco);
   assert.match(c.text, /reach Advanced to train beyond 7/);
   assert.equal(c.action, null);
+});
+
+test('safeScore keeps a set score and drops anything else', () => {
+  assert.equal(safeScore('6-4  3-6  7-5'), '6-4  3-6  7-5');
+  assert.equal(safeScore('<img src=x onerror=alert(1)>'), '');
+  assert.equal(safeScore({ sets: '6-4' }), '');
+  assert.equal(safeScore('6'.repeat(41)), '');
 });

@@ -33,6 +33,7 @@ import {
   canEnter,
   aiRankingTable,
   worldRanking,
+  safeScore,
 } from './career.js';
 import { listRooms } from './net.js';
 import { TIERS, tierAt, scaleStats, aiLevel, questionnaireLevel, playtomicStart, startCredits } from './level.js';
@@ -2016,7 +2017,7 @@ function renderRewardScreen() {
       <div class="cr-reward-box">
         <div class="cr-reward-head">
           <div class="cr-reward-outcome ${r.won ? '' : 'is-loss'}">${r.won ? t('🏆 WIN') : t('LOSS')}</div>
-          <div class="cr-reward-score">${t('Score: {score}', { score: r.score || '—' })}</div>
+          <div class="cr-reward-score">${t('Score: {score}', { score: escapeHtml(r.score || '—') })}</div>
         </div>
 
         <div class="cr-reward-lines">
@@ -2701,7 +2702,7 @@ function joinOnlineRoom(code, create) {
       updated.lastReward = {
         ups, coach: result.tally && !result.forfeit ? coachTip(result.tally, updated, eco) : null,
         lines: reward.lines, mult: reward.mult, credits: reward.credits, won: result.won, ai: result.ai || 'online',
-        score: result.score?.sets || '',
+        score: safeScore(result.score?.sets),
       };
       persistProfile(withRating(updated, result, result.mates || [], result.opps?.length ? result.opps : [null]));
     },
