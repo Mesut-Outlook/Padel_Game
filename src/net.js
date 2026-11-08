@@ -91,3 +91,30 @@ export function listRooms(url) {
     };
   });
 }
+
+// one schedule:* request on a short socket (like listRooms); the reply's fields are re-made as plain strings and numbers
+const person = (p) => ({ name: String(p?.name ?? ''), char: Math.max(0, Math.floor(Number(p?.char) || 0)), level: Number(p?.level) || 0 });
+const MINE = ['host', 'seat', 'pending', 'declined', 'cancelled'];
+export function scheduleCall(url, msg) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(url);
+    const done = (fn, v) => { clearTimeout(timer); ws.onclose = ws.onerror = null; ws.close(); fn(v); };
+    const timer = setTimeout(() => done(reject, new Error('Server did not answer')), 4000);
+    ws.onopen = () => ws.send(JSON.stringify(msg));
+    ws.onerror = () => done(reject, new Error('Could not connect to the game server.'));
+    ws.onmessage = (ev) => {
+      let m; try { m = JSON.parse(ev.data); } catch { return; }
+      if (m?.type === 'error') return done(resolve, { type: 'error', msg: String(m.msg ?? '') });
+      if (m?.type !== 'schedule' && m?.type !== 'schedule:ok') return;
+      done(resolve, {
+        type: m.type, now: Number(m.now) || Date.now(), clients: Math.max(0, Math.floor(Number(m.clients) || 0)),
+        games: (Array.isArray(m.games) ? m.games : []).map(g => ({
+          id: String(g?.id ?? ''), at: Number(g?.at) || 0, players: g?.players === 4 ? 4 : 2, mode: g?.mode === 'team' ? 'team' : 'face', open: g?.open === true,
+          host: person(g?.host), seats: (Array.isArray(g?.seats) ? g.seats : []).map(person), free: Math.max(0, Math.floor(Number(g?.free) || 0)),
+          mine: MINE.includes(g?.mine) ? g.mine : null,
+          ...(Array.isArray(g?.requests) && { requests: g.requests.map(r => ({ reqId: String(r?.reqId ?? ''), ...person(r), ago: Number(r?.ago) || 0 })) }),
+        })),
+      });
+    };
+  });
+}
