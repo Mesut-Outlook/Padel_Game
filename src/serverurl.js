@@ -1,10 +1,10 @@
 // Where the online client connects (pure: no DOM, location is passed in so it can be tested).
 // ?server=wss://... always wins (index.html moves it out of the URL into window.__padelServer before GoatCounter loads). The static GitHub Pages build (VITE_STATIC=1, set in pages.yml) has no game server
-// of its own, so it uses DEFAULT_SERVER — null until a public one runs (then e.g. 'wss://server.padellegends.eu').
+// of its own, so it uses DEFAULT_SERVER.
 // Otherwise: the Vite dev server (:5173) talks to `npm run server` on :8080, and `npm run online` serves page + socket on one host.
 import { N_, t } from './i18n.js';
 
-export const DEFAULT_SERVER = null;
+export const DEFAULT_SERVER = 'wss://raspberryserver.tail6fd73d.ts.net';  // the home Pi behind Tailscale Funnel (24/7 since 2026-11-08)
 export const STATIC_BUILD = import.meta.env?.VITE_STATIC === '1';
 export const NO_SERVER = N_('Online mode requires a game server, which is not included in this static web build. You can play against the AI.');
 

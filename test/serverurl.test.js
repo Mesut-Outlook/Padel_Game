@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { serverUrl, trustedServer, allowServer } from '../src/serverurl.js';
+import { serverUrl, trustedServer, allowServer, DEFAULT_SERVER } from '../src/serverurl.js';
 
 const loc = (href) => new URL(href);
 
-test('static build: no server unless ?server= is given, whatever the domain', () => {
-  assert.equal(serverUrl(loc('https://padellegends.eu/'), true), null);
-  assert.equal(serverUrl(loc('https://mesut-outlook.github.io/Padel_Game/'), true), null);
+test('static build: DEFAULT_SERVER (or none) unless ?server= is given, whatever the domain', () => {
+  assert.equal(serverUrl(loc('https://padellegends.eu/'), true), DEFAULT_SERVER);
+  assert.equal(serverUrl(loc('https://mesut-outlook.github.io/Padel_Game/'), true, null), null);
   assert.equal(serverUrl(loc('https://padellegends.eu/?server=wss://s.example:9000'), true), 'wss://s.example:9000');
   assert.equal(serverUrl(loc('https://padellegends.eu/'), true, 'wss://server.padellegends.eu'), 'wss://server.padellegends.eu');
 });
