@@ -406,7 +406,6 @@ function reopen(last = lastPlayNow) {
 export function playNow({ players = 2, mode = 'face', invite = false, code = '', name } = {}) {
   if (net || pend) return null;
   lastPlayNow = { players, mode, invite, code, name };
-  hideHome();
   const me = +$('char').value, myRk = rackets[+$('racket').value], venue = +$('venue').value || 0;
   const roster = { 0: characters[me], 2: characters[aiSeatChar(2, characters)] }, rk = { 0: myRk, 2: rackets[1 % rackets.length] };
   const warmup = () => {
@@ -414,11 +413,14 @@ export function playNow({ players = 2, mode = 'face', invite = false, code = '',
       startMatch({ players: 2, humans: 1, ai: 'club', match: { sets: 1, goldenPoint: true }, roster, rackets: rk, venue: venues[venue] });
     }
   };
-  return startOnline({
+  const h = startOnline({
     quick: !invite && !code, create: invite, public: false, code, mode, players, venue, warmup, match: { auto: true },  // invite rooms start themselves too: the host is busy warming up
     char: me, stats: characters[me].stats, racket: myRk.stats, name,
     look: { racket: myRk.id, racketColor: myRk.color, racketShape: myRk.shape },
   });
+  if (h || !code) hideHome();
+  if (!h && !code) { warmup(); flash(t(NO_SERVER), 6); }  // no server (static build): play the AI instead of a blank page; a room code stays on HOME / the wizard explains
+  return h;
 }
 const escapeText = (t) => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 
