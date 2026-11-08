@@ -896,6 +896,19 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   #tutorial .tut-foot span { display: inline-block; min-width: 16px; text-align: center; margin-left: 2px; border-radius: 4px; } #tutorial .tut-foot span.ok { color: #111; background: #d8f53a; } #tutorial .tut-foot span.cur { outline: 1px solid #fff; }
   #tutorial.final { top: 50%; left: 50%; transform: translate(-50%, -50%); }
   #tutorial .tut-next { cursor: pointer; }
+  #tutorial .tut-sep, #tutorial .tut-nums { font-style: normal; }
+  body.touch #tutorial .tut-sep { display: none; }  /* the key name is a button there: "Next ›  skip lesson" */
+  /* phones in landscape: the lesson panel sits under ✕ Exit, the scoreboard (meaningless in training) steps aside */
+  @media (max-height: 500px) {
+    body:has(#tutorial:not(.final)) #hud { display: none; }
+    #tutorial { top: calc(max(10px, env(safe-area-inset-top)) + 52px); left: max(10px, env(safe-area-inset-left)); width: min(330px, 45vw); padding: 8px 12px; font-size: 13px; }
+    #tutorial .tut-title { font-size: 19px; margin: 0 0 2px; }
+    #tutorial .tut-text { line-height: 1.35; }
+    #tutorial .tut-dots { margin: 6px 0 2px; } #tutorial .tut-dots i { width: 10px; height: 10px; }
+    #tutorial .tut-msg { min-height: 16px; font-size: 14px; }
+    #tutorial .tut-foot { margin-top: 4px; } #tutorial .tut-nums { display: none; }
+    #tutorial.final { top: 50%; max-height: calc(100dvh - 20px); overflow: auto; }
+  }
   body.touch #tutorial { pointer-events: none; }  /* the stick still works under the lesson panel */
   body.touch #tutorial .tut-next { pointer-events: auto; display: inline-block; padding: 6px 12px; border-radius: 8px; background: #d8f53a; color: #0b1520; }
   /* shot coach (main.js): suggested keys for overheads, glass rebounds and lobs */

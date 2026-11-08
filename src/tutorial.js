@@ -128,7 +128,7 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
     $('.tut-text').innerHTML = l.text(k, count);
     $('.tut-dots').innerHTML = Array.from({ length: l.need }, (_, i) => `<i class="${i < count ? 'on' : ''}"></i>`).join('');
     $('.tut-msg').textContent = msgT > 0 ? msg : '';
-    $('.tut-foot').innerHTML = `<b class="tut-next">${k.next}</b>: ${t('skip lesson')} · ${LESSONS.map((x, i) => `<span class="${done.has(x.id) ? 'ok' : ''}${i === li ? ' cur' : ''}">${i + 1}</span>`).join('')}`;
+    $('.tut-foot').innerHTML = `<b class="tut-next">${k.next}</b><i class="tut-sep">:</i> ${t('skip lesson')}<em class="tut-nums"> · ${LESSONS.map((x, i) => `<span class="${done.has(x.id) ? 'ok' : ''}${i === li ? ' cur' : ''}">${i + 1}</span>`).join('')}</em>`;
   }
   const say = (tMsg, s = 1.4) => { msg = tMsg; msgT = s; };
 
@@ -157,7 +157,7 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
     el.classList.add('final');
     const k = keys();
     const all = LESSONS.every(l => done.has(l.id));
-    el.innerHTML = `<div class="tut-title">${all ? t('🏆 Training Complete!') : t('Training Finished')}</div>${all ? '' : `<div class="tut-step">${t('You can retry any ○ lessons from TRAINING in the main menu')}</div>`}<div class="tut-text">${LESSONS.map(l => `${done.has(l.id) ? '✓' : '○'} ${t(l.title)}`).join('<br>')}</div><div class="tut-foot"><b class="tut-next">${k.next}</b>: ${t('main menu')}</div>`;
+    el.innerHTML = `<div class="tut-title">${all ? t('🏆 Training Complete!') : t('Training Finished')}</div>${all ? '' : `<div class="tut-step">${t('You can retry any ○ lessons from TRAINING in the main menu')}</div>`}<div class="tut-text">${LESSONS.map(l => `${done.has(l.id) ? '✓' : '○'} ${t(l.title)}`).join('<br>')}</div><div class="tut-foot"><b class="tut-next">${k.next}</b><i class="tut-sep">:</i> ${t('main menu')}</div>`;
     li = -1;
   }
   function verdict(ok) {
