@@ -21,10 +21,10 @@ const AI_LEVELS = ['rookie', 'club', 'pro', 'legend'];
 // abuse limits (startServer(port, { ...LIMITS }) overrides them in tests): rooms on the server, sockets on the server, sockets per visitor IP,
 // rooms one visitor holds at a time (a room outlives its socket while seats wait for a rejoin), messages per socket per second
 // (beyond it they are dropped; the client sends ~60/s at most), largest message in bytes. Sized for the home Raspberry Pi: raise them on a bigger host.
-export const LIMITS = { rooms: 10, waiting: 30, clients: 40, perIp: 8, roomsPerIp: 2, msgsPerSec: 120, payload: 4096, rejoinMs: 60000, lobbyMs: 900000,
+export const LIMITS = { rooms: 10, waiting: 30, clients: 40, perIp: 8, roomsPerIp: 2, playingPerIp: 1, msgsPerSec: 120, payload: 4096, rejoinMs: 60000, lobbyMs: 900000,
   ghostMs: 15000, idleMs: 600000, overMs: 60000, matchMs: 5400000, joinsPerMin: 20, logsPerMin: 60, sendSkip: 65536, sendDrop: 524288, countdownMs: 5000 };
 // rooms: matches playing at once (CPU and upload on the Pi); waiting: rooms not started yet (cheap: no simulation), so a few visitors holding
-// empty rooms cannot lock everyone else out; rejoinMs: a dropped player's seat waits this long; lobbyMs: a room nobody starts closes; ghostMs: a socket that has not joined a room by then is closed;
+// empty rooms cannot lock everyone else out; playingPerIp: matches one visitor's rooms may play at once (a home playing together is one room); rejoinMs: a dropped player's seat waits this long; lobbyMs: a room nobody starts closes; ghostMs: a socket that has not joined a room by then is closed;
 // idleMs: a started room where no player sent input closes; overMs: a finished match's room closes after this; matchMs: no room plays longer;
 // joinsPerMin: join messages per visitor; logsPerMin: join/leave/rejoin log lines; sendSkip/sendDrop: bytes a socket may have queued before it misses a
 // message / is dropped (a client that stops reading must not fill the memory); countdownMs: an auto room starts this long after its second human joins
@@ -246,7 +246,8 @@ export function startServer(port, limits = {}) {
     else if (room.startsAt == null) room.startsAt = Date.now() + lim.countdownMs;
   }
   function begin(room) {
-    if ([...rooms.values()].filter(r => r.started).length >= lim.rooms) {  // every match slot busy: an auto room tries again after another countdown
+    const playing = [...rooms.values()].filter(r => r.started);
+    if (playing.length >= lim.rooms || playing.filter(r => r.owner === room.owner).length >= lim.playingPerIp) {  // every match slot busy: an auto room tries again after another countdown
       if (room.cfg.auto) { room.startsAt = Date.now() + lim.countdownMs; lobby(room); }
       return false;
     }

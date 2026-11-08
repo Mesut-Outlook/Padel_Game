@@ -929,7 +929,7 @@ test('quick never joins a private room, and the list shows whoever holds a room 
 });
 
 test('limits: rooms caps matches playing at once, not rooms waiting for a friend', async () => {
-  const srv = await startServer(0, { rooms: 1, roomsPerIp: 5, perIp: 8 });  // all test sockets share one IP
+  const srv = await startServer(0, { rooms: 1, roomsPerIp: 5, playingPerIp: 5, perIp: 8 });  // all test sockets share one IP
   try {
     const a = client(srv.port), b = client(srv.port), c = client(srv.port), d = client(srv.port);
     const r1 = await create(a, { cfg: { players: 2 } });
@@ -942,6 +942,23 @@ test('limits: rooms caps matches playing at once, not rooms waiting for a friend
     const busy = c.next('error'); await c.send({ type: 'start' });
     assert.equal((await busy).msg, 'The server is full. Try again later.');
     assert.equal(srv.rooms.get(r2.code).started, false);
+    for (const x of [a, b, c, d]) x.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('limits: one visitor plays one match at a time (playingPerIp)', async () => {
+  const srv = await startServer(0, { roomsPerIp: 5, perIp: 8 });  // all test sockets share one IP, so they are one visitor
+  try {
+    const a = client(srv.port), b = client(srv.port), c = client(srv.port), d = client(srv.port);
+    const r1 = await create(a, { cfg: { players: 2 } });
+    await join(b, r1.code);
+    await new Promise(r => setTimeout(r, 30));
+    const go = a.next('lobby'); await a.send({ type: 'start' });
+    assert.equal((await go).started, true);
+    const r2 = await create(c, { cfg: { players: 2 } });
+    await join(d, r2.code);
+    const busy = c.next('error'); await c.send({ type: 'start' });
+    assert.equal((await busy).msg, 'The server is full. Try again later.');
     for (const x of [a, b, c, d]) x.ws.close();
   } finally { await srv.close(); }
 });
