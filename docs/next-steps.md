@@ -20,7 +20,19 @@ Plan 3 (canlı lobi) ve plan 4 (açık tema) yayında:
 - Kulübün de yorulması için raporun 7. bölümündeki öneri değerlendirilecek: puan arası dinlenme yalnızca `dead` durumunda verilsin, servis beklerken daha az.
 - Değer değişirse bir test ekle, README yol haritasındaki enerji maddesini güncelle.
 
-**Sıradaki iş plan 5 (Pi 7/24).** Önce yerel hafızadaki "before 24/7" notunu oku: bir oda kapasitesi maddesi ve gizlilik sayfasına eklenecek bir cümle bekliyor. DNS taşıması kullanıcının kendi ekranında, adım adım yapılacak.
+~~**Sıradaki iş plan 5 (Pi 7/24).**~~ Yapıldı (aşağıda).
+
+## Güncel (2026-11-08 akşam): online oyun 7/24 açık
+- Pi 7/24 açık, Tailscale Funnel üzerinden (`DEFAULT_SERVER`; DNS ve e-posta değişmedi). Ayrıntılar: `docs/online-server.md` "7/24 açıldı".
+- Davet kartı: ısınma maçının üstünde link + WhatsApp / Linki kopyala / Paylaş.
+- Güvenlik denetimi yapıldı, engelleyici yok; oda kapasitesi düzeltildi.
+- Tailscale anahtar süresi kapatıldı (kullanıcı, panelde doğrulandı).
+
+**Kullanıcının sonraya bıraktıkları (sor, hatırlat):**
+1. GitHub hesabında iki adımlı doğrulama (Tailscale'e GitHub ile giriliyor, yani bu hesap sunucuyu yönetiyor).
+2. Gerçek test: telefondan WhatsApp ile bir arkadaşa davet, birlikte maç; sırada `journalctl -u padel` `status` satırlarını izle.
+
+**Acil olmayanlar:** Tailscale ACL (ağa yeni cihaz eklenirse Pi'nin 22/445 portları kapatılmalı), ev interneti upload ölçümü (10 maç ≈ 6 Mbit/sn), Node 22 desteği 2027 baharında biter, Pi'de eski `padel-tunnel`/cloudflared ve dev paketleri kaldırılacak (`npm ci --omit=dev`), enerji ayarı kararı (yukarıda).
 
 ## Yarın buradan devam (yazıldı: 2026-11-01 akşamı)
 **Durum:** Evdeki iki cihazla Pi üzerinden maç sorunsuz oynandı. Tam güvenlik denetimi yapıldı, Antigravity bağımsız olarak kontrol etti, bulgular düzeltildi ve yeniden başlatmadan sonra doğrulandı (commit `aa69b32`, `2d0412a`; `npm test` 245/245, Pages başarılı). Gizlilik sayfası test sunucusunu ve Cloudflare'i anlatıyor. **Oyun sunucusu ve tünel kapalı**, 30 dakikalık kontrol iptal edildi. Evin dışından gerçek tarayıcıyla oynanış henüz denenmedi.
