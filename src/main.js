@@ -466,8 +466,14 @@ $('online').onclick = () => {
   });
 };
 
+let starting = false;  // a double tap must not start two matches (or two training panels)
 $('start').onclick = async () => {
   if (net) { net.start(); return; }
+  if (starting) return;
+  starting = true;
+  try { await startFromMenu(); } finally { starting = false; }
+};
+async function startFromMenu() {
   const tutorial = $('start').dataset.tutorial === '1';  // training mode: singles, you vs the ball machine
   const players = tutorial ? 2 : +$('mode').value;
   gameSpeed = +$('speed').value;
@@ -489,7 +495,7 @@ $('start').onclick = async () => {
   if (tutorial) {
     tut = createTutorial({ world, scene, hand: roster[0].hand, camName: () => rig.name, replaying: () => replay.playing, consumePressed, onExit: () => { track('tutorial-end'); toMenu(); } });
   }
-};
+}
 
 // One entry for every offline match. cfg = { players, humans, ai, match, roster: {id: Character}, rackets: {id: racket}, venue, shoes?: {id: {speed, agility}}, ball?: {speed, bounce}, bag?: {id: {bag_water: n, …}} (career; others get the unlimited default bag), sameTeam?, onEnd? }.
 // onEnd gets team 0's MatchResult (+ score text) once; the menu key then returns to #career instead of the plain menu.
