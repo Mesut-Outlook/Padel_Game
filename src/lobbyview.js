@@ -54,3 +54,14 @@ export function aloneOnline(l, seat = null, leftSeat = null) {
   return seat == null ? others.length <= 1 : others.length === 0;
 }
 
+// Chooses which card to show when an online room fails or closes while waiting
+export function roomEndCard(err, { code = '', started = false } = {}) {
+  if (!started && code && (err === 'Room not found' || err === 'Room is full or match already started')) {
+    return 'ended';
+  }
+  if (!started && err === 'Connection closed') {
+    return 'nobody';
+  }
+  return null;
+}
+

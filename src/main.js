@@ -19,7 +19,7 @@ import { predict } from './physics.js';
 import { createFx } from './fx.js';
 import { unlockAudio, isAudioSuspended, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxReward, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
 import { initMenu, setWizardWhere, setWizardLobby, disposeMenu } from './menu.js';
-import { lobbyView, lobbyHtml, aloneOnline } from './lobbyview.js';
+import { lobbyView, lobbyHtml, aloneOnline, roomEndCard } from './lobbyview.js';
 import { initCareer, openCareer } from './careerui.js';
 import { createTutorial } from './tutorial.js';
 import { padText, isPlayStation } from './padstyle.js';
@@ -27,7 +27,7 @@ import { mountKeyHelp } from './helpkeys.js';
 import { parseRoute } from './route.js';
 import { loadSettings } from './settings.js';
 import { initSplash } from './splash.js';
-import { initHome, showHome, hideHome, setOpenGames, getOnlineName } from './home.js';
+import { initHome, showHome, hideHome, setOpenGames, getOnlineName, getQuickPick } from './home.js';
 import { inviteUrl, shareInvite, INVITE_TEXT } from './invite.js';
 import { initSettingsModal, openSettingsModal } from './settingsmodal.js';
 import { bindFullscreenKey, toggleFullscreen, isFullscreen } from './fullscreen.js';
@@ -103,21 +103,28 @@ function applyRoute() {
   }
 }
 
+function sendInviteLink(h, tries = 0) {
+  if (!h || tries > 60) return;
+  const send = async () => {
+    if (!h.lobby) {
+      if (h.ws && h.ws.readyState > 1) return;
+      return setTimeout(() => sendInviteLink(h, tries + 1), 100);
+    }
+    const url = inviteUrl(h.lobby.code, location, window.__padelServer);
+    const how = await shareInvite(url, t(INVITE_TEXT), navigator, isTouch());
+    if (how === 'copied') flash(t('Invite link copied: send it to your friend.'), 4);
+    else if (how === 'failed') flash(t('Room code: {code}', { code: h.lobby.code }), 8);  // no share, no clipboard: the code still works
+  };
+  send();
+}
+
 initSettingsModal();
 initHome({
   onPlayNow: ({ players, mode }) => { track('online-click'); playNow({ players, mode, name: getOnlineName() }); },
   onInvite: ({ players, mode }) => {  // the room opens, the link goes out (share sheet / clipboard) while the warm-up starts
     track('online-click');
     const h = playNow({ players, mode, invite: true, name: getOnlineName() });
-    if (!h) return;
-    const send = async () => {
-      if (!h.lobby) return setTimeout(send, 100);
-      const url = inviteUrl(h.lobby.code, location, window.__padelServer);
-      const how = await shareInvite(url, t(INVITE_TEXT), navigator, isTouch());
-      if (how === 'copied') flash(t('Invite link copied: send it to your friend.'), 4);
-      else if (how === 'failed') flash(t('Room code: {code}', { code: h.lobby.code }), 8);  // no share, no clipboard: the code still works
-    };
-    send();
+    sendInviteLink(h);
   },
   onJoin: (code) => { track('online-click'); playNow({ code, name: getOnlineName() }); },
   onPlayAI: () => { hideHome(); $('start').dataset.tutorial = ''; $('start').click(); },  // the saved Friendly picks, no wizard
@@ -317,7 +324,13 @@ export function startOnline({ url, code, create = false, quick = false, mode = '
     onError: (e) => {  // server texts are fixed English sentences (marked in net.js), so they translate
       if (me && net !== me && pend !== me) return;  // a connection this page already replaced
       say(escapeText(t(e)), null, true);
-      if (pend === me) { pend = null; flash(t(e), 4); return; }  // the warm-up goes on offline
+      if (pend === me) {
+        pend = null;
+        const which = roomEndCard(e, { code: me.lobby?.code || code, started: !!me.lobby?.started });
+        if (which) { showRoomEndCard(which); return; }
+        flash(t(e), 4);
+        return;
+      }
       if (!me.lobby?.started) { net = null; setWizardLobby(null); } else flash(t(e), 4);  // not in a match yet: START can try again
     },
     onLeft: ({ seat, name }) => {  // 'left' comes before the lobby update, so the leaver is still in taken: aloneOnline skips them
@@ -339,6 +352,7 @@ export function startOnline({ url, code, create = false, quick = false, mode = '
         pend = null; net = me; world = null; tut = null; lastCfg = null; avatars = [];
         if (replay.playing) endReplay();
         if (paused) setPaused(false);
+        hideLeftCard();
       }
       if (l.started && avatars.length) {
         for (const id of l.away || []) if (!awaySeats.includes(id) && id !== me.seat) flash(t('{name} lost connection. The AI plays for them until they are back.', { name: nameOf(id) }), 4);
@@ -372,13 +386,33 @@ export function startOnline({ url, code, create = false, quick = false, mode = '
   return me;
 }
 
+let lastPlayNow = null;
+
+function reopen(last = lastPlayNow) {
+  const pick = getQuickPick();
+  const players = last?.players || pick.players || 2;
+  const mode = last?.mode || pick.mode || 'face';
+  const name = getOnlineName();
+  if (last?.invite) {
+    const h = playNow({ players, mode, invite: true, name });
+    sendInviteLink(h);
+    return h;
+  }
+  return playNow({ players, mode, name });
+}
+
 // PLAY NOW / Invite a friend / a Join from the open list: the player's saved picks, no menus. While the room waits, a warm-up match vs AI runs here.
 export function playNow({ players = 2, mode = 'face', invite = false, code = '', name } = {}) {
   if (net || pend) return null;
+  lastPlayNow = { players, mode, invite, code, name };
   hideHome();
   const me = +$('char').value, myRk = rackets[+$('racket').value], venue = +$('venue').value || 0;
   const roster = { 0: characters[me], 2: characters[aiSeatChar(2, characters)] }, rk = { 0: myRk, 2: rackets[1 % rackets.length] };
-  const warmup = () => startMatch({ players: 2, humans: 1, ai: 'club', match: { sets: 1, goldenPoint: true }, roster, rackets: rk, venue: venues[venue] });
+  const warmup = () => {
+    if (!world || world.match?.winner != null) {
+      startMatch({ players: 2, humans: 1, ai: 'club', match: { sets: 1, goldenPoint: true }, roster, rackets: rk, venue: venues[venue] });
+    }
+  };
   return startOnline({
     quick: !invite && !code, create: invite, public: false, code, mode, players, venue, warmup, match: { auto: true },  // invite rooms start themselves too: the host is busy warming up
     char: me, stats: characters[me].stats, racket: myRk.stats, name,
@@ -1060,11 +1094,30 @@ function pauseInput() {
   }
 }
 
-// Opponent left card: shows when no other human players remain in an online match. Match keeps running.
-let leftCardOpen = false, leftCardSel = 0, leftCardName = '';
+// Floating dialog card over a running match: opponent left / room ended / nobody came. Match keeps running behind.
+let leftCardOpen = false, leftCardSel = 0, leftCardName = '', leftCardMode = 'opponent-left';
 let lastPadNavLeftCard = 0;
 
 function leftCardItems() {
+  if (leftCardMode === 'ended') {
+    return [
+      [t('PLAY NOW'), () => {
+        hideLeftCard();
+        const pick = getQuickPick();
+        playNow({ players: pick?.players || 2, mode: pick?.mode || 'face', name: getOnlineName() });
+      }],
+      [t('Keep warming up'), () => hideLeftCard()],
+    ];
+  }
+  if (leftCardMode === 'nobody') {
+    return [
+      [t('Reopen'), () => {
+        hideLeftCard();
+        reopen();
+      }],
+      [t('Keep warming up'), () => hideLeftCard()],
+    ];
+  }
   return [
     [t('Continue vs AI'), () => hideLeftCard()],
     [t('Back to lobby'), toMenu],
@@ -1081,7 +1134,11 @@ function updateLeftCardSel() {
 
 function drawLeftCard() {
   const titleEl = $('lcTitle');
-  if (titleEl) titleEl.textContent = t('{name} left the match.', { name: leftCardName });
+  if (titleEl) {
+    if (leftCardMode === 'ended') titleEl.textContent = t('This game has ended.');
+    else if (leftCardMode === 'nobody') titleEl.textContent = t('Nobody came.');
+    else titleEl.textContent = t('{name} left the match.', { name: leftCardName });
+  }
   const box = $('lcItems');
   if (!box) return;
   const items = leftCardItems();
@@ -1101,8 +1158,7 @@ function drawLeftCard() {
   });
 }
 
-function showLeftCard(name) {
-  leftCardName = name || '?';
+function openLeftCard() {
   leftCardSel = 0;
   leftCardOpen = true;
   const card = $('leftCard');
@@ -1118,6 +1174,17 @@ function showLeftCard(name) {
   lastPadNavLeftCard = 0;
   padRepeatTimer = 0;
   clearPressed();
+}
+
+function showLeftCard(name) {
+  leftCardMode = 'opponent-left';
+  leftCardName = name || '?';
+  openLeftCard();
+}
+
+function showRoomEndCard(type) {
+  leftCardMode = type;
+  openLeftCard();
 }
 
 function hideLeftCard() {

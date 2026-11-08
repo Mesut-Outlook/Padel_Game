@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { lobbyView, lobbyHtml, aloneOnline } from '../src/lobbyview.js';
+import { lobbyView, lobbyHtml, aloneOnline, roomEndCard } from '../src/lobbyview.js';
 
 const chars = [{ name: 'Erhan' }, { name: 'Burcu' }, { name: 'Daan' }];
 const venues = [{ name: 'Madrid Indoor Arena' }];
@@ -55,4 +55,36 @@ test('aloneOnline: true only when no other human players remain in the match', (
   assert.equal(aloneOnline({ taken: [0, 1, 2] }, 0, 2), false, 'seat 2 left but seat 1 remains');
   assert.equal(aloneOnline({ taken: [0, 2] }, null, 2), true, 'leftSeat without seat');
 });
+
+test('roomEndCard: chooses which card to show on room errors', () => {
+  // Case 1: Invite link / code with room not found or room full -> 'ended'
+  assert.equal(roomEndCard('Room not found', { code: 'ABC234', started: false }), 'ended');
+  assert.equal(roomEndCard('Room is full or match already started', { code: 'ABC234', started: false }), 'ended');
+  assert.equal(roomEndCard('Room not found', { code: 'ABC234' }), 'ended', 'started defaults to false');
+
+  // Case 1 exclusions: missing code or match already started -> null
+  assert.equal(roomEndCard('Room not found', { code: '', started: false }), null);
+  assert.equal(roomEndCard('Room not found', { started: false }), null);
+  assert.equal(roomEndCard('Room not found', { code: 'ABC234', started: true }), null);
+  assert.equal(roomEndCard('Room is full or match already started', { code: '', started: false }), null);
+  assert.equal(roomEndCard('Room is full or match already started', { code: 'ABC234', started: true }), null);
+
+  // Case 2: Connection closed while waiting -> 'nobody'
+  assert.equal(roomEndCard('Connection closed', { started: false }), 'nobody');
+  assert.equal(roomEndCard('Connection closed', { code: 'ABC234', started: false }), 'nobody');
+  assert.equal(roomEndCard('Connection closed', { code: '', started: false }), 'nobody');
+  assert.equal(roomEndCard('Connection closed'), 'nobody', 'defaults options to empty object with started: false');
+
+  // Case 2 exclusions: match already started -> null
+  assert.equal(roomEndCard('Connection closed', { started: true }), null);
+  assert.equal(roomEndCard('Connection closed', { code: 'ABC234', started: true }), null);
+
+  // Other server errors / invalid inputs -> null
+  assert.equal(roomEndCard('Server did not answer', { code: 'ABC234', started: false }), null);
+  assert.equal(roomEndCard('The match was closed.', { code: 'ABC234', started: false }), null);
+  assert.equal(roomEndCard('Could not connect to the game server.', { code: 'ABC234', started: false }), null);
+  assert.equal(roomEndCard(null), null);
+  assert.equal(roomEndCard(undefined), null);
+});
+
 
