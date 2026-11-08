@@ -1084,4 +1084,6 @@ export default {
   "Waiting for your friend": "Arkadaşın bekleniyor",
   "The match starts by itself when your friend opens the link.": "Arkadaşın linki açınca maç kendiliğinden başlar.",
   "Share…": "Paylaş…",
+  "Training again": "Antrenmanı tekrarla",
+  "New here? Learn the shots in a few minutes": "İlk kez mi? Vuruşları birkaç dakikada öğren",
 };

@@ -1084,4 +1084,6 @@ export default {
   "Waiting for your friend": "En attente de ton ami",
   "The match starts by itself when your friend opens the link.": "Le match démarre tout seul quand ton ami ouvre le lien.",
   "Share…": "Partager…",
+  "Training again": "Refaire l'entraînement",
+  "New here? Learn the shots in a few minutes": "Nouveau ? Apprends les coups en quelques minutes",
 };

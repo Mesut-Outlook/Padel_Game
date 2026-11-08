@@ -321,3 +321,19 @@ test('selector toggling updates quickPick and stores in localStorage', () => {
   assert.deepEqual(getQuickPick(), { players: 2, mode: 'face' });
   assert.equal(JSON.parse(mockStorage.getItem('padel.quick.v1')).players, 2);
 });
+
+test('HOME shows the Training card under PLAY NOW; after the tutorial it is a plain Training again button', () => {
+  mockStorage.removeItem('padel.tutorial');
+  initHome({});
+  let html = homeRoot.innerHTML;
+  assert.match(html, /id="hm-btn-play-now"[\s\S]*class="hm-train-card" id="hm-btn-training"/);
+  assert.match(html, /New here\? Learn the shots in a few minutes/);
+  assert.equal(html.split('id="hm-btn-training"').length - 1, 1);  // not in the bottom bar any more
+  const { LESSON_IDS } = { LESSON_IDS: ['move', 'serve', 'slice', 'forehand', 'backhand', 'aim', 'lob', 'chiquita', 'volley', 'smash', 'glass', 'contra', 'ui', 'match'] };
+  mockStorage.setItem('padel.tutorial', JSON.stringify(LESSON_IDS));
+  initHome({});
+  html = homeRoot.innerHTML;
+  assert.match(html, /class="hm-btn-sec" id="hm-btn-training"[^>]*>Training again</);
+  assert.doesNotMatch(html, /hm-train-card/);
+  mockStorage.removeItem('padel.tutorial');
+});

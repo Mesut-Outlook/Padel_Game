@@ -2042,6 +2042,13 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
     color: var(--acc);
     outline: none;
   }
+  .hm-train-card { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; min-height: 56px; margin-top: 10px; padding: 10px 12px; border: 1px solid #bfdbfe; border-radius: 12px; background: linear-gradient(90deg, #eff6ff, #fff); color: var(--fg); cursor: pointer; font: inherit; transition: border-color 0.14s ease, transform 0.14s ease; }
+  .hm-train-card:hover, .hm-train-card:focus-visible { border-color: var(--court); transform: translateY(-1px); outline: none; }
+  .hm-train-ic { width: 36px; height: 36px; flex: none; border-radius: 10px; background: var(--court); display: grid; place-items: center; font-size: 19px; }
+  .hm-train-txt b { display: block; font: 800 17px/1.05 var(--head-font); letter-spacing: 1px; text-transform: uppercase; color: var(--court); }
+  .hm-train-txt small { color: var(--muted); font-size: 12px; }
+  .hm-train-arr { margin-left: auto; font: 800 24px var(--head-font); color: var(--court); }
+  #hm-btn-training.hm-btn-sec { width: 100%; margin-top: 10px; }
   .hm-ai-row {
     display: flex;
     gap: 8px;

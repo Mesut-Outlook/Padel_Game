@@ -9,6 +9,7 @@ import { padDir, spatialFocus } from './padnav.js';
 import { loadProfile } from './career.js';
 import { toggleFullscreen } from './fullscreen.js';
 import { t } from './i18n.js';
+import { tutorialFinished } from './tutorialdone.js';
 import { drawFlag } from './flags.js';
 import characters from '../data/characters.json' with { type: 'json' };
 
@@ -309,6 +310,9 @@ export function renderHome() {
           <button type="button" class="hm-play-now" id="hm-btn-play-now" tabindex="0">
             ${t('PLAY NOW')}
           </button>
+          ${tutorialFinished()
+            ? `<button type="button" class="hm-btn-sec" id="hm-btn-training" tabindex="0">${t('Training again')}</button>`
+            : `<button type="button" class="hm-train-card" id="hm-btn-training" tabindex="0"><span class="hm-train-ic" aria-hidden="true">🎓</span><span class="hm-train-txt"><b>${t('Training')}</b><small>${t('New here? Learn the shots in a few minutes')}</small></span><span class="hm-train-arr" aria-hidden="true">›</span></button>`}
 
           <div class="hm-sub-actions">
             ${callbacks.online === false ? '' : `<button type="button" class="hm-btn-sec" id="hm-btn-invite" tabindex="0">${t('Invite a friend')}</button>`}
@@ -339,7 +343,6 @@ export function renderHome() {
     <footer class="hm-bottom-bar">
       <div class="hm-actions-row">
         <button type="button" class="hm-btn" id="hm-btn-career" tabindex="0">🏆 ${t('Career')}</button>
-        <button type="button" class="hm-btn" id="hm-btn-training" tabindex="0">🎓 ${t('Training')}</button>
         <button type="button" class="hm-btn" id="hm-btn-settings" tabindex="0">⚙️ ${t('Settings')}</button>
         <button type="button" class="hm-btn" id="hm-btn-controls" tabindex="0">⌨️ ${t('Controls')}</button>
         <button type="button" class="hm-btn fs-btn-sync" id="hm-btn-fullscreen" tabindex="0" title="${t('Fullscreen')}">⛶ ${t('Fullscreen')}</button>

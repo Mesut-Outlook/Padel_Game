@@ -1084,4 +1084,6 @@ export default {
   "Waiting for your friend": "Warte auf deinen Freund",
   "The match starts by itself when your friend opens the link.": "Das Match startet von selbst, sobald dein Freund den Link öffnet.",
   "Share…": "Teilen…",
+  "Training again": "Training wiederholen",
+  "New here? Learn the shots in a few minutes": "Neu hier? Lerne die Schläge in ein paar Minuten",
 };
