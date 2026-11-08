@@ -121,6 +121,7 @@ function sendInviteLink(h, tries = 0) {
 
 initSettingsModal();
 initHome({
+  online: !!serverUrl(location),  // no game server (static build): HOME leaves out Invite a friend
   onPlayNow: ({ players, mode }) => { track('online-click'); playNow({ players, mode, name: getOnlineName() }); },
   onInvite: ({ players, mode }) => {  // the room opens, the link goes out (share sheet / clipboard) while the warm-up starts
     track('online-click');
@@ -407,19 +408,20 @@ export function playNow({ players = 2, mode = 'face', invite = false, code = '',
   if (net || pend) return null;
   lastPlayNow = { players, mode, invite, code, name };
   const me = +$('char').value, myRk = rackets[+$('racket').value], venue = +$('venue').value || 0;
-  const roster = { 0: characters[me], 2: characters[aiSeatChar(2, characters)] }, rk = { 0: myRk, 2: rackets[1 % rackets.length] };
-  const warmup = () => {
-    if (!world || world.match?.winner != null) {
-      startMatch({ players: 2, humans: 1, ai: 'club', match: { sets: 1, goldenPoint: true }, roster, rackets: rk, venue: venues[venue] });
-    }
+  const vsAI = (n) => {  // you in seat 0, other active players (never your own character) in the AI seats
+    const ids = n === 2 ? [0, 2] : [0, 2, 1, 3], others = characters.filter(c => c !== characters[me] && isActive(c)).sort(() => Math.random() - 0.5);
+    const roster = {}, rk = {};
+    ids.forEach((id, i) => { roster[id] = i ? others[i - 1] : characters[me]; rk[id] = i ? rackets[Math.floor(Math.random() * rackets.length)] : myRk; });
+    startMatch({ players: n, humans: 1, ai: 'club', match: { sets: 1, goldenPoint: true }, roster, rackets: rk, venue: venues[venue] });
   };
+  const warmup = () => { if (!world || world.match?.winner != null) vsAI(2); };
   const h = startOnline({
     quick: !invite && !code, create: invite, public: false, code, mode, players, venue, warmup, match: { auto: true },  // invite rooms start themselves too: the host is busy warming up
     char: me, stats: characters[me].stats, racket: myRk.stats, name,
     look: { racket: myRk.id, racketColor: myRk.color, racketShape: myRk.shape },
   });
   if (h || !code) hideHome();
-  if (!h && !code) { warmup(); flash(t(NO_SERVER), 6); }  // no server (static build): play the AI instead of a blank page; a room code stays on HOME / the wizard explains
+  if (!h && !code) { vsAI(players); flash(t(NO_SERVER), 6); }  // no server (static build): play the AI instead of a blank page; a room code stays on HOME / the wizard explains
   return h;
 }
 const escapeText = (t) => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);

@@ -164,6 +164,7 @@ export function openSettingsModal() {
   modalEl.querySelector('#sm-btn-close').onclick = close;
   modalEl.querySelector('#sm-btn-cancel').onclick = close;
   modalEl.querySelector('#sm-btn-save').onclick = save;
+  modalEl.onkeydown = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };  // Esc = pad B = Cancel
 
   modalEl.hidden = false;
   refreshModalHints();

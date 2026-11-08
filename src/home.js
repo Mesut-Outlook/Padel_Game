@@ -311,7 +311,7 @@ export function renderHome() {
           </button>
 
           <div class="hm-sub-actions">
-            <button type="button" class="hm-btn-sec" id="hm-btn-invite" tabindex="0">${t('Invite a friend')}</button>
+            ${callbacks.online === false ? '' : `<button type="button" class="hm-btn-sec" id="hm-btn-invite" tabindex="0">${t('Invite a friend')}</button>`}
             <div class="hm-ai-row">
               <button type="button" class="hm-btn-sec" id="hm-btn-play-ai" tabindex="0">${t('Play vs AI')}</button>
               <button type="button" class="hm-link-btn" id="hm-link-customize" tabindex="0">${t('Customize')}</button>
@@ -421,7 +421,8 @@ export function renderHome() {
   homeEl.querySelector('#hm-btn-play-now').onclick = () => {
     callbacks.onPlayNow?.(getQuickPick());
   };
-  homeEl.querySelector('#hm-btn-invite').onclick = () => {
+  const invite = homeEl.querySelector('#hm-btn-invite');  // absent without a game server (static build)
+  if (invite) invite.onclick = () => {
     callbacks.onInvite?.(getQuickPick());
   };
   homeEl.querySelector('#hm-btn-play-ai').onclick = () => {

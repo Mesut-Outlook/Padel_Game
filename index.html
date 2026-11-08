@@ -17,7 +17,12 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   if (r) { window.__padelRoom = r; u.searchParams.delete('room'); }
   if (s) { try { sessionStorage.setItem('padel.server', s); } catch { /* per page */ } u.searchParams.delete('server'); }
   try { window.__padelServer = s || sessionStorage.getItem('padel.server') || undefined; } catch { window.__padelServer = s || undefined; }
-  if (r || s) history.replaceState(history.state, '', u.pathname + u.search + u.hash); } catch { /* keep the URL as is */ }</script>
+  if (r || s) history.replaceState(history.state, '', u.pathname + u.search + u.hash); } catch { /* keep the URL as is */ }
+/* After a deploy, a cached index.html (max-age 600) or an open tab asks for bundles that are gone (404): reload once instead of a stuck splash */
+(() => { const again = () => { try { if (Date.now() - (+sessionStorage.getItem('padel.reloaded') || 0) < 30000) return; sessionStorage.setItem('padel.reloaded', Date.now()); } catch { return; }
+    const u = new URL(location.href); if (window.__padelRoom) u.searchParams.set('room', window.__padelRoom); history.replaceState(history.state, '', u.href); location.reload(); };  // reload revalidates the cached page
+  addEventListener('error', e => { const el = e.target; if (el?.tagName === 'SCRIPT' && el.type === 'module' && el.src.startsWith(location.origin)) again(); }, true);
+  addEventListener('vite:preloadError', again); })();</script>
 <script data-goatcounter="https://padellegends.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
 <style>
   /* Barlow Condensed (OFL, public/fonts/OFL.txt) served from this site, not Google Fonts: no visitor IP goes to Google */
