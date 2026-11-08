@@ -1086,4 +1086,12 @@ export default {
   "Share…": "Teilen…",
   "Training again": "Training wiederholen",
   "New here? Learn the shots in a few minutes": "Neu hier? Lerne die Schläge in ein paar Minuten",
+  "That time is not available.": "Diese Zeit ist nicht verfügbar.",
+  "That time slot is full. Pick another time.": "Diese Zeit ist voll. Wähle eine andere.",
+  "You already have a game posted.": "Du hast schon ein Match eingestellt.",
+  "You already have two games booked.": "Du hast schon zwei Matches gebucht.",
+  "This game has enough requests.": "Für dieses Match gibt es genug Anfragen.",
+  "This game is full.": "Dieses Match ist voll.",
+  "Game not found.": "Match nicht gefunden.",
+  "The schedule is full. Try again later.": "Der Kalender ist voll. Versuche es später noch einmal.",
 };

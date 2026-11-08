@@ -1086,4 +1086,12 @@ export default {
   "Share…": "Delen…",
   "Training again": "Training opnieuw",
   "New here? Learn the shots in a few minutes": "Nieuw hier? Leer de slagen in een paar minuten",
+  "That time is not available.": "Dat tijdstip is niet beschikbaar.",
+  "That time slot is full. Pick another time.": "Dit tijdvak is vol. Kies een andere tijd.",
+  "You already have a game posted.": "Je hebt al een wedstrijd geplaatst.",
+  "You already have two games booked.": "Je hebt al twee wedstrijden geboekt.",
+  "This game has enough requests.": "Deze wedstrijd heeft genoeg aanvragen.",
+  "This game is full.": "Deze wedstrijd is vol.",
+  "Game not found.": "Wedstrijd niet gevonden.",
+  "The schedule is full. Try again later.": "De kalender is vol. Probeer het later opnieuw.",
 };

@@ -941,6 +941,9 @@
   "GOLDEN POINT": [
     "src/rules.js:180"
   ],
+  "Game not found.": [
+    "src/net.js:11"
+  ],
   "Game speed": [
     "index.html:2685"
   ],
@@ -2519,6 +2522,12 @@
   "That server will receive your IP address and the player you play with: name, look, level, stats and equipment.": [
     "src/serverurl.js:39"
   ],
+  "That time is not available.": [
+    "src/net.js:10"
+  ],
+  "That time slot is full. Pick another time.": [
+    "src/net.js:10"
+  ],
   "The ball bounced — hit it in the air before it touches the floor.": [
     "src/tutorial.js:56"
   ],
@@ -2543,6 +2552,9 @@
   "The match was closed.": [
     "src/net.js:8"
   ],
+  "The schedule is full. Try again later.": [
+    "src/net.js:11"
+  ],
   "The server is full. Try again later.": [
     "src/net.js:7"
   ],
@@ -2554,6 +2566,12 @@
   ],
   "This game has ended.": [
     "src/main.js:1154"
+  ],
+  "This game has enough requests.": [
+    "src/net.js:11"
+  ],
+  "This game is full.": [
+    "src/net.js:11"
   ],
   "This link uses a game server that Padel Legends does not run: {host}": [
     "src/serverurl.js:38"
@@ -2814,6 +2832,12 @@
   "You against another player, each with an AI partner.": [
     "src/home.js:186",
     "src/home.js:306"
+  ],
+  "You already have a game posted.": [
+    "src/net.js:10"
+  ],
+  "You already have two games booked.": [
+    "src/net.js:10"
   ],
   "You and another player vs two AI players.": [
     "src/home.js:187",

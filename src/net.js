@@ -5,7 +5,10 @@ import { N_ } from './i18n.js';
 const RETRY = [1000, 2000, 4000, 8000, 15000];
 // what the server (server/server.js fail()) and this file report through onError: fixed sentences, so the UI can translate them
 export const NET_TEXTS = [N_('Room not found'), N_('Room is full or match already started'), N_('Already in a room'), N_('The server is full. Try again later.'),
-  N_('Could not get back into the match'), N_('Connection closed'), N_('The match was closed.'), N_('Could not connect to the game server.'), N_('Server did not answer')];
+  N_('Could not get back into the match'), N_('Connection closed'), N_('The match was closed.'), N_('Could not connect to the game server.'), N_('Server did not answer'),
+  // posted games (server/schedule.js)
+  N_('That time is not available.'), N_('That time slot is full. Pick another time.'), N_('You already have a game posted.'), N_('You already have two games booked.'),
+  N_('This game has enough requests.'), N_('This game is full.'), N_('Game not found.'), N_('The schedule is full. Try again later.')];
 
 export function connect({ url, code, cfg, char, stats, racket, onLobby, onError, onStatus, onLeft, ...extra }) {  // extra: public, quick, name, look, shoes, ball, bag
   const net = { seat: null, lobby: null, snaps: [], events: [], score: null, winner: null, ws: null, token: null };

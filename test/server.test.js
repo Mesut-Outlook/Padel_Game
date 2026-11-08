@@ -962,3 +962,147 @@ test('limits: one visitor plays one match at a time (playingPerIp)', async () =>
     for (const x of [a, b, c, d]) x.ws.close();
   } finally { await srv.close(); }
 });
+
+// scheduled games (plan 2026-11-08-scheduled-games, task 4): a fake clock (limits.now) and a fast scheduler tick
+const SM = 60000, SAT = Date.UTC(2026, 10, 8, 21, 0), ST0 = Date.UTC(2026, 10, 8, 12, 0);
+const tick = (ms = 80) => new Promise(r => setTimeout(r, ms));
+async function schedServer(extra = {}) {
+  const clock = { t: ST0 };
+  const srv = await startServer(0, { now: () => clock.t, schedTickMs: 20, statePath: '', ...extra });
+  return { srv, clock };
+}
+const call = async (c, m, type = null) => { const p = type ? c.next(type) : new Promise(r => { const on = (raw) => { const x = JSON.parse(raw); if (['schedule', 'schedule:ok', 'error'].includes(x.type)) { c.ws.off('message', on); r(x); } }; c.ws.on('message', on); }); await c.send(m); return p; };
+const me = (i) => ({ token: `token-number-${i}-abcdefgh`, name: `P${i}`, char: i, level: 3 });
+
+test('schedule: post, list and ask over the socket; the token never comes back', async () => {
+  const { srv } = await schedServer();
+  try {
+    const a = client(srv.port), b = client(srv.port);
+    const ok = await call(a, { type: 'schedule:post', at: SAT, players: 2, mode: 'face', open: false, ...me(1) });
+    assert.equal(ok.type, 'schedule:ok');
+    const id = ok.games[0].id;
+    assert.equal((await call(b, { type: 'schedule:ask', id, ...me(2) })).type, 'schedule:ok');
+    const host = await call(a, { type: 'schedule:list', token: me(1).token });
+    assert.equal(host.games[0].mine, 'host'); assert.equal(host.games[0].requests.length, 1);
+    assert.equal(JSON.stringify(host).includes('token-number'), false);
+    a.ws.close(); b.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('schedule: list reply carries the other open sockets and the server clock', async () => {
+  const { srv } = await schedServer();
+  try {
+    const a = client(srv.port), b = client(srv.port), c = client(srv.port);
+    await Promise.all([a.send({ type: 'schedule:list' }), b.send({ type: 'schedule:list' })]);
+    const r = await call(c, { type: 'schedule:list' });
+    assert.equal(r.clients, 2); assert.equal(r.now, ST0);
+    for (const x of [a, b, c]) x.ws.close();
+  } finally { await srv.close(); }
+});
+
+async function bookedGame(srv, players = 2) {
+  const a = client(srv.port), b = client(srv.port);
+  const id = (await call(a, { type: 'schedule:post', at: SAT, players, mode: 'face', open: true, ...me(1) })).games[0].id;
+  await call(b, { type: 'schedule:ask', id, ...me(2) });
+  return { a, b, id };
+}
+const enter = async (c, id, i) => { const p = c.next('seat'); await c.send({ type: 'schedule:enter', id, ...me(i) }); return p; };
+
+test('schedule: enter only from 10 min before and only with a seat; host and guest get seats 0 and 2', async () => {
+  const { srv, clock } = await schedServer();
+  try {
+    const { a, b, id } = await bookedGame(srv);
+    clock.t = SAT - 11 * SM;
+    assert.equal((await call(a, { type: 'schedule:enter', id, ...me(1) })).msg, 'Game not found.');
+    clock.t = SAT - 10 * SM;
+    const stranger = client(srv.port);
+    assert.equal((await call(stranger, { type: 'schedule:enter', id, ...me(7) })).msg, 'Game not found.');
+    assert.equal((await enter(a, id, 1)).seat, 0);
+    assert.equal((await enter(b, id, 2)).seat, 2);
+    for (const x of [a, b, stranger]) x.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('schedule: the room starts at its time with two humans; one human starts after the 3-minute grace', async () => {
+  const { srv, clock } = await schedServer();
+  try {
+    const { a, b, id } = await bookedGame(srv);
+    clock.t = SAT - 5 * SM;
+    await enter(a, id, 1); await enter(b, id, 2);
+    const code = [...srv.rooms.keys()].find(k => srv.rooms.get(k).cfg.scheduled === id);
+    await tick(); assert.equal(srv.rooms.get(code).started, false);
+    clock.t = SAT; await tick();
+    assert.equal(srv.rooms.get(code).started, true);
+    a.ws.close(); b.ws.close();
+    const s2 = await schedServer();
+    const g = await bookedGame(s2.srv);
+    s2.clock.t = SAT - SM; await enter(g.a, g.id, 1);
+    s2.clock.t = SAT + 2 * SM; await tick();
+    const room = [...s2.srv.rooms.values()].find(r => r.cfg.scheduled === g.id);
+    assert.equal(room.started, false);
+    s2.clock.t = SAT + 3 * SM; await tick();
+    assert.equal(room.started, true);
+    g.a.ws.close(); g.b.ws.close(); await s2.srv.close();
+  } finally { await srv.close(); }
+});
+
+test('schedule: a guest alone opens the room and becomes its host when the host never comes', async () => {
+  const { srv, clock } = await schedServer();
+  try {
+    const { a, b, id } = await bookedGame(srv);
+    clock.t = SAT - SM;
+    assert.equal((await enter(b, id, 2)).seat, 2);
+    const room = [...srv.rooms.values()].find(r => r.cfg.scheduled === id);
+    assert.equal(room.host, 2);
+    clock.t = SAT + 3 * SM; await tick();
+    assert.equal(room.started, true);
+    a.ws.close(); b.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('schedule: scheduled rooms leave two match slots free (rooms: 3 → only one scheduled match plays)', async () => {
+  const { srv, clock } = await schedServer({ rooms: 3 });
+  try {
+    const g1 = await bookedGame(srv);
+    const fromIp = (ip) => {  // another visitor: the server reads cf-connecting-ip from a local peer
+      const ws = new WebSocket(`ws://127.0.0.1:${srv.port}`, { headers: { 'cf-connecting-ip': ip } });
+      const open = new Promise(r => ws.once('open', r));
+      return { ws, send: async (m) => { await open; ws.send(JSON.stringify(m)); }, next: (type) => new Promise(r => { const on = (raw) => { const x = JSON.parse(raw); if (x.type === type) { ws.off('message', on); r(x); } }; ws.on('message', on); }) };
+    };
+    const c = fromIp('203.0.113.9'), d = fromIp('203.0.113.10');
+    const id2 = (await call(c, { type: 'schedule:post', at: SAT, players: 2, mode: 'face', open: true, ...me(3) })).games.find(g => g.mine === 'host').id;
+    clock.t = SAT - SM;
+    await enter(g1.a, g1.id, 1); await enter(c, id2, 3);
+    clock.t = SAT + 3 * SM; await tick();
+    const started = [...srv.rooms.values()].filter(r => r.cfg.scheduled && r.started);
+    assert.equal(started.length, 1);
+    for (const x of [g1.a, g1.b, c, d]) x.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('schedule: more than 10 writes a minute from one visitor are refused', async () => {
+  const { srv } = await schedServer();
+  try {
+    const a = client(srv.port);
+    let last;
+    for (let i = 0; i < 11; i++) last = await call(a, { type: 'schedule:cancel', id: 'nope', ...me(1) });
+    assert.equal(last.msg, 'The server is full. Try again later.');
+    a.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('schedule: the state file is written on post and read by a new server', async () => {
+  const { mkdtempSync } = await import('node:fs'), { tmpdir } = await import('node:os'), { join } = await import('node:path');
+  const file = join(mkdtempSync(join(tmpdir(), 'padel-')), 'schedule.json');
+  const one = await schedServer({ statePath: file });
+  const a = client(one.srv.port);
+  await call(a, { type: 'schedule:post', at: SAT, players: 4, mode: 'team', open: false, ...me(1) });
+  a.ws.close(); await one.srv.close();
+  const two = await schedServer({ statePath: file });
+  try {
+    const b = client(two.srv.port);
+    const r = await call(b, { type: 'schedule:list', token: me(1).token });
+    assert.equal(r.games.length, 1); assert.equal(r.games[0].mine, 'host'); assert.equal(r.games[0].players, 4);
+    b.ws.close();
+  } finally { await two.srv.close(); }
+});

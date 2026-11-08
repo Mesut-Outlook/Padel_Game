@@ -1086,4 +1086,12 @@ export default {
   "Share…": "Paylaş…",
   "Training again": "Antrenmanı tekrarla",
   "New here? Learn the shots in a few minutes": "İlk kez mi? Vuruşları birkaç dakikada öğren",
+  "That time is not available.": "Bu saat uygun değil.",
+  "That time slot is full. Pick another time.": "Bu saat dolu. Başka bir saat seç.",
+  "You already have a game posted.": "Zaten açık bir ilanın var.",
+  "You already have two games booked.": "Zaten iki maçta yerin var.",
+  "This game has enough requests.": "Bu maça yeterince istek geldi.",
+  "This game is full.": "Bu maç dolu.",
+  "Game not found.": "Maç bulunamadı.",
+  "The schedule is full. Try again later.": "Takvim dolu. Daha sonra tekrar dene.",
 };
