@@ -21,9 +21,10 @@ const AI_LEVELS = ['rookie', 'club', 'pro', 'legend'];
 // abuse limits (startServer(port, { ...LIMITS }) overrides them in tests): rooms on the server, sockets on the server, sockets per visitor IP,
 // rooms one visitor holds at a time (a room outlives its socket while seats wait for a rejoin), messages per socket per second
 // (beyond it they are dropped; the client sends ~60/s at most), largest message in bytes. Sized for the home Raspberry Pi: raise them on a bigger host.
-export const LIMITS = { rooms: 10, clients: 40, perIp: 8, roomsPerIp: 2, msgsPerSec: 120, payload: 4096, rejoinMs: 60000, lobbyMs: 900000,
+export const LIMITS = { rooms: 10, waiting: 30, clients: 40, perIp: 8, roomsPerIp: 2, msgsPerSec: 120, payload: 4096, rejoinMs: 60000, lobbyMs: 900000,
   ghostMs: 15000, idleMs: 600000, overMs: 60000, matchMs: 5400000, joinsPerMin: 20, logsPerMin: 60, sendSkip: 65536, sendDrop: 524288, countdownMs: 5000 };
-// rejoinMs: a dropped player's seat waits this long; lobbyMs: a room nobody starts closes; ghostMs: a socket that has not joined a room by then is closed;
+// rooms: matches playing at once (CPU and upload on the Pi); waiting: rooms not started yet (cheap: no simulation), so a few visitors holding
+// empty rooms cannot lock everyone else out; rejoinMs: a dropped player's seat waits this long; lobbyMs: a room nobody starts closes; ghostMs: a socket that has not joined a room by then is closed;
 // idleMs: a started room where no player sent input closes; overMs: a finished match's room closes after this; matchMs: no room plays longer;
 // joinsPerMin: join messages per visitor; logsPerMin: join/leave/rejoin log lines; sendSkip/sendDrop: bytes a socket may have queued before it misses a
 // message / is dropped (a client that stops reading must not fill the memory); countdownMs: an auto room starts this long after its second human joins
@@ -244,7 +245,14 @@ export function startServer(port, limits = {}) {
     if (!ready(room)) room.startsAt = null;
     else if (room.startsAt == null) room.startsAt = Date.now() + lim.countdownMs;
   }
-  function begin(room) { room.started = true; room.startsAt = null; room.startedAt = room.lastInput = Date.now(); lobby(room); }
+  function begin(room) {
+    if ([...rooms.values()].filter(r => r.started).length >= lim.rooms) {  // every match slot busy: an auto room tries again after another countdown
+      if (room.cfg.auto) { room.startsAt = Date.now() + lim.countdownMs; lobby(room); }
+      return false;
+    }
+    room.started = true; room.startsAt = null; room.startedAt = room.lastInput = Date.now(); lobby(room);
+    return true;
+  }
 
   function tick(room) {
     if (room.startsAt != null && !room.started && Date.now() >= room.startsAt) begin(room);
@@ -312,7 +320,7 @@ export function startServer(port, limits = {}) {
         if (target) { /* quick match: an open room of the same kind */ }
         else if ((m.create === true || want) && m.rejoin === undefined) {  // the server picks the code: never guessable, never someone else's room
           const owner = ownerKey(ip), mine = [...rooms.values()].filter(r => r.owner === owner).length;
-          if (rooms.size >= lim.rooms || mine >= lim.roomsPerIp) return fail('The server is full. Try again later.');
+          if ([...rooms.values()].filter(r => !r.started).length >= lim.waiting || mine >= lim.roomsPerIp) return fail('The server is full. Try again later.');
           target = makeRoom(newCode(), want ? { ...want, public: true } : sanitizeCfg(m.cfg, m), owner);
         } else {
           if ((wrong.get(ip) || 0) >= 5) return ws.close(1008, 'too many wrong codes');  // even a right code: each new socket would be a free guess
@@ -364,7 +372,7 @@ export function startServer(port, limits = {}) {
       } else if (!room) return;
       else if (m.type === 'start') {  // only the room creator (or whoever took over after they left)
         if (room.clients.get(ws) !== room.host || room.started || room.clients.size < 2) return;  // two people: the wizard asks the same
-        begin(room);
+        if (!begin(room)) fail('The server is full. Try again later.');
       } else if (m.type === 'leave') {  // Exit: the seat goes to the AI for good, the others are told
         ws.leaving = true; ws.close(1000, 'left');
       } else if (m.type === 'input') {

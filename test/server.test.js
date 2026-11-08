@@ -286,8 +286,8 @@ test('bad messages, prototype shot names and broken URLs do not crash the server
   } finally { await srv.close(); }
 });
 
-test('limits: rooms on the server, sockets per IP, other sites\' pages and oversized messages', async () => {
-  const srv = await startServer(0, { rooms: 1, perIp: 3 });
+test('limits: waiting rooms on the server, sockets per IP, other sites\' pages and oversized messages', async () => {
+  const srv = await startServer(0, { waiting: 1, perIp: 3 });
   try {
     const a = client(srv.port), b = client(srv.port);
     await create(a, { cfg: { players: 2 } });
@@ -925,5 +925,23 @@ test('quick never joins a private room, and the list shows whoever holds a room 
     const row = (await list(srv.port)).find(r => r.code === pub.code);
     assert.equal(row.host, 'Next'); assert.equal(row.char, 5);
     for (const x of [a, b, d]) x.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('limits: rooms caps matches playing at once, not rooms waiting for a friend', async () => {
+  const srv = await startServer(0, { rooms: 1, roomsPerIp: 5, perIp: 8 });  // all test sockets share one IP
+  try {
+    const a = client(srv.port), b = client(srv.port), c = client(srv.port), d = client(srv.port);
+    const r1 = await create(a, { cfg: { players: 2 } });
+    await join(b, r1.code);
+    await new Promise(r => setTimeout(r, 30));  // let b's join lobby message reach a first
+    const go = a.next('lobby'); await a.send({ type: 'start' });
+    assert.equal((await go).started, true);
+    const r2 = await create(c, { cfg: { players: 2 } });  // a waiting room still opens while the one match slot is busy
+    await join(d, r2.code);
+    const busy = c.next('error'); await c.send({ type: 'start' });
+    assert.equal((await busy).msg, 'The server is full. Try again later.');
+    assert.equal(srv.rooms.get(r2.code).started, false);
+    for (const x of [a, b, c, d]) x.ws.close();
   } finally { await srv.close(); }
 });
