@@ -32,6 +32,8 @@ Plan 3 (canlı lobi) ve plan 4 (açık tema) yayında:
 1. GitHub hesabında iki adımlı doğrulama (Tailscale'e GitHub ile giriliyor, yani bu hesap sunucuyu yönetiyor).
 2. Gerçek test: telefondan WhatsApp ile bir arkadaşa davet, birlikte maç; sırada `journalctl -u padel` `status` satırlarını izle.
 
+**Sıradaki büyük iş (kullanıcı onayladı, "duruma göre sonra yeniden gözden geçiririz"):** planlı maçlar + HOME'da Antrenman kartı, tasarım `docs/superpowers/specs/2026-11-08-scheduled-games-design.md`. Sıradaki adım: uygulama planı (superpowers:writing-plans), önce Antrenman kartı.
+
 **Acil olmayanlar:** Tailscale ACL (ağa yeni cihaz eklenirse Pi'nin 22/445 portları kapatılmalı), ev interneti upload ölçümü (10 maç ≈ 6 Mbit/sn), Node 22 desteği 2027 baharında biter, Pi'de eski `padel-tunnel`/cloudflared ve dev paketleri kaldırılacak (`npm ci --omit=dev`), enerji ayarı kararı (yukarıda).
 
 ## Yarın buradan devam (yazıldı: 2026-11-01 akşamı)
