@@ -826,6 +826,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
     body.touch #rotate { display: flex; position: fixed; inset: 0; z-index: 50; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; background: #0b1520; color: #fff; text-align: center; font: 800 22px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 1.5px; }
     body.touch #rotate .rt-icon { font-size: 56px; }
     body.touch #rotate small { font: 600 14px system-ui; letter-spacing: 0; color: #9fb3c8; }
+    body:has(#home:not([hidden])) #rotate { display: none; }
   }
   /* in-game key help (src/helpkeys.js): colours match public/kontroller.html */
   #help { position: fixed; z-index: 2; font-size: 12px; }
@@ -2219,6 +2220,175 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
     /* compact buttons, but a 44 px touch target: an invisible strip above and below each */
     .hm-seg-btn, .hm-btn-sec, .hm-link-btn, .hm-btn-join, .hm-btn, .hm-name-badge { position: relative; }
     .hm-seg-btn::after, .hm-btn-sec::after, .hm-link-btn::after, .hm-btn-join::after, .hm-btn::after, .hm-name-badge::after { content: ''; position: absolute; inset: -9px 0; }
+  }
+  /* phones and tablets in portrait: stacked columns, scrollable home, compact topbar */
+  @media (orientation: portrait) {
+    #home.panel {
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      box-sizing: border-box;
+    }
+    .hm-topbar {
+      box-sizing: border-box;
+      padding: 8px 12px;
+      margin: 8px 12px 0;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+    }
+    .hm-brand { gap: 6px; }
+    .hm-logo { font-size: clamp(20px, 5.5vw, 24px); }
+    .hm-tour-tag, .hm-pad-hint, .hm-footer-hint, .hm-howto { display: none; }
+    .hm-top-right { margin-left: auto; gap: 8px; }
+    .hm-name-box { align-items: flex-end; max-width: 100%; box-sizing: border-box; }
+    .hm-name-row { max-width: 100%; box-sizing: border-box; }
+    .hm-name-badge { max-width: 150px; padding: 4px 10px; font-size: 13px; box-sizing: border-box; }
+    .hm-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hm-name-input { max-width: 130px; box-sizing: border-box; }
+    .hm-name-box .hm-name-note {
+      display: block;
+      white-space: normal;
+      text-align: right;
+      max-width: 180px;
+      font-size: 10px;
+      line-height: 1.25;
+      color: var(--muted);
+      box-sizing: border-box;
+    }
+    .hm-main {
+      flex: 1 0 auto;
+      overflow-y: visible;
+      padding: 10px 12px;
+      gap: 12px;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .hm-cols {
+      grid-template-columns: 1fr;
+      max-width: 420px;
+      width: 100%;
+      gap: 12px;
+      margin: 0;
+      box-sizing: border-box;
+    }
+    .hm-col {
+      padding: 14px 14px;
+      border-radius: 14px;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .hm-col-left { gap: 8px; }
+    .hm-col-right { min-height: 0; }
+    .hm-seg-btn {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      padding: 8px 12px;
+      box-sizing: border-box;
+    }
+    .hm-mode-segment .hm-seg-btn {
+      min-height: 40px;
+      font-size: 14px;
+    }
+    .hm-pick-desc {
+      min-height: 28px;
+      font-size: 12px;
+      line-height: 1.35;
+      margin-top: 2px;
+    }
+    .hm-play-now {
+      min-height: 52px;
+      padding: 12px 16px;
+      font-size: 24px;
+      border-radius: 12px;
+      margin-top: 4px;
+      box-sizing: border-box;
+    }
+    .hm-sub-actions {
+      margin-top: 4px;
+      gap: 8px;
+    }
+    .hm-btn-sec {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      padding: 10px 14px;
+      box-sizing: border-box;
+    }
+    .hm-link-btn {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      padding: 8px 14px;
+      box-sizing: border-box;
+    }
+    .hm-games-title {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+    .hm-games-list {
+      max-height: 220px;
+      gap: 6px;
+    }
+    .hm-games-empty {
+      padding: 18px 12px;
+    }
+    .hm-game-row {
+      padding: 6px 10px;
+      box-sizing: border-box;
+    }
+    .hm-game-host {
+      max-width: 90px;
+      font-size: 13px;
+    }
+    .hm-game-type {
+      font-size: 12px;
+    }
+    .hm-btn-join {
+      min-height: 44px;
+      padding: 8px 16px;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+    .hm-bottom-bar {
+      padding: 10px 14px;
+      margin: 0 12px 16px;
+      border-radius: 12px;
+      box-sizing: border-box;
+    }
+    .hm-actions-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .hm-btn {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 14px;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+    /* touch target safety: invisible hit strip above and below interactive elements */
+    .hm-seg-btn, .hm-btn-sec, .hm-link-btn, .hm-btn-join, .hm-btn, .hm-name-badge {
+      position: relative;
+    }
+    .hm-seg-btn::after, .hm-btn-sec::after, .hm-link-btn::after, .hm-btn-join::after, .hm-btn::after, .hm-name-badge::after {
+      content: '';
+      position: absolute;
+      inset: -4px 0;
+    }
   }
 
   /* Settings Modal */
