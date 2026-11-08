@@ -14,6 +14,9 @@
   h1 { margin: 0; font: 900 34px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 1px; } h1 b { color: var(--acc); }
   h2 { font: 800 20px 'Barlow Condensed', 'Oswald', system-ui; text-transform: uppercase; letter-spacing: 1px; margin: 32px 0 10px; }
   .sub { color: var(--mut); margin: 4px 0 20px; }
+  .langs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; margin-bottom: 8px; }
+  .langs a { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--mut); text-decoration: none; font-size: 13px; font-weight: 700; }
+  .langs a.on { background: var(--acc); border-color: var(--acc); color: #fff; }
   a { color: var(--acc); }
   .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; color: var(--mut); font-size: 13px; }
   .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
@@ -71,6 +74,7 @@
 </head>
 <body>
 <div class="wrap">
+  <nav class="langs" id="langs" aria-label="Language"></nav>
   <h1 data-i18n-html="PADEL <b>LEGENDS</b> · Controls">PADEL <b>LEGENDS</b> · Controls</h1>
   <div class="sub"><span data-i18n="Press any key on your keyboard or hover over a key below to see what it does.">Press any key on your keyboard or hover over a key below to see what it does.</span> <a href="./" data-i18n="← Back to game">← Back to game</a></div>
   <div class="ways"><a href="#keyboard" data-i18n="⌨ Keyboard">⌨ Keyboard</a><a href="#controller" data-i18n="🎮 Xbox / PlayStation controller">🎮 Xbox / PlayStation controller</a><a href="#touch" data-i18n="📱 Tablet &amp; phone (iPad, Android)">📱 Tablet &amp; phone (iPad, Android)</a></div>
@@ -209,7 +213,7 @@
 </div>
 
 <script type="module">
-import { t, N_, loadLang, pickLang, translateDom } from './src/i18n.js';
+import { t, N_, loadLang, pickLang, translateDom, lang, LANGS } from './src/i18n.js';
 import { loadSettings } from './src/settings.js';
 import { padSvg, padLegend } from './src/helpkeys.js';
 
@@ -262,7 +266,13 @@ function show(code) {
   detail.innerHTML = d ? `<b>${d[0]}</b> — ${t(d[3])}` : `<b>${label(code)}</b> — ${t('this key is not used in the game.')}`;
 }
 
-loadLang(pickLang(loadSettings().lang, navigator.languages || [navigator.language])).then(() => {
+// ?lang=xx picks the page language (the switcher's links); otherwise the saved setting, then the browser
+const HELP_LANGS = ['tr', 'en', 'es', 'nl', 'fr', 'de'];
+const asked = new URLSearchParams(location.search).get('lang');
+loadLang(asked ? pickLang(asked) : pickLang(loadSettings().lang, navigator.languages || [navigator.language])).then(() => {
+  document.documentElement.lang = lang();
+  document.getElementById('langs').innerHTML = HELP_LANGS.map(c => `<a href="?lang=${c}" class="${c === lang() ? 'on' : ''}" hreflang="${c}">${LANGS.find(([k]) => k === c)[1]}</a>`).join('');
+  for (const a of document.querySelectorAll('#langs a')) a.onclick = () => { a.href = a.getAttribute('href') + location.hash; };  // keep the open section
   translateDom(document);
   for (const kind of ['xbox', 'ps']) {
     const el = document.getElementById(`pad-${kind}`);
