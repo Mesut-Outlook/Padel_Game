@@ -45,3 +45,12 @@ export function lobbyHtml(v) {
     <div class="lb-next">${next}</div>
   </div>`;
 }
+
+// true when no other humans remain in the match
+export function aloneOnline(l, seat = null, leftSeat = null) {
+  if (!l?.taken) return false;
+  if (seat != null && !l.taken.includes(seat)) return false;
+  const others = l.taken.filter(s => (seat == null || s !== seat) && (leftSeat == null || s !== leftSeat));
+  return seat == null ? others.length <= 1 : others.length === 0;
+}
+

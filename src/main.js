@@ -19,7 +19,7 @@ import { predict } from './physics.js';
 import { createFx } from './fx.js';
 import { unlockAudio, isAudioSuspended, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxReward, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
 import { initMenu, setWizardWhere, setWizardLobby, disposeMenu } from './menu.js';
-import { lobbyView, lobbyHtml } from './lobbyview.js';
+import { lobbyView, lobbyHtml, aloneOnline } from './lobbyview.js';
 import { initCareer, openCareer } from './careerui.js';
 import { createTutorial } from './tutorial.js';
 import { padText, isPlayStation } from './padstyle.js';
@@ -273,6 +273,7 @@ async function setupScene(venue, ids, roster, rk) {
   }
   const name = (t) => ids.filter(id => (id < 2 ? 0 : 1) === t).map(id => roster[id].name.split(' ').pop()).join(' / ');
   $('t0').textContent = name(0); $('t1').textContent = name(1);
+  hideLeftCard();
   for (const id of ['exitBtn', 'hud', 'cam', 'help', 'fsBtn']) $(id).hidden = false;
   clearPressed();  // a D-pad ↓ / key pressed in the menus must not act in the match
   $('touchUi').hidden = !isTouch() || document.body.classList.contains('pad');
@@ -319,7 +320,11 @@ export function startOnline({ url, code, create = false, quick = false, mode = '
       if (pend === me) { pend = null; flash(t(e), 4); return; }  // the warm-up goes on offline
       if (!me.lobby?.started) { net = null; setWizardLobby(null); } else flash(t(e), 4);  // not in a match yet: START can try again
     },
-    onLeft: ({ seat, name }) => flash(t('{name} left the match. The AI plays for them.', { name: name || avatars[seat]?.ch?.name || '?' }), 4),
+    onLeft: ({ seat, name }) => {  // 'left' comes before the lobby update, so the leaver is still in taken: aloneOnline skips them
+      const leftName = name || avatars[seat]?.ch?.name || '?';
+      if (net === me && aloneOnline(me.lobby, me.seat, seat)) showLeftCard(leftName);  // no human left to play: stay vs AI or go
+      else flash(t('{name} left the match. The AI plays for them.', { name: leftName }), 4);
+    },
     onStatus: (s) => flash(s === 'back' ? t('You are back in the match.') : t('Connection lost. Getting you back into the match…'), s === 'back' ? 2.5 : 30),
     onLobby: (l) => {
       // in the match: tell the others when a player drops (the AI plays their seat) and when they come back
@@ -445,6 +450,7 @@ export async function startMatch(cfg) {
 
 // back to the menu after a match; career matches return to the career hub
 function toMenu() {
+  hideLeftCard();
   keepAwake(false);
   const ub = $('unmuteBadge'); if (ub) ub.hidden = true;
   const isCareer = !!onEnd;
@@ -971,6 +977,7 @@ $('pause').onclick = (e) => {
 };
 
 function setPaused(on) {
+  if (on && leftCardOpen) hideLeftCard();
   paused = on;
   pauseSel = 0;
   $('pause').hidden = !on;
@@ -1053,6 +1060,141 @@ function pauseInput() {
   }
 }
 
+// Opponent left card: shows when no other human players remain in an online match. Match keeps running.
+let leftCardOpen = false, leftCardSel = 0, leftCardName = '';
+let lastPadNavLeftCard = 0;
+
+function leftCardItems() {
+  return [
+    [t('Continue vs AI'), () => hideLeftCard()],
+    [t('Back to lobby'), toMenu],
+  ];
+}
+
+function updateLeftCardSel() {
+  const box = $('lcItems');
+  if (!box) return;
+  box.querySelectorAll('.pz-item').forEach((b, i) => {
+    b.classList.toggle('sel', i === leftCardSel);
+  });
+}
+
+function drawLeftCard() {
+  const titleEl = $('lcTitle');
+  if (titleEl) titleEl.textContent = t('{name} left the match.', { name: leftCardName });
+  const box = $('lcItems');
+  if (!box) return;
+  const items = leftCardItems();
+  box.innerHTML = items.map(([itemText], i) => `<button type="button" class="pz-item${i === leftCardSel ? ' sel' : ''}" data-i="${i}" tabindex="-1">${itemText}</button>`).join('');
+  box.querySelectorAll('.pz-item').forEach(b => {
+    b.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const idx = +b.dataset.i;
+      const act = leftCardItems()[idx]?.[1];
+      if (act) act();
+    };
+    b.onmousemove = () => {
+      leftCardSel = +b.dataset.i;
+      updateLeftCardSel();
+    };
+  });
+}
+
+function showLeftCard(name) {
+  leftCardName = name || '?';
+  leftCardSel = 0;
+  leftCardOpen = true;
+  const card = $('leftCard');
+  if (card) {
+    drawLeftCard();
+    card.hidden = false;
+  }
+  const pads = (navigator.getGamepads ? Array.from(navigator.getGamepads()) : []).filter(Boolean);
+  lastPadNavA = pads.some(p => p.buttons[0]?.pressed);
+  lastPadNavB = pads.some(p => p.buttons[1]?.pressed);
+  lastPadNavStart = true;
+  lastPadNavY = 0;
+  lastPadNavLeftCard = 0;
+  padRepeatTimer = 0;
+  clearPressed();
+}
+
+function hideLeftCard() {
+  leftCardOpen = false;
+  const card = $('leftCard');
+  if (card) card.hidden = true;
+  clearPressed();
+}
+
+if ($('leftCard')) {
+  $('leftCard').onclick = (e) => {
+    if (e.target === $('leftCard')) hideLeftCard();
+  };
+}
+
+function leftCardInput() {
+  const items = leftCardItems(), n = items.length;
+  const pads = (navigator.getGamepads ? Array.from(navigator.getGamepads()) : []).filter(Boolean);
+
+  let padPrev = false, padNext = false, padPick = false, padBack = false;
+  let currentNav = 0;
+  let currentA = false;
+  let currentB = false;
+  let currentStart = false;
+
+  const now = performance.now();
+
+  for (const pad of pads) {
+    const [dx, dy] = padDir(pad);
+    if (dy === -1 || dx === -1) currentNav = -1;
+    else if (dy === 1 || dx === 1) currentNav = 1;
+
+    if (pad.buttons[0]?.pressed) currentA = true;
+    if (pad.buttons[1]?.pressed) currentB = true;
+    if (pad.buttons[9]?.pressed) currentStart = true;
+  }
+
+  if (currentNav !== 0) {
+    if (currentNav !== lastPadNavLeftCard) {
+      if (currentNav === -1) padPrev = true;
+      if (currentNav === 1) padNext = true;
+      padRepeatTimer = now + 280;
+    } else if (now > padRepeatTimer) {
+      if (currentNav === -1) padPrev = true;
+      if (currentNav === 1) padNext = true;
+      padRepeatTimer = now + 150;
+    }
+  } else {
+    padRepeatTimer = 0;
+  }
+  lastPadNavLeftCard = currentNav;
+
+  if (currentA && !lastPadNavA) padPick = true;
+  if (currentB && !lastPadNavB) padBack = true;
+  if (currentStart && !lastPadNavStart) padBack = true;
+  lastPadNavA = currentA;
+  lastPadNavB = currentB;
+  lastPadNavStart = currentStart;
+
+  const prev = consumePressed('ArrowUp') | consumePressed('ArrowLeft') | consumePressed('KeyW') | consumePressed('KeyA') | padPrev;
+  const next = consumePressed('ArrowDown') | consumePressed('ArrowRight') | consumePressed('KeyS') | consumePressed('KeyD') | padNext;
+  const pick = consumePressed('Enter') | consumePressed('Space') | padPick;
+  const back = consumePressed('Escape') | consumePressed('Pause') | padBack;
+
+  if (prev || next) {
+    leftCardSel = (leftCardSel + (next ? 1 : n - 1)) % n;
+    updateLeftCardSel();
+  }
+  if (pick) {
+    const act = items[leftCardSel]?.[1];
+    if (act) act();
+  } else if (back) {
+    hideLeftCard();
+  }
+}
+
+
 // auto: the point's replay window from game.js + the team that won it (only they may skip it); none = R, the last shots, yours to end
 let replayCamBefore = null, replayWho = null;
 function startReplay(auto, team = null) {
@@ -1112,8 +1254,11 @@ function loop(now) {
     // offline the world freezes; an online match can't be stopped, so it keeps running behind the menu
     if (paused && !net) { renderer.render(scene, camera); requestAnimationFrame(loop); return; }
     if (!paused) { requestAnimationFrame(loop); return; }
+  } else if (leftCardOpen) {
+    leftCardInput();
   }
   const over = world?.match.winner != null || net?.winner != null;
+  if (over && leftCardOpen) hideLeftCard();
   if (consumePressed('Pause') | (!replay.playing && consumePressed('Escape'))) {
     if (over && !tut) { toMenu(); return; }  // Start / Esc on the final score: back to the menu
     setPaused(true); requestAnimationFrame(loop); return;
@@ -1134,8 +1279,8 @@ function loop(now) {
     if (!view) { endReplay(); view = snapshot(world); }
   } else if (net) {
     const pl = net.seat < 2 ? 0 : 1;
-    const inp = readLocal(pl, control, getCamPlane());
-    if (eatReq.delete(net.seat)) inp.eat = true;
+    const inp = leftCardOpen ? { move: [0, 0], swing: null, aim: 0 } : readLocal(pl, control, getCamPlane());
+    if (!leftCardOpen && eatReq.delete(net.seat)) inp.eat = true;
     net.send(inp);
     view = net.view();
     if (!view) { requestAnimationFrame(loop); return; }

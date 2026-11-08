@@ -43,3 +43,5 @@ Read `CLAUDE.md` — it is the shared guide for every agent (Claude, Antigravity
 | `agy-28` | ✕ Exit düğmesi ve "Leave the match?" penceresi | `agents/reports/agy-28-exit-button.md` | Completed, Opus reviewed (online Leave sends `leave`, Team up AI seats get avatars) |
 | `agy-29` | Açık renk tema (maç dışı ekranlar) | `agents/reports/agy-29-light-theme.md` | Completed, Opus reviewed (match overlays keep white text: the HUD team names had turned dark on dark) |
 | `agy-30` | Ana sayfa = canlı lobi (görsel düzen) | `agents/reports/agy-30-home-live-lobby.md` | Completed, Opus reviewed and wired (PLAY NOW / Invite / Join → `playNow`, the open list polls a trusted server every 4 s, an invite link joins with no menus) |
+| `agy-31` | Rakip çıkınca: "Continue vs AI / Back to lobby" | `agents/reports/agy-31-opponent-left.md` | Completed, Opus reviewed (the onLeft path simplified: `left` arrives before the lobby update and `aloneOnline` skips the leaver, so no pending state) |
+

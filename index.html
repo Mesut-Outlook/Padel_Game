@@ -913,13 +913,13 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   #smashBanner .sb-sub b { color: #0b1520; background: var(--acc); padding: 1px 7px; border-radius: 5px; margin: 0 2px; font-weight: 800; }
   @keyframes sbPop { from { opacity: 0; transform: translateX(-50%) skewX(-6deg) scale(.82); } to { opacity: 1; transform: translateX(-50%) skewX(-6deg) scale(1); } }
   /* pause menu (main.js) */
-  #pause { position: fixed; inset: 0; background: rgba(5,10,16,.75); display: grid; place-items: center; z-index: 6; }
-  #pause .pz-card { background: rgba(10,18,28,.95); border: 1px solid #ffffff1a; border-top: 4px solid var(--acc); border-radius: 14px; padding: 22px 26px; width: min(340px, 90vw); text-align: center; }
-  #pause .pz-title { font: 900 28px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 2px; margin-bottom: 14px; }
+  #pause, #leftCard { position: fixed; inset: 0; background: rgba(5,10,16,.75); display: grid; place-items: center; z-index: 6; }
+  #pause .pz-card, #leftCard .pz-card { background: rgba(10,18,28,.95); border: 1px solid #ffffff1a; border-top: 4px solid var(--acc); border-radius: 14px; padding: 22px 26px; width: min(340px, 90vw); text-align: center; }
+  #pause .pz-title, #leftCard .pz-title { font: 900 28px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 2px; margin-bottom: 14px; }
   #pause .pz-loss { color: #ff9f43; font-size: 13px; font-weight: 700; margin: -8px 0 12px; }
-  #pause .pz-item { display: block; width: 100%; margin: 8px 0; padding: 12px; border-radius: 10px; border: 1px solid #ffffff1a; background: #12202e; color: #fff; font: 800 17px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 1px; cursor: pointer; text-transform: uppercase; }
-  #pause .pz-item.sel { background: var(--acc); color: #0b1520; border-color: var(--acc); }
-  #pause .pz-note { color: #ff9f43; font-size: 12px; min-height: 16px; } #pause .pz-hint { color: #9fb3c8; font-size: 11px; margin-top: 8px; }
+  #pause .pz-item, #leftCard .pz-item { display: block; width: 100%; margin: 8px 0; padding: 12px; border-radius: 10px; border: 1px solid #ffffff1a; background: #12202e; color: #fff; font: 800 17px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 1px; cursor: pointer; text-transform: uppercase; }
+  #pause .pz-item.sel, #leftCard .pz-item.sel { background: var(--acc); color: #0b1520; border-color: var(--acc); }
+  #pause .pz-note { color: #ff9f43; font-size: 12px; min-height: 16px; } #pause .pz-hint, #leftCard .pz-hint { color: #9fb3c8; font-size: 11px; margin-top: 8px; }
 
   /* Career Mode (.pl-career-* / .cr-*) */
   .pl-career-top-btn {
@@ -2506,6 +2506,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
 <div id="smashVignette" hidden></div>
 <div id="smashBanner" hidden><div class="sb-kicker" id="sbKicker"></div><div class="sb-title" id="sbTitle"></div><div class="sb-sub" id="sbSub"></div></div>
 <div id="pause" hidden><div class="pz-card"><div class="pz-title" data-i18n="Leave the match?">Leave the match?</div><div id="pzLoss" class="pz-loss" hidden data-i18n="Leaving counts as a loss.">Leaving counts as a loss.</div><div id="pzItems"></div><div id="pzNote" class="pz-note"></div><div class="pz-hint" data-i18n="↑ ↓ select · Enter / A (✕) confirm · Esc / Start (Options) resume">↑ ↓ select · Enter / A (✕) confirm · Esc / Start (Options) resume</div></div></div>
+<div id="leftCard" hidden><div class="pz-card"><div class="pz-title" id="lcTitle"></div><div id="lcItems"></div></div></div>
 <div id="replayTag" hidden data-i18n-html="● REPLAY <small style=&quot;font-weight:600;opacity:.85&quot;>· press any key to skip</small>">● REPLAY <small style="font-weight:600;opacity:.85">· press any key to skip</small></div>
 <div id="help" hidden></div>
 <div id="touchUi" hidden></div>

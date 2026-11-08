@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { lobbyView, lobbyHtml } from '../src/lobbyview.js';
+import { lobbyView, lobbyHtml, aloneOnline } from '../src/lobbyview.js';
 
 const chars = [{ name: 'Erhan' }, { name: 'Burcu' }, { name: 'Daan' }];
 const venues = [{ name: 'Madrid Indoor Arena' }];
@@ -32,3 +32,27 @@ test('lobbyView: a hostile server cannot put markup in the rules line', () => {
   assert.equal(v.rules.sets, 3);
   assert.ok(!lobbyHtml(v).includes('<img'));
 });
+
+test('aloneOnline: true only when no other human players remain in the match', () => {
+  // Invalid or empty lobbies
+  assert.equal(aloneOnline(null, 0), false);
+  assert.equal(aloneOnline({}, 0), false);
+  assert.equal(aloneOnline({ taken: [] }, 0), false);
+  assert.equal(aloneOnline({ taken: [2] }, 0), false, 'not alone if not even seated in taken');
+
+  // Human alone in room
+  assert.equal(aloneOnline({ taken: [0] }, 0), true);
+  assert.equal(aloneOnline({ taken: [2] }, 2), true);
+  assert.equal(aloneOnline({ taken: [0] }), true, 'seat optional');
+
+  // Multiple humans
+  assert.equal(aloneOnline({ taken: [0, 2] }, 0), false);
+  assert.equal(aloneOnline({ taken: [0, 1, 2, 3] }, 0), false);
+  assert.equal(aloneOnline({ taken: [0, 2] }), false);
+
+  // Another player left (leftSeat)
+  assert.equal(aloneOnline({ taken: [0, 2] }, 0, 2), true, 'opponent in seat 2 left -> player 0 is alone');
+  assert.equal(aloneOnline({ taken: [0, 1, 2] }, 0, 2), false, 'seat 2 left but seat 1 remains');
+  assert.equal(aloneOnline({ taken: [0, 2] }, null, 2), true, 'leftSeat without seat');
+});
+
