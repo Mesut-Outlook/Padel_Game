@@ -11,9 +11,9 @@ import { createCameraRig } from './camera.js';
 import { createReplay } from './replay.js';
 import { aiInput } from './ai.js';
 import { readLocal, readGamepad, consumePressed, clearPressed, localControl } from './input.js';
-import { connect } from './net.js';
+import { connect, listRooms } from './net.js';
 import { debugFrame } from './debug.js';
-import { serverUrl, NO_SERVER, allowServer, NOT_CONNECTED } from './serverurl.js';
+import { serverUrl, NO_SERVER, allowServer, NOT_CONNECTED, trustedServer } from './serverurl.js';
 import { track, trackOnce } from './track.js';
 import { predict } from './physics.js';
 import { createFx } from './fx.js';
@@ -27,7 +27,8 @@ import { mountKeyHelp } from './helpkeys.js';
 import { parseRoute } from './route.js';
 import { loadSettings } from './settings.js';
 import { initSplash } from './splash.js';
-import { initHome, showHome, hideHome } from './home.js';
+import { initHome, showHome, hideHome, setOpenGames, getOnlineName } from './home.js';
+import { inviteUrl, shareInvite, INVITE_TEXT } from './invite.js';
 import { initSettingsModal, openSettingsModal } from './settingsmodal.js';
 import { bindFullscreenKey, toggleFullscreen, isFullscreen } from './fullscreen.js';
 import { padDir } from './padnav.js';
@@ -94,15 +95,33 @@ function applyRoute() {
   } else {
     hideHome();
     if (menuEl) menuEl.hidden = false;
-    if (route.room) {
-      setWizardWhere('online', route.room);
+    if (route.room) {  // an invite link: straight into that room (the tap on the link was the Join), no menus
+      window.__padelRoom = null;
+      if (menuEl) menuEl.hidden = true;
+      if (!playNow({ code: route.room, name: getOnlineName() })) setWizardWhere('online', route.room);  // no server: the wizard explains
     }
   }
 }
 
 initSettingsModal();
 initHome({
-  onFriendly: () => {
+  onPlayNow: ({ players, mode }) => { track('online-click'); playNow({ players, mode, name: getOnlineName() }); },
+  onInvite: ({ players, mode }) => {  // the room opens, the link goes out (share sheet / clipboard) while the warm-up starts
+    track('online-click');
+    const h = playNow({ players, mode, invite: true, name: getOnlineName() });
+    if (!h) return;
+    const send = async () => {
+      if (!h.lobby) return setTimeout(send, 100);
+      const url = inviteUrl(h.lobby.code, location, window.__padelServer);
+      const how = await shareInvite(url, t(INVITE_TEXT), navigator, isTouch());
+      if (how === 'copied') flash(t('Invite link copied: send it to your friend.'), 4);
+      else if (how === 'failed') flash(t('Room code: {code}', { code: h.lobby.code }), 8);  // no share, no clipboard: the code still works
+    };
+    send();
+  },
+  onJoin: (code) => { track('online-click'); playNow({ code, name: getOnlineName() }); },
+  onPlayAI: () => { hideHome(); $('start').dataset.tutorial = ''; $('start').click(); },  // the saved Friendly picks, no wizard
+  onCustomize: () => {
     location.hash = '#friendly';
   },
   onCareer: () => {
@@ -124,6 +143,18 @@ initHome({
     location.hash = '#career';
   },
 });
+
+// the open games list on HOME: refreshed while HOME is on screen; only our own (or a local) server is asked without a click
+async function pollOpenGames() {
+  const home = $('home');
+  if (home && !home.hidden && !document.hidden && !net && !pend) {
+    const url = serverUrl(location);
+    if (!url || !trustedServer(url, location)) setOpenGames([], false);
+    else { try { setOpenGames(await listRooms(url), true); } catch { setOpenGames([], false); } }
+  }
+  setTimeout(pollOpenGames, 4000);
+}
+pollOpenGames();
 
 window.addEventListener('hashchange', () => {
   if (menuDisposed) return toMenu();  // browser Back mid-match: the wizard is gone, so leave like pause → Main menu (reloads)
