@@ -769,34 +769,23 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   #invitePanel .ip-wa { background: #1f9d55; border-color: #1f9d55; color: #fff; }
   #invitePanel .ip-close { position: absolute; top: 6px; right: 6px; width: 40px; height: 40px; border: 0; background: none; font-size: 18px; cursor: pointer; color: #44515e; }
   #invitePanel .ip-btn:focus-visible, #invitePanel .ip-close:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
-  #hud { position: fixed; top: calc(max(10px, env(safe-area-inset-top)) + 52px); left: max(10px, env(safe-area-inset-left)); background: rgba(10,18,28,.95); border: 1px solid #ffffff1a; border-radius: 10px; padding: 6px 10px 8px; z-index: 2; min-width: 300px; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
-  #hud .hud-head { display: flex; justify-content: space-between; gap: 16px; font-size: 10px; letter-spacing: 1.5px; color: #9fb3c8; font-weight: 800; margin-bottom: 4px; }
-  #hud #hudLabel { color: var(--acc); }
-  #hud .hud-energy { margin-top: 5px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; }
-  #hud .he-row { display: grid; grid-template-columns: auto 1fr auto 22px; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; color: #9fb3c8; min-width: 0; }
-  #hud .he-row.human { color: #fff; font-weight: 800; }
-  #hud .he-row.human .he-name { color: var(--acc); }
-  #hud .he-row .he-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 72px; }
-  #hud .he-bar { height: 5px; background: #ffffff14; border-radius: 3px; overflow: hidden; min-width: 32px; }
-  #hud .he-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #4ade80, #d8f53a); border-radius: 3px; transition: width .25s linear; }
-  #hud .he-bar i.mid { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-  #hud .he-bar i.low { background: #ef4444; animation: heLow .7s ease-in-out infinite alternate; }
-  #hud .he-d { font-size: 8px; line-height: 1; margin-right: -3px; }
-  #hud .he-hyd { min-width: 0; }
-  #hud .he-hyd i { background: #38bdf8; }
-  #hud .he-hyd i.low { background: #ef4444; }
+  /* scoreline at the top centre (main.js renderHud) */
+  #hud { position: fixed; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); background: rgba(10,18,28,.92); border: 1px solid #ffffff1a; border-radius: 12px; padding: 5px 14px 6px; z-index: 2; box-shadow: 0 4px 16px rgba(0,0,0,.4); text-align: center; max-width: min(460px, calc(100vw - 32px)); min-width: 220px; }
+  body.touch:not(.pad) #hud { top: calc(max(10px, env(safe-area-inset-top)) + 54px); }  /* under the touch buttons' row */
+  #hud .hud-grid { display: flex; align-items: center; justify-content: center; gap: 8px; font-variant-numeric: tabular-nums; }
+  #hud .hud-grid .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; font-size: 15px; }
+  #hud .hud-grid .nm:first-child { text-align: right; } #hud .hud-grid .nm:last-child { text-align: left; }
+  #hud .hud-grid .nm.srv:first-child::before { content: '● '; color: var(--acc); } #hud .hud-grid .nm.srv:last-child::after { content: ' ●'; color: var(--acc); }  /* ● = serving */
+  #hud .hud-grid .pt { min-width: 34px; font-weight: 900; font-size: 22px; color: #0b1520; background: var(--acc); border-radius: 6px; padding: 0 4px; }
+  #hud .hud-grid .dash { font-weight: 900; color: #9fb3c8; }
+  #hud .hud-sub { margin-top: 2px; font-size: 11px; letter-spacing: 1px; font-weight: 700; color: #9fb3c8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #hud .hud-sub:empty { display: none; }
+  body:has(#invitePanel:not([hidden])) #hud { display: none; }  /* the invite card holds the top centre during the warm-up */
   #eatOffers { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: grid; gap: 6px; z-index: 4; }
   #eatOffers .eat-offer { font: 800 14px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 1.2px; color: #fff; background: rgba(10,18,28,.92); border: 1px solid rgba(216,245,58,.55); border-radius: 999px; padding: 7px 16px; box-shadow: 0 6px 20px rgba(0,0,0,.45); cursor: pointer; touch-action: none; white-space: nowrap; }
   #eatOffers kbd { color: #0b1520; background: var(--acc); border-radius: 4px; padding: 0 6px; font-family: inherit; }
   @keyframes heLow { from { opacity: 1; } to { opacity: .35; } }
-  #hud .hud-grid { display: grid; align-items: center; column-gap: 6px; row-gap: 3px; font-variant-numeric: tabular-nums; }
-  #hud .hud-grid span { text-align: center; font-weight: 800; font-size: 17px; }
-  #hud .hud-grid .hd { font-size: 9px; color: #9fb3c8; letter-spacing: 1px; } #hud .hud-grid .hd.cur { color: #fff; }
-  #hud .hud-grid .srv { color: var(--acc); font-size: 13px; }
-  #hud .hud-grid .nm { text-align: left; font-size: 15px; padding-right: 8px; white-space: nowrap; }
-  #hud .hud-grid .g { color: #9fb3c8; } #hud .hud-grid .g.won { color: #fff; } #hud .hud-grid .g.cur { color: #fff; background: #ffffff14; border-radius: 4px; }
-  #hud .hud-grid .pt { color: #0b1520; background: var(--acc); border-radius: 5px; font-size: 18px; padding: 0 4px; }
-  #hud .hud-style { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 5px; padding-top: 4px; border-top: 1px solid #ffffff14; font-size: 10.5px; letter-spacing: 1px; color: #9fb3c8; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #hud .hud-style { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 5px; padding-top: 4px; border-top: 1px solid #ffffff14; font-size: 10.5px; letter-spacing: 1px; color: #9fb3c8; font-weight: 700; font-variant-numeric: tabular-nums; }
   #hud .hs-pts b { color: var(--acc); font-weight: 800; font-size: 12px; }
   #hud .hs-streak { background: linear-gradient(90deg, #ff9f43, #ff4d4d); color: #0b1520; padding: 1px 6px; border-radius: 999px; font-size: 9.5px; font-weight: 900; letter-spacing: .8px; }
   #hud .hs-medals { display: flex; gap: 4px; font-size: 12px; }
@@ -839,7 +828,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   #fsHint b { color: var(--acc); } #fsHint button { flex: none; margin-left: auto; background: none; border: 0; color: #fff; font-size: 18px; cursor: pointer; }
   #fsHint[hidden] { display: none; }
   @media (display-mode: standalone), (display-mode: fullscreen) { .fs-btn-sync { display: none !important; } }  /* opened from the home-screen icon: already full screen */
-  @media (max-height: 500px) { #hud { transform: scale(.78); transform-origin: top left; } }
+  @media (max-height: 500px) { #hud { transform: translateX(-50%) scale(.85); transform-origin: top center; } }
   #hud { transition: opacity .25s, visibility .25s; } #hud.away { opacity: 0; visibility: hidden; }  /* scoreboard mode (main.js hudAway) */
   #rotate { display: none; }
   @media (orientation: portrait) {
@@ -895,7 +884,6 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   #help .pk.on { background: #ffffff1f; } #help .pk.on b { box-shadow: 0 0 0 2px #fff; }
   #replayTag { position: fixed; top: 56px; right: 16px; background: #c1121f; padding: 4px 12px; border-radius: 6px; font-weight: 800; z-index: 2; }
   kbd { background: #234; padding: 1px 6px; border-radius: 4px; }
-  #hud .tour { font-size: 11px; letter-spacing: 2px; opacity: .7; }
 
   /* training mode */
   .pl-start-slot { display: flex; gap: 10px; align-items: center; }
@@ -2702,10 +2690,9 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
 <div id="invitePanel" role="dialog" aria-live="polite" hidden></div>
 <div id="tlBar"><button type="button" id="exitBtn" hidden><span aria-hidden="true">✕</span> <span data-i18n="Exit">Exit</span></button><button type="button" id="hudBtn" aria-label="Scoreboard: auto / hidden / always on" data-i18n-title="Scoreboard: auto / hidden / always on" title="Scoreboard: auto / hidden / always on">📊</button></div>
 <div id="hud" hidden>
-  <div class="hud-head"><span class="tour">MESUT PADEL TOUR</span><span id="hudLabel">SET 1</span></div>
   <div class="hud-grid" id="hudGrid"></div>
+  <div class="hud-sub" id="hudLabel"></div>
   <div class="hud-style" id="hudStyle"><span class="hs-pts" id="hsPts">STYLE <b>0</b> PTS</span><span class="hs-streak" id="hsStreak" hidden>🔥 x1.5 ON FIRE</span><span class="hs-medals" id="hsMedals"></span></div>
-  <div class="hud-energy" id="hudEnergy" hidden></div>
   <span id="t0" hidden>TEAM A</span><span id="t1" hidden>TEAM B</span><span id="setsHud" hidden></span><span id="pts" hidden></span>
 </div>
 <div id="eatOffers"></div>

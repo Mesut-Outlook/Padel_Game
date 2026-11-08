@@ -971,6 +971,7 @@ export default {
   "shot": "pancada",
   "shot · serve": "pancada · serviço",
   "skip lesson": "saltar lição",
+  "Games {a}–{b}": "Jogos {a}–{b}",
   "▾ tap to read": "▾ toca para ler",
   "▴ tap to hide": "▴ toca para esconder",
   "slice": "slice",

@@ -250,6 +250,7 @@ function renderStyleHud() {
   const ptsEl = $('hsPts'), strEl = $('hsStreak'), medEl = $('hsMedals');
   if (!ptsEl) return;
   ptsEl.innerHTML = t('STYLE <b>{pts}</b> PTS', { pts: styleStats.pts });
+  if ($('hudStyle')) $('hudStyle').hidden = !styleStats.pts && styleStats.streak < 2 && !styleStats.medals.length;  // no style row until there is something to show
   if (strEl) {
     strEl.hidden = styleStats.streak < 2;
     if (styleStats.streak >= 2) strEl.textContent = t('🔥 x{mult} ON FIRE', { mult: styleStats.streak >= 3 ? '2.0' : '1.5' });
@@ -319,7 +320,7 @@ async function setupScene(venue, ids, roster, rk) {
   keepAwake(true);
   $('msg').textContent = '';
   acc = 0; freeze = 0; slow = 0; shake = 0; approach = 0; bannerMode = ''; rallyFlags = {};
-  energyUi = null; tiredWarned = false; emptyFoodWarned = false; clearOffers();
+  tiredWarned = false; emptyFoodWarned = false; clearOffers();
   resetStyleStats();
   updateSmashBanner();
   setMusicDuck('point');
@@ -924,37 +925,15 @@ function handleEvents(events, score, winner) {
   renderHud(s);
 }
 
-// energy bars for all active players (offline from the world, online from the snapshot); red and pulsing when spent
-let energyUi = null, tiredWarned = false;
+// energy and hydration bars live in the players' name tags (player.js makeLabel); here only offers and the TIRED warning
+let tiredWarned = false;
 function renderEnergy(view) {
   if (world) for (const pid of offers.keys()) if (!world.players[pid]?.offer) hideOffer(pid);
-  const box = $('hudEnergy');
-  if (!box) return;
-  const isDoubles = world ? (world.players[1]?.active ?? true) : !!avatars[1];
-  const activeIds = isDoubles ? [0, 1, 2, 3] : [0, 2];  // two columns: a row per team, in the scoreboard's order
-  const names = activeIds.map(id => avatars[id]?.ch?.name?.split(' ').pop() || ('P' + (id + 1)));
-  const key = activeIds.join() + ':' + humans.join() + ':' + names.join();
-  if (energyUi?.key !== key) {
-    box.innerHTML = activeIds.map((id, i) => {
-      const isHuman = humans.includes(id);
-      return `<div class="he-row${isHuman ? ' human' : ''}"><span class="he-name">${escapeText(names[i])}</span><span class="he-bar"><i></i></span><span class="he-d">💧</span><span class="he-bar he-hyd"><i></i></span></div>`;
-    }).join('');
-    energyUi = { key, ids: activeIds, bars: [...box.querySelectorAll('.he-bar:not(.he-hyd) i')], hyd: [...box.querySelectorAll('.he-hyd i')] };
-    box.hidden = false;
-  }
-  activeIds.forEach((id, k) => {
-    const e = world ? (world.players[id]?.energy ?? 1) : (view.pl[id]?.[7] ?? 1), bar = energyUi.bars[k];
-    if (bar) {
-      bar.style.width = `${Math.round(e * 100)}%`;
-      bar.className = e < 0.25 ? 'low' : e < 0.5 ? 'mid' : '';
-    }
-    const hy = world ? (world.players[id]?.hyd ?? 1) : (view.pl[id]?.[8] ?? 1), hb = energyUi.hyd[k];
-    if (hb) { hb.style.width = `${Math.round(hy * 100)}%`; hb.className = hy < 0.3 ? 'low' : ''; }
-    if (humans.length && id === humans[0]) {
-      if (e < 0.25 && !tiredWarned) { tiredWarned = true; showHype(t('😮‍💨 TIRED — catch your breath between points'), 0, 2.2); }
-      if (e > 0.4) tiredWarned = false;
-    }
-  });
+  const id = humans[0];
+  if (id === undefined) return;
+  const e = world ? (world.players[id]?.energy ?? 1) : (view.pl[id]?.[7] ?? 1);
+  if (e < 0.25 && !tiredWarned) { tiredWarned = true; showHype(t('😮‍💨 TIRED — catch your breath between points'), 0, 2.2); }
+  if (e > 0.4) tiredWarned = false;
 }
 
 // scoreboard mode, cycled with B / pad D-pad ↓ / touch 📊 and remembered: auto = hidden from the serve until the point ends
@@ -969,7 +948,7 @@ function nextHudMode() {
 }
 const hudAway = (state) => $('hud').classList.toggle('away', hudMode === 'off' || (hudMode === 'auto' && (state === 'serve' || state === 'toss' || state === 'play')));
 
-// score board: rows per team with games per set, the current point and a ball marking the server
+// scoreline at the top centre: ● name  15 – 30  name, and under it the set, games and earlier sets
 let hudKey = '';
 function renderHud(s) {
   $('setsHud').textContent = s.sets; $('pts').textContent = s.pts;  // plain text kept for flashes and tools
@@ -978,18 +957,16 @@ function renderHud(s) {
   const names = [$('t0').textContent, $('t1').textContent], key = JSON.stringify(b) + names;
   if (key === hudKey) return;
   hudKey = key;
-  const n = b.sets.length, cur = (i) => (i === n - 1 ? ' cur' : '');
-  const c = (tText, cls = '') => `<span class="${cls}">${tText}</span>`;
-  let h = c('') + c('') + b.sets.map((_, i) => c(t('SET {n}', { n: i + 1 }), 'hd' + cur(i))).join('') + c(t('PTS'), 'hd');
-  for (const tIdx of [0, 1]) {
-    h += c(b.server === tIdx ? '●' : '', 'srv') + c(escapeText(names[tIdx]), 'nm')
-      + b.sets.map((st, i) => c(escapeText(st[tIdx]), 'g' + cur(i) + (i < n - 1 && st[tIdx] > st[1 - tIdx] ? ' won' : ''))).join('')
-      + c(escapeText(b.pts[tIdx]), 'pt');  // online: board values come from the server
+  const n = b.sets.length, side = (i) => `<span class="nm${b.server === i ? ' srv' : ''}">${escapeText(names[i])}</span>`;
+  $('hudGrid').innerHTML = side(0) + `<span class="pt">${escapeText(b.pts[0])}</span><span class="dash">–</span><span class="pt">${escapeText(b.pts[1])}</span>` + side(1);  // online: board values come from the server
+  const sub = [];
+  if (n) {
+    const g = b.sets[n - 1];
+    sub.push(t('SET {n}', { n: b.setNo }), t('Games {a}–{b}', { a: g[0], b: g[1] }));
+    if (n > 1) sub.push(b.sets.slice(0, -1).map(st => `${st[0]}–${st[1]}`).join(' '));
   }
-  const grid = $('hudGrid');
-  grid.style.gridTemplateColumns = `14px auto ${n > 0 ? `repeat(${n}, 34px) ` : ''}48px`;
-  grid.innerHTML = h;
-  $('hudLabel').textContent = n ? t('SET {n}', { n: b.setNo }) + (b.label ? ' · ' + t(b.label) : '') : (b.label ? t(b.label) : '');  // rally scoring has no sets
+  if (b.label) sub.push(t(b.label));
+  $('hudLabel').textContent = sub.join(' · ');  // rally scoring has no sets
 }
 
 // Pause menu: Esc (when no replay is running) or pad Start. Freezes the match; online games keep running.

@@ -971,6 +971,7 @@ export default {
   "shot": "slag",
   "shot · serve": "slag · service",
   "skip lesson": "les overslaan",
+  "Games {a}–{b}": "Games {a}–{b}",
   "▾ tap to read": "▾ tik om te lezen",
   "▴ tap to hide": "▴ tik om te verbergen",
   "slice": "slice",

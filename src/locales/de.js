@@ -971,6 +971,7 @@ export default {
   "shot": "Schlag",
   "shot · serve": "Schlag · Aufschlag",
   "skip lesson": "Lektion überspringen",
+  "Games {a}–{b}": "Spiele {a}–{b}",
   "▾ tap to read": "▾ zum Lesen tippen",
   "▴ tap to hide": "▴ zum Ausblenden tippen",
   "slice": "Slice",

@@ -453,7 +453,7 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
   holder.add(root);
   scene.add(holder);
   const label = makeLabel(ch.name, ch.countryCode);
-  label.position.y = 2.15; holder.add(label);
+  label.sprite.position.y = 2.15; holder.add(label.sprite);
   const bubble = makeBubble(); bubble.sprite.position.y = 2.6; holder.add(bubble.sprite);
   let bubbleT = 0;
 
@@ -540,6 +540,7 @@ export async function createAvatar(scene, ch, racketColor = '#e63946', racketSha
     say(text) { bubble.draw(text); bubble.sprite.visible = true; bubbleT = 1.6; },
     update(dt, s, ball, overheadCue = false) { // s = [x, z, facing, anim, swingAnim, swingT, backhand]; ball = [x, y, z] for stroke prep
       if (bubbleT > 0 && (bubbleT -= dt) <= 0) bubble.sprite.visible = false;
+      label.bars(s[7] ?? 1, s[8] ?? 1);  // snapshot energy / hydration
       holder.position.set(s[0], 0, s[1]);
       holder.rotation.y = s[2];
       const a = actions[s[3]] ? s[3] : 'idle';
@@ -960,16 +961,33 @@ function track(keys, t) {
   return lerpPose(A, B, (t - ta) / (tb - ta));
 }
 
+// name tag with the player's energy (green → amber → red) and 💧 hydration bars under the name
 function makeLabel(name, cc) {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 48;
-  const x = c.getContext('2d');
-  x.fillStyle = 'rgba(0,0,0,0.55)'; x.fillRect(0, 0, 256, 48);
-  x.fillStyle = '#fff'; x.font = 'bold 24px system-ui'; x.textAlign = 'center';
-  x.fillText(`${name}  ${cc}`, 128, 32);
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+  const x = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
+  const bar = (x0, w, v, col) => {
+    x.fillStyle = 'rgba(255,255,255,0.18)'; x.fillRect(x0, 44, w, 12);
+    x.fillStyle = col; x.fillRect(x0, 44, Math.round(w * v), 12);
+  };
+  let last = '';
+  const draw = (e, h) => {
+    const key = Math.round(e * 20) + ':' + Math.round(h * 20);  // redraw only on a visible change
+    if (key === last) return;
+    last = key;
+    x.clearRect(0, 0, 256, 64);
+    x.fillStyle = 'rgba(0,0,0,0.55)'; x.fillRect(0, 0, 256, 64);
+    x.fillStyle = '#fff'; x.font = 'bold 24px system-ui'; x.textAlign = 'center';
+    x.fillText(`${name}  ${cc}`, 128, 30);
+    bar(12, 150, e, e < 0.25 ? '#ef4444' : e < 0.5 ? '#f59e0b' : '#4ade80');
+    x.font = '14px system-ui'; x.fillText('💧', 184, 56);
+    bar(196, 48, h, h < 0.3 ? '#ef4444' : '#38bdf8');
+    tex.needsUpdate = true;
+  };
+  draw(1, 1);
   // constant on-screen size: readable far away, never fills the screen in close-up cameras
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, sizeAttenuation: false }));
-  s.scale.set(0.11, 0.02, 1);
-  return s;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, sizeAttenuation: false }));
+  sprite.scale.set(0.11, 0.0275, 1);
+  return { sprite, bars: draw };
 }
 
 function makeBubble() {

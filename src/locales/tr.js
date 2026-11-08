@@ -971,6 +971,7 @@ export default {
   "shot": "vuruş",
   "shot · serve": "vuruş · servis",
   "skip lesson": "dersi atla",
+  "Games {a}–{b}": "Oyun {a}–{b}",
   "▾ tap to read": "▾ okumak için dokun",
   "▴ tap to hide": "▴ gizlemek için dokun",
   "slice": "slice",

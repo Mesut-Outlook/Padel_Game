@@ -971,6 +971,7 @@ export default {
   "shot": "golpe",
   "shot · serve": "golpe · saque",
   "skip lesson": "saltar lección",
+  "Games {a}–{b}": "Juegos {a}–{b}",
   "▾ tap to read": "▾ toca para leer",
   "▴ tap to hide": "▴ toca para ocultar",
   "slice": "cortado",
