@@ -6,8 +6,8 @@ export const LANGS = [
   ['it', 'Italiano'], ['nl', 'Nederlands'], ['pt', 'Português'], ['tr', 'Türkçe'],
 ];
 const CODES = LANGS.map(([c]) => c);
-// false until the locale tables are written (plan step 4): English for everyone, no Language setting; ?lang=xx still tests one
-export const I18N_LIVE = false;
+// live since 2026-11-08 (owner approved): the browser's language when we have it, otherwise English; the Language setting overrides
+export const I18N_LIVE = true;
 let table = {}, current = 'en';
 
 export const lang = () => current;
