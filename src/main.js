@@ -88,6 +88,7 @@ function applyRoute() {
     hideHome();
     if (menuEl) menuEl.hidden = true;
     showHome();
+    refreshOpenGames();  // the list at once, not on the next 10 s tick
   } else if (route.screen === 'career') {
     hideHome();
     if (menuEl) menuEl.hidden = false;
@@ -152,26 +153,26 @@ initHome({
 });
 
 // the open games list on HOME: refreshed while HOME is on screen; only our own (or a local) server is asked without a click
-async function pollOpenGames() {
+async function refreshOpenGames() {
   const home = $('home');
-  if (home && !home.hidden && !document.hidden && !net && !pend) {
-    const url = serverUrl(location);
-    if (!url || !trustedServer(url, location)) setOpenGames([], false);
-    else { try { setOpenGames(await listRooms(url), true); } catch { setOpenGames([], false); } }
-  }
-  setTimeout(pollOpenGames, 10000);  // ponytail: fixed 10 s; the home Pi answers every open HOME, lengthen it if that shows in its status line
+  if (!home || home.hidden || document.hidden || net || pend) return;
+  const url = serverUrl(location);
+  if (!url || !trustedServer(url, location)) setOpenGames([], false);
+  else { try { setOpenGames(await listRooms(url), true); } catch { setOpenGames([], false); } }
 }
-pollOpenGames();
+// ponytail: fixed 10 s; the home Pi answers every open HOME, lengthen it if that shows in its status line
+const pollOpenGames = () => { refreshOpenGames(); setTimeout(pollOpenGames, 10000); };
 
 window.addEventListener('hashchange', () => {
   if (menuDisposed) return toMenu();  // browser Back mid-match: the wizard is gone, so leave like pause → Main menu (reloads)
   applyRoute();
 });
 
-initSplash({
-  onComplete: () => {
-    applyRoute();
-  },
+// after the whole module has run: a splash already seen this session completes at once, and an invite link then starts a match,
+// which needs everything below (net, scene, renderer) to exist
+setTimeout(() => {
+  initSplash({ onComplete: () => applyRoute() });
+  pollOpenGames();
 });
 
 bindFullscreenKey(window, document, () => $('hud').hidden);  // menus only: in a match F is the slice shot

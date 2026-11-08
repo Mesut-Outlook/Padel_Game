@@ -913,7 +913,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   @keyframes sbPop { from { opacity: 0; transform: translateX(-50%) skewX(-6deg) scale(.82); } to { opacity: 1; transform: translateX(-50%) skewX(-6deg) scale(1); } }
   /* pause menu (main.js) */
   #pause, #leftCard { position: fixed; inset: 0; background: rgba(5,10,16,.75); display: grid; place-items: center; z-index: 6; }
-  #pause .pz-card, #leftCard .pz-card { background: rgba(10,18,28,.95); border: 1px solid #ffffff1a; border-top: 4px solid var(--acc); border-radius: 14px; padding: 22px 26px; width: min(340px, 90vw); text-align: center; }
+  #pause .pz-card, #leftCard .pz-card { box-sizing: border-box; background: rgba(10,18,28,.95); border: 1px solid #ffffff1a; border-top: 4px solid var(--acc); border-radius: 14px; padding: 22px 26px; width: min(340px, 90vw); text-align: center; }
   #pause .pz-title, #leftCard .pz-title { font: 900 28px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 2px; margin-bottom: 14px; }
   #pause .pz-loss { color: #ff9f43; font-size: 13px; font-weight: 700; margin: -8px 0 12px; }
   #pause .pz-item, #leftCard .pz-item { display: block; width: 100%; margin: 8px 0; padding: 12px; border-radius: 10px; border: 1px solid #ffffff1a; background: #12202e; color: #fff; font: 800 17px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 1px; cursor: pointer; text-transform: uppercase; }
@@ -2216,6 +2216,9 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
     .hm-btn-join { padding: 4px 8px; font-size: 11px; }
     .hm-bottom-bar { padding: 4px 10px; margin-bottom: 4px; }
     .hm-btn { padding: 4px 8px; font-size: 12px; }
+    /* compact buttons, but a 44 px touch target: an invisible strip above and below each */
+    .hm-seg-btn, .hm-btn-sec, .hm-link-btn, .hm-btn-join, .hm-btn, .hm-name-badge { position: relative; }
+    .hm-seg-btn::after, .hm-btn-sec::after, .hm-link-btn::after, .hm-btn-join::after, .hm-btn::after, .hm-name-badge::after { content: ''; position: absolute; inset: -9px 0; }
   }
 
   /* Settings Modal */

@@ -47,3 +47,4 @@ Read `CLAUDE.md` — it is the shared guide for every agent (Claude, Antigravity
 | `agy-32` | "This game has ended" ve "Nobody came — reopen?" | `agents/reports/agy-32-room-ended.md` | Completed, Opus reviewed (tried a dead invite code and the card's PLAY NOW in the browser) |
 
 
+| `agy-33` | Yeni akışın telefon/tablet/masaüstü incelemesi (salt okunur) | `agents/reports/agy-33-flow-review.md` | Completed, Opus verified and fixed all four findings (invite link crash for returning visitors, list delay, card overflow, 44 px touch targets) |
