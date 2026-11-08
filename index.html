@@ -754,6 +754,16 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   #exitBtn { position: fixed; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); min-height: 44px; min-width: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid rgba(11, 21, 32, 0.2); background: #fff; color: #0b1520; font: 800 16px/1 var(--head-font); letter-spacing: 1px; text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; z-index: 4; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: transform 0.14s ease, opacity 0.14s ease; }
   #exitBtn:hover, #exitBtn:focus-visible { transform: translateY(-1px); outline: 2px solid var(--acc); outline-offset: 2px; }
   #exitBtn:active { transform: scale(0.96); }
+  #invitePanel { position: fixed; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(380px, calc(100vw - 32px)); box-sizing: border-box; background: #fff; color: #0b1520; border-radius: 12px; padding: 12px 14px; z-index: 5; box-shadow: 0 8px 24px rgba(0,0,0,.4); display: flex; flex-direction: column; gap: 6px; font: 14px/1.35 system-ui, sans-serif; }
+  #invitePanel[hidden] { display: none; }
+  #invitePanel b { font: 800 17px/1.1 var(--head-font); letter-spacing: .5px; text-transform: uppercase; padding-right: 36px; }
+  #invitePanel .ip-sub { color: #44515e; font-size: 13px; }
+  #invitePanel .ip-link { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #c9d1d9; border-radius: 8px; font: 13px ui-monospace, monospace; color: #0b1520; background: #f4f6f8; }
+  #invitePanel .ip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  #invitePanel .ip-btn { flex: 1 1 0; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #c9d1d9; background: #fff; color: #0b1520; font: 700 14px system-ui, sans-serif; text-decoration: none; cursor: pointer; white-space: nowrap; padding: 0 10px; }
+  #invitePanel .ip-wa { background: #1f9d55; border-color: #1f9d55; color: #fff; }
+  #invitePanel .ip-close { position: absolute; top: 6px; right: 6px; width: 40px; height: 40px; border: 0; background: none; font-size: 18px; cursor: pointer; color: #44515e; }
+  #invitePanel .ip-btn:focus-visible, #invitePanel .ip-close:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
   #hud { position: fixed; top: calc(max(10px, env(safe-area-inset-top)) + 52px); left: max(10px, env(safe-area-inset-left)); background: rgba(10,18,28,.95); border: 1px solid #ffffff1a; border-radius: 10px; padding: 6px 10px 8px; z-index: 2; min-width: 300px; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
   #hud .hud-head { display: flex; justify-content: space-between; gap: 16px; font-size: 10px; letter-spacing: 1.5px; color: #9fb3c8; font-weight: 800; margin-bottom: 4px; }
   #hud #hudLabel { color: var(--acc); }
@@ -901,14 +911,20 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   /* phones in landscape: the lesson panel sits under ✕ Exit, the scoreboard (meaningless in training) steps aside */
   @media (max-height: 500px) {
     body:has(#tutorial:not(.final)) #hud { display: none; }
-    #tutorial { top: calc(max(10px, env(safe-area-inset-top)) + 52px); left: max(10px, env(safe-area-inset-left)); width: min(330px, 45vw); padding: 8px 12px; font-size: 13px; }
-    #tutorial .tut-title { font-size: 19px; margin: 0 0 2px; }
+    #tutorial { top: calc(max(10px, env(safe-area-inset-top)) + 52px); left: max(10px, env(safe-area-inset-left)); width: min(300px, 42vw); padding: 7px 10px; font-size: 12px; }
+    #tutorial .tut-step { font-size: 9px; letter-spacing: 1.5px; } #tutorial .tut-foot { font-size: 11px; }
+    #tutorial .tut-title { font-size: 17px; margin: 0 0 2px; }
     #tutorial .tut-text { line-height: 1.35; }
     #tutorial .tut-dots { margin: 6px 0 2px; } #tutorial .tut-dots i { width: 10px; height: 10px; }
     #tutorial .tut-msg { min-height: 16px; font-size: 14px; }
     #tutorial .tut-foot { margin-top: 4px; } #tutorial .tut-nums { display: none; }
     #tutorial.final { top: 50%; max-height: calc(100dvh - 20px); overflow: auto; }
   }
+  #tutorial .tut-tog { display: none; }
+  body.touch #tutorial .tut-tog { display: block; float: right; margin: -2px -4px 0 8px; padding: 2px 8px; border-radius: 6px; background: #ffffff1a; font-size: 11px; font-weight: 700; color: #d8f53a; }
+  body.touch #tutorial .tut-tog, body.touch #tutorial .tut-step, body.touch #tutorial .tut-title { pointer-events: auto; cursor: pointer; }
+  #tutorial.mini .tut-text, #tutorial.mini .tut-foot { display: none; }
+  #tutorial.mini .tut-msg:empty { display: none; }
   body.touch #tutorial { pointer-events: none; }  /* the stick still works under the lesson panel */
   body.touch #tutorial .tut-next { pointer-events: auto; display: inline-block; padding: 6px 12px; border-radius: 8px; background: #d8f53a; color: #0b1520; }
   /* shot coach (main.js): suggested keys for overheads, glass rebounds and lobs */
@@ -2678,6 +2694,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
     <div class="credits">Developer: <b>Mesut</b> · Main sponsor: <b>MESUT PADEL</b></div>
   </div>
 </div>
+<div id="invitePanel" role="dialog" aria-live="polite" hidden></div>
 <button type="button" id="exitBtn" hidden><span aria-hidden="true">✕</span> <span data-i18n="Exit">Exit</span></button>
 <div id="hud" hidden>
   <div class="hud-head"><span class="tour">MESUT PADEL TOUR</span><span id="hudLabel">SET 1</span></div>

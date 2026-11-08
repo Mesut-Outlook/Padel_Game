@@ -971,6 +971,8 @@ export default {
   "shot": "coup",
   "shot · serve": "coup · service",
   "skip lesson": "passer la leçon",
+  "▾ tap to read": "▾ touche pour lire",
+  "▴ tap to hide": "▴ touche pour masquer",
   "slice": "slice",
   "slice serve": "service slicé",
   "smash": "smash",
@@ -1078,4 +1080,7 @@ export default {
   "🧱 CONTRAPARED SAVE!": "🧱 SAUVETAGE EN CONTRE-VITRE !",
   "🧱 GLASS MASTERPIECE! · +{bonus} PTS": "🧱 CHEF-D'ŒUVRE SUR LA VITRE ! · +{bonus} PTS",
   "🧱 OFF THE GLASS!": "🧱 SUR LA VITRE !",
+  "Waiting for your friend": "En attente de ton ami",
+  "The match starts by itself when your friend opens the link.": "Le match démarre tout seul quand ton ami ouvre le lien.",
+  "Share…": "Partager…",
 };

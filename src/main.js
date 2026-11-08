@@ -104,14 +104,41 @@ function applyRoute() {
   }
 }
 
+// the invite card over the warm-up: the link to send (WhatsApp, copy, the phone's share sheet) until the friend comes or the room closes
+function showInvitePanel(url) {
+  const el = $('invitePanel'); if (!el) return;
+  const text = t(INVITE_TEXT);
+  el.innerHTML = `<button type="button" class="ip-close" aria-label="${t('Close')}">✕</button>
+    <b>${t('Waiting for your friend')}</b>
+    <span class="ip-sub">${t('The match starts by itself when your friend opens the link.')}</span>
+    <input class="ip-link" readonly aria-label="${t('Invite a friend')}">
+    <div class="ip-row">
+      <a class="ip-btn ip-wa" target="_blank" rel="noopener">WhatsApp</a>
+      <button type="button" class="ip-btn ip-copy">${t('Copy Link')}</button>
+      ${navigator.share ? `<button type="button" class="ip-btn ip-share">${t('Share…')}</button>` : ''}
+    </div>`;
+  const link = el.querySelector('.ip-link');
+  link.value = url;
+  link.onfocus = () => link.select();
+  el.querySelector('.ip-wa').href = `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`;  // opens WhatsApp only on this tap: nothing is loaded from it before
+  el.querySelector('.ip-copy').onclick = async () => {
+    try { await navigator.clipboard.writeText(url); flash(t('Invite link copied: send it to your friend.'), 3); } catch { link.focus(); }
+  };
+  el.querySelector('.ip-share')?.addEventListener('click', () => navigator.share({ title: 'Padel Legends', text, url }).catch(() => {}));
+  el.querySelector('.ip-close').onclick = () => hideInvitePanel();
+  el.hidden = false;
+}
+function hideInvitePanel() { const el = $('invitePanel'); if (el) { el.hidden = true; el.innerHTML = ''; } }
+
 function sendInviteLink(h, tries = 0) {
-  if (!h || tries > 60) return;
+  if (!h || tries > 300) return;  // 30 s: on a first visit the warm-up scene loads while the room answers, so the lobby can come late
   const send = async () => {
     if (!h.lobby) {
       if (h.ws && h.ws.readyState > 1) return;
       return setTimeout(() => sendInviteLink(h, tries + 1), 100);
     }
     const url = inviteUrl(h.lobby.code, location, window.__padelServer);
+    showInvitePanel(url);
     const how = await shareInvite(url, t(INVITE_TEXT), navigator, isTouch());
     if (how === 'copied') flash(t('Invite link copied: send it to your friend.'), 4);
     else if (how === 'failed') flash(t('Room code: {code}', { code: h.lobby.code }), 8);  // no share, no clipboard: the code still works
@@ -327,7 +354,7 @@ export function startOnline({ url, code, create = false, quick = false, mode = '
       if (me && net !== me && pend !== me) return;  // a connection this page already replaced
       say(escapeText(t(e)), null, true);
       if (pend === me) {
-        pend = null;
+        pend = null; hideInvitePanel();  // the room is gone: its link no longer works
         const which = roomEndCard(e, { code: me.lobby?.code || code, started: !!me.lobby?.started });
         if (which) { showRoomEndCard(which); return; }
         flash(t(e), 4);
@@ -351,7 +378,7 @@ export function startOnline({ url, code, create = false, quick = false, mode = '
       }
       if (pend === me && !l.startsAt) joinedSeen = false;
       if (l.started && pend === me) {  // the warm-up ends here: its score counts nowhere
-        pend = null; net = me; world = null; tut = null; lastCfg = null; avatars = [];
+        hideInvitePanel(); pend = null; net = me; world = null; tut = null; lastCfg = null; avatars = [];
         if (replay.playing) endReplay();
         if (paused) setPaused(false);
         hideLeftCard();
@@ -489,7 +516,7 @@ export async function startMatch(cfg) {
 
 // back to the menu after a match; career matches return to the career hub
 function toMenu() {
-  hideLeftCard();
+  hideLeftCard(); hideInvitePanel();
   keepAwake(false);
   const ub = $('unmuteBadge'); if (ub) ub.hidden = true;
   const isCareer = !!onEnd;

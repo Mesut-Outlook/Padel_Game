@@ -971,6 +971,8 @@ export default {
   "shot": "vuruş",
   "shot · serve": "vuruş · servis",
   "skip lesson": "dersi atla",
+  "▾ tap to read": "▾ okumak için dokun",
+  "▴ tap to hide": "▴ gizlemek için dokun",
   "slice": "slice",
   "slice serve": "kesik servis",
   "smash": "smash",
@@ -1078,4 +1080,7 @@ export default {
   "🧱 CONTRAPARED SAVE!": "🧱 CONTRAPARED KURTARIŞI!",
   "🧱 GLASS MASTERPIECE! · +{bonus} PTS": "🧱 CAM ŞAHESERİ! · +{bonus} PUAN",
   "🧱 OFF THE GLASS!": "🧱 CAMDAN DÖNÜŞ!",
+  "Waiting for your friend": "Arkadaşın bekleniyor",
+  "The match starts by itself when your friend opens the link.": "Arkadaşın linki açınca maç kendiliğinden başlar.",
+  "Share…": "Paylaş…",
 };

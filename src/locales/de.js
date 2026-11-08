@@ -971,6 +971,8 @@ export default {
   "shot": "Schlag",
   "shot · serve": "Schlag · Aufschlag",
   "skip lesson": "Lektion überspringen",
+  "▾ tap to read": "▾ zum Lesen tippen",
+  "▴ tap to hide": "▴ zum Ausblenden tippen",
   "slice": "Slice",
   "slice serve": "Slice-Aufschlag",
   "smash": "Smash",
@@ -1078,4 +1080,7 @@ export default {
   "🧱 CONTRAPARED SAVE!": "🧱 CONTRAPARED-RETTUNG!",
   "🧱 GLASS MASTERPIECE! · +{bonus} PTS": "🧱 GLAS-MEISTERSTÜCK! · +{bonus} PKT",
   "🧱 OFF THE GLASS!": "🧱 ÜBER DIE WAND!",
+  "Waiting for your friend": "Warte auf deinen Freund",
+  "The match starts by itself when your friend opens the link.": "Das Match startet von selbst, sobald dein Freund den Link öffnet.",
+  "Share…": "Teilen…",
 };

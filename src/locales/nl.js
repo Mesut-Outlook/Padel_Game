@@ -971,6 +971,8 @@ export default {
   "shot": "slag",
   "shot · serve": "slag · service",
   "skip lesson": "les overslaan",
+  "▾ tap to read": "▾ tik om te lezen",
+  "▴ tap to hide": "▴ tik om te verbergen",
   "slice": "slice",
   "slice serve": "slice-service",
   "smash": "smash",
@@ -1078,4 +1080,7 @@ export default {
   "🧱 CONTRAPARED SAVE!": "🧱 CONTRAPARED-REDDING!",
   "🧱 GLASS MASTERPIECE! · +{bonus} PTS": "🧱 GLASMEESTERWERK! · +{bonus} PTS",
   "🧱 OFF THE GLASS!": "🧱 VIA HET GLAS!",
+  "Waiting for your friend": "Wachten op je vriend",
+  "The match starts by itself when your friend opens the link.": "De wedstrijd begint vanzelf zodra je vriend de link opent.",
+  "Share…": "Delen…",
 };

@@ -971,6 +971,8 @@ export default {
   "shot": "golpe",
   "shot · serve": "golpe · saque",
   "skip lesson": "saltar lección",
+  "▾ tap to read": "▾ toca para leer",
+  "▴ tap to hide": "▴ toca para ocultar",
   "slice": "cortado",
   "slice serve": "saque cortado",
   "smash": "remate",
@@ -1078,4 +1080,7 @@ export default {
   "🧱 CONTRAPARED SAVE!": "🧱 ¡SALVADA CON CONTRAPARED!",
   "🧱 GLASS MASTERPIECE! · +{bonus} PTS": "🧱 ¡OBRA MAESTRA DE CRISTAL! · +{bonus} PTS",
   "🧱 OFF THE GLASS!": "🧱 ¡DE PARED!",
+  "Waiting for your friend": "Esperando a tu amigo",
+  "The match starts by itself when your friend opens the link.": "El partido empieza solo cuando tu amigo abre el enlace.",
+  "Share…": "Compartir…",
 };

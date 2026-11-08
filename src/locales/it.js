@@ -971,6 +971,8 @@ export default {
   "shot": "colpo",
   "shot · serve": "colpo · servizio",
   "skip lesson": "salta lezione",
+  "▾ tap to read": "▾ tocca per leggere",
+  "▴ tap to hide": "▴ tocca per nascondere",
   "slice": "slice",
   "slice serve": "servizio slice",
   "smash": "smash",
@@ -1078,4 +1080,7 @@ export default {
   "🧱 CONTRAPARED SAVE!": "🧱 SALVATAGGIO CONTRAPARED!",
   "🧱 GLASS MASTERPIECE! · +{bonus} PTS": "🧱 CAPOLAVORO SUL VETRO! · +{bonus} PT",
   "🧱 OFF THE GLASS!": "🧱 DAL VETRO!",
+  "Waiting for your friend": "In attesa del tuo amico",
+  "The match starts by itself when your friend opens the link.": "La partita inizia da sola quando il tuo amico apre il link.",
+  "Share…": "Condividi…",
 };

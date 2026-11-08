@@ -971,6 +971,8 @@ export default {
   "shot": "pancada",
   "shot · serve": "pancada · serviço",
   "skip lesson": "saltar lição",
+  "▾ tap to read": "▾ toca para ler",
+  "▴ tap to hide": "▴ toca para esconder",
   "slice": "slice",
   "slice serve": "serviço cortado",
   "smash": "smash",
@@ -1078,4 +1080,7 @@ export default {
   "🧱 CONTRAPARED SAVE!": "🧱 SALVAÇÃO NA CONTRAPARED!",
   "🧱 GLASS MASTERPIECE! · +{bonus} PTS": "🧱 OBRA-PRIMA NO VIDRO! · +{bonus} PTS",
   "🧱 OFF THE GLASS!": "🧱 FORA DO VIDRO!",
+  "Waiting for your friend": "À espera do teu amigo",
+  "The match starts by itself when your friend opens the link.": "O jogo começa sozinho quando o teu amigo abrir o link.",
+  "Share…": "Partilhar…",
 };
