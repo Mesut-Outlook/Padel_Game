@@ -93,7 +93,7 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
   // --- DOM panel
   const el = document.createElement('div');
   el.id = 'tutorial';
-  el.innerHTML = '<div class="tut-step"></div><div class="tut-title"></div><div class="tut-text"></div><div class="tut-dots"></div><div class="tut-msg"></div><div class="tut-foot"></div>';
+  el.innerHTML = '<b class="tut-tog"></b><div class="tut-step"></div><div class="tut-title"></div><div class="tut-text"></div><div class="tut-dots"></div><div class="tut-msg"></div><div class="tut-foot"></div>';
   document.body.appendChild(el);
   const $ = (c) => el.querySelector(c);
   // the touch buttons send untrusted key events, so only a real key switches to keyboard names
@@ -101,6 +101,8 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
   addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') device = 'touch'; });
   // the footer's key name is also a button (touch has no Enter): skip lesson / main menu
   el.addEventListener('pointerdown', (e) => {
+    // phones: a tap on the panel's head folds the lesson text away and back
+    if (e.target.closest('.tut-tog, .tut-step, .tut-title')) { el.classList.toggle('mini'); render(); return; }
     if (!e.target.closest('.tut-next')) return;
     e.preventDefault();
     dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter' })); dispatchEvent(new KeyboardEvent('keyup', { code: 'Enter' }));
@@ -123,6 +125,7 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
 
   function render() {
     const l = LESSONS[li], k = keys();
+    $('.tut-tog').textContent = el.classList.contains('mini') ? t('▾ tap to read') : t('▴ tap to hide');
     $('.tut-step').textContent = t('TRAINING · LESSON {current}/{total}', { current: li + 1, total: LESSONS.length });
     $('.tut-title').textContent = t(l.title) + (done.has(l.id) ? ' ✓' : '');
     $('.tut-text').innerHTML = l.text(k, count);
@@ -134,6 +137,7 @@ export function createTutorial({ world: w, scene, hand, camName, replaying, cons
 
   // --- lesson flow
   function begin(i) {
+    el.classList.remove('mini');  // a new lesson always opens its text
     li = i; count = 0; att = null; wait = 0.6; camChanges = 0; sawReplay = false; camSeen = camName();
     const l = LESSONS[li], me = w.players[0], opp = w.players[2];
     opp.active = l.kind === 'match';
