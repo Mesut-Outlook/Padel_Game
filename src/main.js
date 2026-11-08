@@ -219,7 +219,9 @@ function awardStyle(basePts, label = '', medalKey = null, tier = 1) {
   return gained;
 }
 
+let sceneGen = 0;  // a newer setupScene (warm-up → online) makes an older one still loading stop
 async function setupScene(venue, ids, roster, rk) {
+  const gen = ++sceneGen;
   loadingScene = true;
   $('menu').hidden = true;
   disposeMenu();
@@ -233,7 +235,11 @@ async function setupScene(venue, ids, roster, rk) {
   marker = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.17, 24), new THREE.MeshBasicMaterial({ color: 0xd8f53a, transparent: true, opacity: 0.8 }));
   marker.rotation.x = -Math.PI / 2; scene.add(marker);
   avatars = [];
-  for (const id of ids) avatars[id] = await createAvatar(scene, roster[id], rk[id].color, rk[id].shape);
+  for (const id of ids) {
+    const a = await createAvatar(scene, roster[id], rk[id].color, rk[id].shape);
+    if (gen !== sceneGen) { scene.remove(a.holder); return; }  // superseded: its scene was already cleared
+    avatars[id] = a;
+  }
   const name = (t) => ids.filter(id => (id < 2 ? 0 : 1) === t).map(id => roster[id].name.split(' ').pop()).join(' / ');
   $('t0').textContent = name(0); $('t1').textContent = name(1);
   for (const id of ['exitBtn', 'hud', 'cam', 'help', 'fsBtn']) $(id).hidden = false;

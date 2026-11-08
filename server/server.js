@@ -93,7 +93,7 @@ export function sanitizeCfg(c, m = {}) {
     goldenPoint: c.goldenPoint !== false, starPoint: bool(c.starPoint), superTiebreak: bool(c.superTiebreak),
     ai: AI_LEVELS.includes(c.ai) ? c.ai : 'club', venue: clamp(Math.floor(+c.venue || 0), 0, VENUES - 1), outdoor: bool(c.outdoor),
     mode: c.mode === 'team' ? 'team' : 'face',  // doubles: humans on one team vs AIs (Team up), or across the net (Face off)
-    public: bool(m.public), auto: bool(c.auto) || bool(m.quick), host: cleanName(m.name || ''),
+    public: bool(m.public), auto: bool(c.auto) || bool(m.quick),
   };
 }
 

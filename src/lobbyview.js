@@ -11,7 +11,7 @@ export function lobbyView(l, seat, characters = [], venues = []) {
   const taken = l.taken || [], away = l.away || [];
   const seats = (l.seats || []).map(id => ({
     id, team: id < 2 ? 0 : 1,
-    name: l.names?.[id] || characters[l.chars?.[id]]?.name || '',
+    name: l.names?.[id] || (Number.isInteger(l.chars?.[id]) && characters[l.chars[id]]?.name) || '',
     you: id === seat, host: id === l.host,
     human: taken.includes(id), away: away.includes(id),
   })).sort((a, b) => a.team - b.team || a.id - b.id);

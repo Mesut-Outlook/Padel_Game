@@ -260,7 +260,8 @@ test('match settings are whitelisted before they reach the world and the lobby',
   try {
     const a = client(srv.port);
     const l = await create(a, { name: 'A<b>', cfg: { players: 9, sets: 1e9, ai: '__proto__', venue: 999, outdoor: 'yes', goldenPoint: false, evil: 1 } });
-    assert.deepEqual(l.cfg, { players: 4, sets: 3, goldenPoint: false, starPoint: false, superTiebreak: false, ai: 'club', venue: 9, outdoor: false, mode: 'face', public: false, auto: false, host: 'Ab' });
+    assert.deepEqual(l.cfg, { players: 4, sets: 3, goldenPoint: false, starPoint: false, superTiebreak: false, ai: 'club', venue: 9, outdoor: false, mode: 'face', public: false, auto: false });  // the creator's name is not part of the room settings
+    assert.equal(l.names[0], 'Ab');
     a.ws.close();
   } finally { await srv.close(); }
 });
@@ -887,7 +888,6 @@ test('public names lose rude words', async () => {
     const a = client(srv.port);
     const l = await quick(a, { name: 'fuck you', cfg: { players: 2 } });
     assert.equal(l.names[0], 'Player');
-    assert.equal(l.cfg.host, 'Player');
     a.ws.close();
     const { cleanName } = await import('../server/server.js');
     assert.equal(cleanName('f4ck'), 'Player');  // digits for letters do not get past
