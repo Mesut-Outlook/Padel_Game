@@ -25,7 +25,7 @@ test('room list shows public open rooms only, and drops them once started', asyn
     const host = client(srv.port), priv = client(srv.port);
     const { code } = await create(host, { public: true, name: 'Mesut', cfg: { players: 2, venue: 3 } });
     await create(priv, { cfg: { players: 2 } });
-    assert.deepEqual(await list(srv.port), [{ code, players: 2, venue: 3, free: 1, host: 'Mesut' }]);
+    assert.deepEqual(await list(srv.port), [{ code, players: 2, venue: 3, free: 1, host: 'Mesut', char: 0 }]);
     const guest = client(srv.port);
     await join(guest, code);
     const lob = host.next('lobby');
@@ -260,7 +260,7 @@ test('match settings are whitelisted before they reach the world and the lobby',
   try {
     const a = client(srv.port);
     const l = await create(a, { name: 'A<b>', cfg: { players: 9, sets: 1e9, ai: '__proto__', venue: 999, outdoor: 'yes', goldenPoint: false, evil: 1 } });
-    assert.deepEqual(l.cfg, { players: 4, sets: 3, goldenPoint: false, starPoint: false, superTiebreak: false, ai: 'club', venue: 9, outdoor: false, public: false, host: 'Ab' });
+    assert.deepEqual(l.cfg, { players: 4, sets: 3, goldenPoint: false, starPoint: false, superTiebreak: false, ai: 'club', venue: 9, outdoor: false, mode: 'face', public: false, auto: false, host: 'Ab' });
     a.ws.close();
   } finally { await srv.close(); }
 });
@@ -594,7 +594,7 @@ test('a room counts for its creator after they leave, and keeps no IP', async ()
       return { ws, send, next };
     };
     const made = [];
-    for (let i = 0; i < 3; i++) {  // roomsPerIp: 3
+    for (let i = 0; i < 2; i++) {  // roomsPerIp: 2
       const c = open('203.0.113.1'), lob = c.next('lobby');
       await c.send({ type: 'join', create: true, cfg: { players: 2 } });
       made.push({ c, code: (await lob).code });
@@ -802,5 +802,110 @@ test('a socket gets at most one room list a second', async () => {
     await new Promise(r => setTimeout(r, 200));
     assert.equal(n, 1);
     c.ws.close();
+  } finally { await srv.close(); }
+});
+
+// live lobby (plan 3): quick match, Team up / Face off, auto start, leaving
+const quick = async (c, m = {}) => { const p = c.next('lobby'); await c.send({ type: 'join', quick: true, ...m }); return p; };
+
+test('quick: joins the longest-waiting matching public room, else opens a public auto room', async () => {
+  const srv = await startServer(0, { countdownMs: 60000, roomsPerIp: 5 });  // all test sockets share one IP
+  try {
+    const a = client(srv.port), b = client(srv.port), c = client(srv.port), d = client(srv.port);
+    const r1 = await quick(a, { cfg: { players: 2 } });
+    assert.equal(r1.cfg.public, true); assert.equal(r1.cfg.auto, true);
+    const r2 = await quick(b, { cfg: { players: 4, mode: 'team' } });  // other kind: a new room
+    assert.notEqual(r2.code, r1.code);
+    assert.equal((await quick(c, { cfg: { players: 2 } })).code, r1.code);
+    assert.equal((await quick(d, { cfg: { players: 4, mode: 'face' } })).code !== r2.code, true);  // Face off never joins a Team up room
+    for (const x of [a, b, c, d]) x.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('Team up rooms seat humans on one team (2 seats), Face off across the net', async () => {
+  const srv = await startServer(0, { countdownMs: 60000 });
+  try {
+    const a = client(srv.port), b = client(srv.port);
+    const t = await create(a, { cfg: { players: 4, mode: 'team' } });
+    assert.deepEqual(t.seats, [0, 1]);
+    const f = await create(b, { cfg: { players: 4, mode: 'face' } });
+    assert.deepEqual(f.seats, [0, 2, 1, 3]);
+    a.ws.close(); b.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('auto rooms start themselves after the countdown once a second human is in; a drop cancels it', async () => {
+  const srv = await startServer(0, { countdownMs: 150 });
+  try {
+    const a = client(srv.port), b = client(srv.port), c = client(srv.port);
+    const { code } = await quick(a, { cfg: { players: 2 } });
+    const counting = await quick(b, { cfg: { players: 2 } });
+    assert.ok(counting.startsAt > Date.now() - 50);
+    const back = new Promise(r => a.ws.on('message', (raw) => { const m = JSON.parse(raw); if (m.type === 'lobby' && m.taken.length === 1) r(m); }));
+    b.ws.close();
+    assert.equal((await back).startsAt, null);
+    await new Promise(r => setTimeout(r, 250));
+    assert.equal(srv.rooms.get(code).started, false);
+    await quick(c, { cfg: { players: 2 } });
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(srv.rooms.get(code).started, true);
+    a.ws.close(); c.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('room list rows carry the kind and the host character, never more', async () => {
+  const srv = await startServer(0, { countdownMs: 60000 });
+  try {
+    const a = client(srv.port);
+    const { code } = await quick(a, { name: 'Ada', char: 4, cfg: { players: 4, mode: 'team', venue: 2 } });
+    assert.deepEqual(await list(srv.port), [{ code, players: 4, mode: 'team', venue: 2, free: 1, host: 'Ada', char: 4 }]);
+    a.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('leave: the seat goes to the AI for good and the others are told who left', async () => {
+  const srv = await startServer(0);
+  try {
+    const a = client(srv.port), b = client(srv.port);
+    const { code } = await create(a, { name: 'Mesut', cfg: { players: 2 } });
+    await join(b, code, { name: 'Carla' });
+    const go = b.next('lobby'); await a.send({ type: 'start' }); await go;
+    const left = b.next('left');
+    await a.send({ type: 'leave' });
+    assert.deepEqual(await left, { type: 'left', seat: 0, name: 'Mesut' });
+    await new Promise(r => setTimeout(r, 50));
+    const room = srv.rooms.get(code);
+    assert.equal(room.away[0], undefined);  // no seat kept for a rejoin
+    assert.equal(room.tokens[0], undefined);
+    b.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('public names lose rude words', async () => {
+  const srv = await startServer(0, { countdownMs: 60000 });
+  try {
+    const a = client(srv.port);
+    const l = await quick(a, { name: 'fuck you', cfg: { players: 2 } });
+    assert.equal(l.names[0], 'Player');
+    assert.equal(l.cfg.host, 'Player');
+    a.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('client: quick match joins the same room; Exit tells the other player, without errors or a rejoin', async () => {
+  const { connect } = await import('../src/net.js');
+  const srv = await startServer(0, { countdownMs: 50 });
+  try {
+    const url = `ws://127.0.0.1:${srv.port}`, seen = [];
+    const a = connect({ url, quick: true, name: 'Ada', cfg: { players: 2 }, char: 0, onError: (e) => seen.push('a: ' + e) });
+    while (!a.lobby) await new Promise(r => setTimeout(r, 10));
+    const b = connect({ url, quick: true, name: 'Bo', cfg: { players: 2 }, char: 1, onLeft: (x) => seen.push(x), onError: (e) => seen.push('b: ' + e) });
+    while (!b.lobby?.started) await new Promise(r => setTimeout(r, 10));
+    assert.equal(b.lobby.code, a.lobby.code);
+    a.leave();
+    while (!seen.length) await new Promise(r => setTimeout(r, 10));
+    await new Promise(r => setTimeout(r, 50));
+    assert.deepEqual(seen, [{ seat: 0, name: 'Ada' }]);
+    b.ws.onclose = null; b.ws.close();
   } finally { await srv.close(); }
 });

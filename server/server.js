@@ -21,12 +21,12 @@ const AI_LEVELS = ['rookie', 'club', 'pro', 'legend'];
 // abuse limits (startServer(port, { ...LIMITS }) overrides them in tests): rooms on the server, sockets on the server, sockets per visitor IP,
 // rooms one visitor holds at a time (a room outlives its socket while seats wait for a rejoin), messages per socket per second
 // (beyond it they are dropped; the client sends ~60/s at most), largest message in bytes. Sized for the home Raspberry Pi: raise them on a bigger host.
-export const LIMITS = { rooms: 10, clients: 40, perIp: 8, roomsPerIp: 3, msgsPerSec: 120, payload: 4096, rejoinMs: 60000, lobbyMs: 900000,
-  ghostMs: 15000, idleMs: 600000, overMs: 60000, matchMs: 5400000, joinsPerMin: 20, logsPerMin: 60, sendSkip: 65536, sendDrop: 524288 };
+export const LIMITS = { rooms: 10, clients: 40, perIp: 8, roomsPerIp: 2, msgsPerSec: 120, payload: 4096, rejoinMs: 60000, lobbyMs: 900000,
+  ghostMs: 15000, idleMs: 600000, overMs: 60000, matchMs: 5400000, joinsPerMin: 20, logsPerMin: 60, sendSkip: 65536, sendDrop: 524288, countdownMs: 5000 };
 // rejoinMs: a dropped player's seat waits this long; lobbyMs: a room nobody starts closes; ghostMs: a socket that has not joined a room by then is closed;
 // idleMs: a started room where no player sent input closes; overMs: a finished match's room closes after this; matchMs: no room plays longer;
 // joinsPerMin: join messages per visitor; logsPerMin: join/leave/rejoin log lines; sendSkip/sendDrop: bytes a socket may have queued before it misses a
-// message / is dropped (a client that stops reading must not fill the memory)
+// message / is dropped (a client that stops reading must not fill the memory); countdownMs: an auto room starts this long after its second human joins
 // pages that may open a socket here: the site, local dev, and any page served by this same host (npm run online, a tunnel)
 const ORIGINS = ['padellegends.eu', 'www.padellegends.eu', 'localhost', '127.0.0.1', ...(process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean)];
 const CLOSED_FOR_GOOD = 4000;  // close code for a started room the server ended (idle, too long, error): the client does not try to rejoin
@@ -40,6 +40,9 @@ const OUTFIT_STYLES = ['crew', 'polo', 'vneck', 'tank'];
 const OUTFIT_PATTERNS = ['none', 'chest', 'sash', 'side', 'stripes', 'split'];
 const BODY_TYPES = ['slim', 'athletic', 'muscular', 'stocky', 'tall', 'petite'];
 const text = (v, n) => String(v).replace(/[^\p{L}\p{N} .'-]/gu, '').slice(0, n);
+// names show in the public room list: a few rude words make it a plain 'Player' (ponytail: short list, grow it when reports come in)
+const RUDE = /fuck|shit|cunt|bitch|nigg|fag|whore|slut|pussy|hitler|nazi|orospu|amk|siktir|sikerim|yarrak|piç|ibne|puta|mierda|cabr[oó]n|coño|merde|putain|stronz|cazz|kanker|hoer|scheiss|fotze|caralho|porra/i;
+export const cleanName = (v) => { const n = text(v, 16).trim(); return RUDE.test(n.replace(/[^\p{L}]/gu, '')) ? 'Player' : n; };
 function sanitizeLook(l) {
   if (!l || typeof l !== 'object' || JSON.stringify(l).length > LOOK_MAX) return null;
   const col = (v) => (typeof v === 'string' && COLOR.test(v) ? v : undefined), num = (v, lo, hi) => (typeof v === 'number' ? clamp(v, lo, hi) : undefined);
@@ -88,7 +91,8 @@ export function sanitizeCfg(c, m = {}) {
     players: c.players === 2 ? 2 : 4, sets: [1, 3, 5].includes(c.sets) ? c.sets : 3,
     goldenPoint: c.goldenPoint !== false, starPoint: bool(c.starPoint), superTiebreak: bool(c.superTiebreak),
     ai: AI_LEVELS.includes(c.ai) ? c.ai : 'club', venue: clamp(Math.floor(+c.venue || 0), 0, VENUES - 1), outdoor: bool(c.outdoor),
-    public: bool(m.public), host: text(m.name || '', 16),
+    mode: c.mode === 'team' ? 'team' : 'face',  // doubles: humans on one team vs AIs (Team up), or across the net (Face off)
+    public: bool(m.public), auto: bool(c.auto) || bool(m.quick), host: cleanName(m.name || ''),
   };
 }
 
@@ -203,6 +207,9 @@ export function startServer(port, limits = {}) {
   }
   const statusTimer = setInterval(status, 60000);
 
+  // public lobbies with a free seat, longest waiting first (Map order = creation order)
+  const openRooms = () => [...rooms.values()].filter(r => r.cfg.public && !r.started && r.clients.size < r.seats.length);
+
   function closeRoom(room, reason = '', code = 1000) {
     clearInterval(room.timer); rooms.delete(room.code);
     for (const ws of room.clients.keys()) ws.close(code, reason);
@@ -217,7 +224,7 @@ export function startServer(port, limits = {}) {
   function makeRoom(code, cfg, owner) {
     const players = cfg.players === 2 ? 2 : 4;
     const room = {
-      code, cfg, owner, born: Date.now(), seats: players === 2 ? [0, 2] : [0, 2, 1, 3], clients: new Map(), inputs: {}, started: false, host: null, frame: 0,
+      code, cfg, owner, born: Date.now(), seats: players === 2 ? [0, 2] : cfg.mode === 'team' ? [0, 1] : [0, 2, 1, 3], startsAt: null, clients: new Map(), inputs: {}, started: false, host: null, frame: 0,
       world: newWorld({ players, match: { sets: cfg.sets, goldenPoint: cfg.goldenPoint, starPoint: cfg.starPoint, superTiebreak: cfg.superTiebreak }, stats: {}, rackets: {}, outdoor: cfg.outdoor, holdReplay: true }),  // every client shows a highlight before the next serve
       chars: {}, looks: {}, names: {}, timer: null, tokens: {}, away: {},  // away: seat -> { token, until, name, look } of a dropped player
     };
@@ -229,7 +236,17 @@ export function startServer(port, limits = {}) {
     return room;
   }
 
+  // an auto room is ready when two humans are in (Face off: one on each team, which the seat order gives)
+  const ready = (room) => room.clients.size >= 2;
+  function countdown(room) {
+    if (!room.cfg.auto || room.started) return;
+    if (!ready(room)) room.startsAt = null;
+    else if (room.startsAt == null) room.startsAt = Date.now() + lim.countdownMs;
+  }
+  function begin(room) { room.started = true; room.startsAt = null; room.startedAt = room.lastInput = Date.now(); lobby(room); }
+
   function tick(room) {
+    if (room.startsAt != null && !room.started && Date.now() >= room.startsAt) begin(room);
     if (!room.started || !room.clients.size) return;  // nobody connected: the match waits for a rejoin instead of playing on
     try {
       const w = room.world, taken = new Set(room.clients.values());
@@ -248,7 +265,7 @@ export function startServer(port, limits = {}) {
   }
 
   function lobby(room) {
-    const msg = JSON.stringify({ type: 'lobby', code: room.code, cfg: room.cfg, seats: room.seats, taken: [...room.clients.values()], away: Object.keys(room.away).map(Number), chars: room.chars, looks: room.looks, names: room.names, started: room.started, host: room.host });
+    const msg = JSON.stringify({ type: 'lobby', code: room.code, cfg: room.cfg, seats: room.seats, taken: [...room.clients.values()], away: Object.keys(room.away).map(Number), chars: room.chars, looks: room.looks, names: room.names, started: room.started, host: room.host, startsAt: room.startsAt });
     for (const ws of room.clients.keys()) sendCapped(ws, msg, lim);
   }
 
@@ -282,17 +299,20 @@ export function startServer(port, limits = {}) {
       else if (m.type === 'list') {  // public lobbies that still have a free seat; one list a second per socket
         if (Date.now() - lastList < 1000) return;
         lastList = Date.now();
-        const open = [...rooms.values()].filter(r => r.cfg.public && !r.started && r.clients.size < r.seats.length);
-        reply({ type: 'rooms', rooms: open.map(r => ({ code: r.code, players: r.seats.length, venue: r.cfg.venue, free: r.seats.length - r.clients.size, host: r.cfg.host })) });
+        reply({ type: 'rooms', rooms: openRooms().map(r => ({ code: r.code, players: r.cfg.players, ...(r.cfg.players === 4 && { mode: r.cfg.mode }), venue: r.cfg.venue,
+          free: r.seats.length - r.clients.size, host: r.cfg.host, char: r.chars[r.seats[0]] ?? 0 })) });
       } else if (m.type === 'join') {
         if (room) return fail('Already in a room');  // one room per connection
         const n = (joins.get(ip) || 0) + 1; joins.set(ip, n);
         if (n > lim.joinsPerMin) return fail('The server is full. Try again later.');
         let target;
-        if (m.create === true && m.rejoin === undefined) {  // the server picks the code: never guessable, never someone else's room
+        const want = m.quick === true && m.rejoin === undefined && sanitizeCfg(m.cfg, m);
+        if (want) target = openRooms().find(r => r.cfg.auto && r.cfg.players === want.players && (want.players === 2 || r.cfg.mode === want.mode));  // longest waiting first
+        if (target) { /* quick match: an open room of the same kind */ }
+        else if ((m.create === true || want) && m.rejoin === undefined) {  // the server picks the code: never guessable, never someone else's room
           const owner = ownerKey(ip), mine = [...rooms.values()].filter(r => r.owner === owner).length;
           if (rooms.size >= lim.rooms || mine >= lim.roomsPerIp) return fail('The server is full. Try again later.');
-          target = makeRoom(newCode(), sanitizeCfg(m.cfg, m), owner);
+          target = makeRoom(newCode(), want ? { ...want, public: true } : sanitizeCfg(m.cfg, m), owner);
         } else {
           if ((wrong.get(ip) || 0) >= 5) return ws.close(1008, 'too many wrong codes');  // even a right code: each new socket would be a free guess
           target = rooms.get(String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6));
@@ -332,17 +352,20 @@ export function startServer(port, limits = {}) {
           room.world.ballSpec = { speed: clamp(m.ball.speed, 1, 1.12), bounce: clamp(m.ball.bounce, 1, 1.07) };
           room.world.ball.bounce = room.world.ballSpec.bounce;
         }
-        if (m.name) room.names[seat] = text(m.name, 16);
+        if (m.name) room.names[seat] = cleanName(m.name);
         const look = sanitizeLook(m.look);
         if (look) room.looks[seat] = look;
         room.tokens[seat] = randomBytes(16).toString('base64url');  // lets this player back into the seat if the connection drops
         logLine(`join seat=${seat}`);
         reply({ type: 'seat', seat, code: room.code, token: room.tokens[seat] });
+        countdown(room);
         lobby(room);
       } else if (!room) return;
       else if (m.type === 'start') {  // only the room creator (or whoever took over after they left)
         if (room.clients.get(ws) !== room.host || room.started || room.clients.size < 2) return;  // two people: the wizard asks the same
-        room.started = true; room.startedAt = room.lastInput = Date.now(); lobby(room);
+        begin(room);
+      } else if (m.type === 'leave') {  // Exit: the seat goes to the AI for good, the others are told
+        ws.leaving = true; ws.close(1000, 'left');
       } else if (m.type === 'input') {
         const seat = room.clients.get(ws);
         room.lastInput = Date.now();
@@ -362,10 +385,15 @@ export function startServer(port, limits = {}) {
       room.clients.delete(ws);
       logLine(`leave seat=${seat} code=${code} started=${+room.started}`);  // why a player left; never an IP or a room code
       // mid-match the AI plays the seat while it waits for its player (rejoin); in the lobby the seat is simply free
-      if (room.started && room.world.match.winner == null) room.away[seat] = { token: room.tokens[seat], until: Date.now() + lim.rejoinMs, name: room.names[seat], look: room.looks[seat] };
+      if (ws.leaving) {
+        delete room.tokens[seat];
+        const msg = JSON.stringify({ type: 'left', seat, name: room.names[seat] || '' });
+        for (const c of room.clients.keys()) sendCapped(c, msg, lim);
+      } else if (room.started && room.world.match.winner == null) room.away[seat] = { token: room.tokens[seat], until: Date.now() + lim.rejoinMs, name: room.names[seat], look: room.looks[seat] };
       delete room.looks[seat]; delete room.names[seat];
       if (!room.clients.size) { if (!Object.keys(room.away).length) closeRoom(room); return; }
       if (seat === room.host) room.host = room.clients.values().next().value;  // the next player may start the match
+      countdown(room);
       lobby(room);  // seat falls back to AI
     });
   });

@@ -7,7 +7,7 @@ const RETRY = [1000, 2000, 4000, 8000, 15000];
 export const NET_TEXTS = [N_('Room not found'), N_('Room is full or match already started'), N_('Already in a room'), N_('The server is full. Try again later.'),
   N_('Could not get back into the match'), N_('Connection closed'), N_('The match was closed.'), N_('Could not connect to the game server.'), N_('Server did not answer')];
 
-export function connect({ url, code, cfg, char, stats, racket, onLobby, onError, onStatus, ...extra }) {  // extra: public, name, look, shoes, ball, bag
+export function connect({ url, code, cfg, char, stats, racket, onLobby, onError, onStatus, onLeft, ...extra }) {  // extra: public, quick, name, look, shoes, ball, bag
   const net = { seat: null, lobby: null, snaps: [], events: [], score: null, winner: null, ws: null, token: null };
   let tries = 0, lastSent = '';
   function open(join) {
@@ -16,7 +16,7 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError,
     ws.onopen = () => ws.send(JSON.stringify(join));
     ws.onerror = () => { if (!net.lobby) onError?.('Could not connect to the game server.'); };
     ws.onclose = (ev) => {
-      if (net.ws !== ws || net.winner != null) return;  // a finished match's room closes: nothing to report
+      if (net.ws !== ws || net.winner != null || net.left) return;  // a finished match's room closes: nothing to report
       if (ev?.code >= 4000) return onError?.('The match was closed.');  // the server ended the room for good (idle, too long, error): no rejoin
       if (net.lobby?.started && net.winner == null && net.token && tries < RETRY.length) {  // mid-match: get the seat back
         onStatus?.('reconnecting');
@@ -28,6 +28,7 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError,
       if (m.type === 'seat') { net.seat = m.seat; net.token = m.token; lastSent = ''; if (tries) { tries = 0; onStatus?.('back'); } }
       else if (m.type === 'pong') { net.rtt = performance.now() - m.t; net.srvTick = m.tick; }
       else if (m.type === 'lobby') { net.lobby = m; onLobby?.(m); }
+      else if (m.type === 'left') onLeft?.({ seat: Number(m.seat), name: String(m.name ?? '') });  // another player pressed Exit: the AI has their seat
       else if (m.type === 'error') {
         if (join.rejoin) tries = RETRY.length;  // the seat is gone: stop trying
         if (!net.lobby || join.rejoin) { ws.onclose = null; ws.close(); }  // this join failed: the socket has nothing left to do
@@ -51,6 +52,8 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError,
     const s = JSON.stringify({ type: 'input', ...inp });
     if (s !== lastSent || inp.swing || inp.eat || inp.skip) { ws.send(s); lastSent = s; }
   };
+  // Exit: the server gives the seat to the AI for good (no rejoin) and tells the others
+  net.leave = () => { net.left = true; if (net.ws?.readyState === 1) net.ws.send(JSON.stringify({ type: 'leave' })); else net.ws?.close(); };
   net.start = () => net.ws?.readyState === 1 && net.ws.send(JSON.stringify({ type: 'start' }));
   // render ~70ms in the past, interpolating between buffered server snapshots
   net.view = () => {
@@ -68,7 +71,7 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError,
   return net;
 }
 
-// public lobbies on the server: [{ code, players, venue, free, host }]
+// public lobbies on the server: [{ code, players, mode, venue, free, host, char }]
 export function listRooms(url) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(url);
@@ -80,6 +83,7 @@ export function listRooms(url) {
       let m; try { m = JSON.parse(ev.data); } catch { return; }
       if (m?.type === 'rooms') done(resolve, (Array.isArray(m.rooms) ? m.rooms : []).map(r => ({
         code: String(r?.code ?? ''), host: String(r?.host ?? ''), venue: Number(r?.venue) || 0, players: Number(r?.players) || 0, free: Number(r?.free) || 0,
+        mode: r?.mode === 'team' ? 'team' : 'face', char: Math.max(0, Math.floor(Number(r?.char) || 0)),
       })));
     };
   });
