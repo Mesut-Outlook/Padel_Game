@@ -4,6 +4,7 @@
 import { setTouchMove } from './input.js';
 import { padText } from './padstyle.js';
 import { t, N_ } from './i18n.js';
+import { toggleFullscreen } from './fullscreen.js';
 
 export const isTouch = () => (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches) || (typeof location !== 'undefined' && new URLSearchParams(location.search).has('touch'));
 
@@ -23,7 +24,7 @@ const BUTTONS = [
   ['KeyU', N_('CHIQUITA'), 'tc-mini', 172, 172], ['KeyO', N_('CONTRA'), 'tc-mini', 172, 135], ['KeyF', N_('SLICE'), 'tc-mini', 172, 98],
 ];
 const SHOT_C = 50;  // px from the box's right/bottom edge to the SHOT button's centre
-const TOP = [['KeyC', '🎥', N_('Camera')], ['KeyR', '🔁', N_('Replay')], ['KeyM', '🔈', N_('Sound on / off')], ['KeyB', '📊', N_('Scoreboard: auto / hidden / always on')]];
+const TOP = [['KeyC', '🎥', N_('Camera')], ['KeyR', '🔁', N_('Replay')], ['KeyM', '🔈', N_('Sound on / off')]];  // 📊 sits next to ✕ Exit (#hudBtn in index.html)
 
 export function mountTouch(el) {
   el.innerHTML = `
@@ -32,7 +33,7 @@ export function mountTouch(el) {
       const a = deg * Math.PI / 180, x = SHOT_C - r * Math.cos(a), y = SHOT_C + r * Math.sin(a);
       return `<button type="button" class="tc-btn ${cls}" data-key="${code}" style="right:${x.toFixed(0)}px;bottom:${y.toFixed(0)}px">${t(label)}</button>`;
     }).join('')}</div>
-    <div class="tc-top">${TOP.map(([code, icon, name]) => `<button type="button" class="tc-btn tc-small" data-key="${code}" aria-label="${t(name)}">${icon}</button>`).join('')}<button type="button" class="tc-btn tc-small tc-q" aria-label="${t('How to play')}">❔</button></div>
+    <div class="tc-top">${TOP.map(([code, icon, name]) => `<button type="button" class="tc-btn tc-small" data-key="${code}" aria-label="${t(name)}">${icon}</button>`).join('')}<button type="button" class="tc-btn tc-small tc-fs fs-btn-sync" data-icon-only="1" aria-label="${t('Fullscreen')}">⛶</button><button type="button" class="tc-btn tc-small tc-q" aria-label="${t('How to play')}">❔</button></div>
     <div class="tc-tips" hidden>
       <div class="tc-tip tt-move">${t('👆 Put your thumb down anywhere here<br>and drag to run')}</div>
       <div class="tc-tip tt-btns">${t('SHOT: smart shot · serve<br>stick left / right while tapping = aim<br>inner ring: LOB · VÍBORA · SMASH<br>outer ring: CHIQUITA · CONTRA (off your glass) · SLICE serve')}</div>
@@ -66,6 +67,7 @@ export function mountTouch(el) {
     try { localStorage.setItem(TIPS_SEEN, '1'); } catch { /* storage blocked: tips come back next match */ }
   };
   el.querySelector('.tc-q').addEventListener('pointerdown', (e) => { e.preventDefault(); tips.hidden = !tips.hidden; armTips(); });
+  el.querySelector('.tc-fs').addEventListener('click', () => toggleFullscreen());  // click, not pointerdown: a touch pointerdown is no user gesture for the Fullscreen API
   el.querySelector('.tt-ok').addEventListener('pointerdown', (e) => { e.preventDefault(); seen(); });
   el.addEventListener('pointerdown', (e) => { if (!tips.hidden && !e.target.closest('.tc-q, .tc-tips')) seen(); }, true);
   for (const b of el.querySelectorAll('[data-key]')) {

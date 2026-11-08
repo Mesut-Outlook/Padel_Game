@@ -205,6 +205,7 @@ setTimeout(() => {
 
 bindFullscreenKey(window, document, () => $('hud').hidden);  // menus only: in a match F is the slice shot
 if ($('fsBtn')) $('fsBtn').onclick = () => toggleFullscreen();
+if ($('hudBtn')) $('hudBtn').onclick = () => nextHudMode();
 if ($('exitBtn')) {
   $('exitBtn').innerHTML = `<span aria-hidden="true">✕</span> <span>${t('Exit')}</span>`;
   $('exitBtn').onclick = () => {
@@ -956,8 +957,8 @@ function renderEnergy(view) {
   });
 }
 
-// scoreboard mode, cycled with B / pad D-pad ↓ / touch 📊 and remembered: auto = hidden while a point is played
-const HUD_MODES = ['auto', 'off', 'on'], HUD_MODE_KEY = 'padel.hudMode';
+// scoreboard mode, cycled with B / pad D-pad ↓ / touch 📊 and remembered: auto = hidden from the serve until the point ends
+const HUD_MODES = ['auto', 'on', 'off'], HUD_MODE_KEY = 'padel.hudMode';  // auto hides the board most of the time, so the first press shows it
 const HUD_NAME = { auto: N_('SCOREBOARD: AUTO (HIDDEN DURING POINTS)'), off: N_('SCOREBOARD: HIDDEN'), on: N_('SCOREBOARD: ALWAYS ON') };
 let hudMode = 'auto';
 try { const m = localStorage.getItem(HUD_MODE_KEY); if (HUD_MODES.includes(m)) hudMode = m; } catch { /* storage blocked: auto */ }
@@ -966,7 +967,7 @@ function nextHudMode() {
   try { localStorage.setItem(HUD_MODE_KEY, hudMode); } catch { /* not kept */ }
   flash('📊 ' + t(HUD_NAME[hudMode]), 1.4);
 }
-const hudAway = (state) => $('hud').classList.toggle('away', hudMode === 'off' || (hudMode === 'auto' && (state === 'toss' || state === 'play')));
+const hudAway = (state) => $('hud').classList.toggle('away', hudMode === 'off' || (hudMode === 'auto' && (state === 'serve' || state === 'toss' || state === 'play')));
 
 // score board: rows per team with games per set, the current point and a ball marking the server
 let hudKey = '';

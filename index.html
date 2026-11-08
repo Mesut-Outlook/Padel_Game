@@ -751,7 +751,12 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   #hud, #pause, #help, #touchUi, #cam, #hypeToast, #msg, #eatOffers, #unmuteBadge, #fsHint, #smashBanner, #shotHint, #tutorial, #replayTag, #leftCard {
     --acc: #d8f53a; --fg: #fff; --muted: #9fb3c8; color: #fff;
   }
-  #exitBtn { position: fixed; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); min-height: 44px; min-width: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid rgba(11, 21, 32, 0.2); background: #fff; color: #0b1520; font: 800 16px/1 var(--head-font); letter-spacing: 1px; text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; z-index: 4; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: transform 0.14s ease, opacity 0.14s ease; }
+  /* ✕ Exit and, on touch screens, the 📊 scoreboard toggle right of it */
+  #tlBar { position: fixed; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); display: flex; gap: 8px; z-index: 4; }
+  #hudBtn { display: none; width: 44px; height: 44px; border-radius: 50%; border: 1px solid #ffffff33; background: rgba(10,18,28,.75); font-size: 18px; cursor: pointer; touch-action: manipulation; }
+  body.touch:not(.pad) #hudBtn { display: block; } #exitBtn[hidden] + #hudBtn { display: none; }
+  @media (display-mode: standalone) { #touchUi .tc-fs { display: none; } }  /* a home-screen app is already full screen */
+  #exitBtn { position: relative; min-height: 44px; min-width: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid rgba(11, 21, 32, 0.2); background: #fff; color: #0b1520; font: 800 16px/1 var(--head-font); letter-spacing: 1px; text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; z-index: 4; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: transform 0.14s ease, opacity 0.14s ease; }
   #exitBtn:hover, #exitBtn:focus-visible { transform: translateY(-1px); outline: 2px solid var(--acc); outline-offset: 2px; }
   #exitBtn:active { transform: scale(0.96); }
   #invitePanel { position: fixed; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(380px, calc(100vw - 32px)); box-sizing: border-box; background: #fff; color: #0b1520; border-radius: 12px; padding: 12px 14px; z-index: 5; box-shadow: 0 8px 24px rgba(0,0,0,.4); display: flex; flex-direction: column; gap: 6px; font: 14px/1.35 system-ui, sans-serif; }
@@ -2695,7 +2700,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   </div>
 </div>
 <div id="invitePanel" role="dialog" aria-live="polite" hidden></div>
-<button type="button" id="exitBtn" hidden><span aria-hidden="true">✕</span> <span data-i18n="Exit">Exit</span></button>
+<div id="tlBar"><button type="button" id="exitBtn" hidden><span aria-hidden="true">✕</span> <span data-i18n="Exit">Exit</span></button><button type="button" id="hudBtn" aria-label="Scoreboard: auto / hidden / always on" data-i18n-title="Scoreboard: auto / hidden / always on" title="Scoreboard: auto / hidden / always on">📊</button></div>
 <div id="hud" hidden>
   <div class="hud-head"><span class="tour">MESUT PADEL TOUR</span><span id="hudLabel">SET 1</span></div>
   <div class="hud-grid" id="hudGrid"></div>
