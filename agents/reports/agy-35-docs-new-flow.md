@@ -11,7 +11,7 @@ Ana sayfanın canlı lobiye dönüştürülmesi (PLAY NOW, Invite a friend, Play
 Aşağıdaki bölümlerde güncellemeler yapıldı:
 - **`## Hızlı başlangıç`**:
   - `İnternetten arkadaşlarla:` paragrafı güncellendi. Eski "yalnızca odayı kuran maçı başlatır" yerine; canlı lobi, PLAY NOW ile hızlı giriş, arka planda AI'ya karşı ısınma, 2. oyuncu geldiğinde 5 sn geri sayımla başlayan otomatik online maç, tek dokunuşla davet linki, ✕ Exit ile çıkış ve ayrılan rakip yerine AI'ın devralması anlatıldı.
-- **`## Canlı Lobi ve Nasıl Oynanır`** *(Yeni Eklenen Bölüm)*:
+- **`## Nasıl Oynanır ve Canlı Lobi`** *(Yeni Eklenen Bölüm)*:
   - Ana sayfanın artık canlı lobi olduğu (`src/home.js`).
   - **PLAY NOW (Hemen Oyna)**: Menü gezintisi olmadan tek tıkla maça girme.
   - **Tekler (Singles) / Çiftler (Doubles)** seçimi.
@@ -25,7 +25,7 @@ Aşağıdaki bölümlerde güncellemeler yapıldı:
   - **Alt Çubuk**: Kariyer, Eğitim, Ayarlar, Kontroller, Tam Ekran.
 - **`## Online ve Arkadaşınla Oyna`** *(Yeni Eklenen Bölüm)*:
   - **Davet Linki (Tek Dokunuşla Giriş)**: `?room=...` linki ile doğrudan odaya katılma.
-  - **Oda Kodu (Yedek Yol)**: Paylaşım yapılamadığında 4 haneli kodla katılım.
+  - **Oda Kodu (Yedek Yol)**: Paylaşım yapılamadığında 6 karakterlik kodla katılım.
   - **Maçtan Çıkış (✕ Exit)**: Sol üstteki ✕ Exit düğmesi (Esc / Start) ile "Leave the match?" penceresi.
   - **Rakip Ayrıldığında**: Koltuğun kalıcı olarak AI'a devredilmesi ve kalan oyuncuya "Continue vs AI / Back to lobby" seçenekleri.
   - **Sunucu Durumu**: Sunucunun henüz 7/24 kalıcı olarak açık olmadığı, arkadaş testlerinin geçici bağlantı (tünel) üzerinden yürütüldüğü (Pi veya ev ağı bilgisi kesinlikle yazılmadı).
