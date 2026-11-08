@@ -11,7 +11,7 @@ npm run online     # build + oyun ve WebSocket sunucusu tek portta: http://local
 npm test           # kurallar, fizik, AI, replay testleri
 ```
 
-İnternetten arkadaşlarla: `npm run online` sonra `cloudflared tunnel --url http://localhost:8080`, çıkan linki paylaş. Ev sahibi odayı açar (kodu sunucu verir), arkadaşlar davet linkiyle ya da kodla katılır, maçı yalnızca odayı kuran başlatır. Boş koltuklar ve maç ortasında ayrılan oyuncular AI'ya geçer.
+İnternetten arkadaşlarla: `npm run online` sonra `cloudflared tunnel --url http://localhost:8080`, çıkan linki paylaş. Ana sayfada canlı lobi karşılar: **PLAY NOW** ile hemen maça girilir (tekler veya çiftler; aynı takım ya da karşı karşıya), başka bir oyuncu beklenirken arka planda AI'ya karşı ısınma başlar, ikinci oyuncu gelince 5 sn geri sayımdan sonra maç devreye girer. **Invite a friend** ile tek dokunuşla davet linki üretilir (oda kodu yedek yoldur). Maç sırasında **✕ Exit** ile çıkılabilir; rakip ayrıldığında "Continue vs AI / Back to lobby" seçenekleri sunulur ve boş koltuğu AI devralır.
 
 ## Tarayıcıda oyna (GitHub Pages)
 
@@ -28,6 +28,32 @@ Pages sürümünde bilgisayara karşı maç, eğitim, menü ve kol desteği çal
 Kalıcı online sunucu henüz yok: plan ayrı bir sunucu (VPS / Fly.io vb.) + `server.padellegends.eu` alt alan adı
 (Namecheap paylaşımlı hosting WebSocket sunucusu için uygun değil).
 
+## Nasıl Oynanır ve Canlı Lobi
+
+Oyun açıldığında doğrudan canlı lobi ana sayfası (`src/home.js`) karşılar:
+
+- **PLAY NOW (Hemen Oyna):** Menü gezintisine gerek kalmadan kayıtlı tercihlerinizle hemen açık bir odaya katılır veya yeni bir oda açar.
+  - **Tekler (Singles) / Çiftler (Doubles):** 1'e 1 tekler veya 2'ye 2 çiftler maçı.
+  - **Aynı Takım (Team up) / Karşı Karşıya (Face off):** Çiftlerde iki insan oyuncu aynı takımda 2 AI'ya karşı (**Takım ol**) veya karşılıklı takımlarda yanlarında birer AI partnerle (**Karşı karşıya**) oynayabilir. Boş kalan koltukları yapay zekâ doldurur.
+  - **Beklerken Isınma (Warm-up):** Odaya katıldığınızda başka bir oyuncu beklenirken bekletilmezsiniz; hemen AI'ya karşı çevrimdışı bir ısınma maçı başlar.
+  - **5 Saniye Geri Sayım:** İkinci bir oyuncu odaya katıldığı anda 5 saniyelik geri sayım başlar ve gerçek online maç kesintisiz biçimde sahneyi devralır.
+- **Invite a friend (Arkadaşını Davet Et):** Tercih ettiğiniz modda yeni bir oda açar ve doğrudan arkadaşınıza gönderebileceğiniz davet linkini üretir.
+- **Play vs AI (Yapay Zekâya Karşı):** Tercih ettiğiniz modda doğrudan yapay zekâya karşı çevrimdışı maç başlatır.
+- **Customize (Özelleştir):** Karakter, raket, mekan ve maç kurallarını (set sayısı, altın sayı / star point) değiştirmek için 4 sekmeli hazırlık sihirbazını (`src/menu.js`) açar.
+- **Open Games (Açık Maçlar):** Sağ sütunda sunucudaki açık maçlar canlı olarak listelenir; bekleyen oyuncuların yanına tek tıkla katılabilirsiniz.
+- **Alt Çubuk:** 🏆 **Career** (Kariyer modu), 🎓 **Training** (14 derslik eğitim), ⚙️ **Settings** (Global ayarlar), ⌨️ **Controls** (Kontroller sayfası) ve ⛶ **Fullscreen** (Tam ekran).
+
+## Online ve Arkadaşınla Oyna
+
+- **Davet Linki (Tek Dokunuşla Giriş):** "Invite a friend" düğmesine basıldığında özel davet linki (`?room=...`) panoya kopyalanır (mobilde paylaşım sayfası açılır). Arkadaşınız bu linke tıkladığında hiçbir menüyle uğraşmadan tek dokunuşla doğrudan odanıza katılır.
+- **Oda Kodu (Yedek Yol):** Link paylaşılamazsa (pano ya da paylaşım yoksa) 6 karakterlik oda kodu ekranda gösterilir; arkadaşınız kodla Customize → Online adımından girebilir. Açık (PLAY NOW) odalar ayrıca ana sayfadaki listede görünür.
+- **Maçtan Çıkış (✕ Exit):** Maç sırasında ekranın sol üstündeki **✕ Exit** düğmesine (veya klavyede **Esc**, kolda **Start**) basıldığında "Leave the match?" çıkış penceresi açılır.
+- **Rakip Ayrıldığında:** Online maçta bir oyuncu ayrıldığında koltuğu kalıcı olarak AI devralır ve kalan oyuncuya seçenekler sunulur:
+  - **Continue vs AI:** Maçı AI partner/rakiple tamamla.
+  - **Back to lobby:** Ana sayfadaki canlı lobiye dön.
+  (Isınma maçında oda sonlandığında ise "PLAY NOW" veya "Isınmaya devam et" seçenekleri çıkar).
+- **Sunucu Durumu:** Oyun sunucusu henüz 7/24 kalıcı olarak açık değildir. Arkadaş testleri geçici bağlantı (tünel) üzerinden yürütülmektedir; test zamanlarında paylaşılan bir sunucu linkiyle (`padellegends.eu/?server=…`) bağlanılır. Kendi sunucunuzu çalıştırmak için `npm run online` kullanılır.
+
 ## Ziyaret sayacı (GoatCounter)
 
 https://padellegends.goatcounter.com — çerezsiz, kişisel veri yok (AB'de onay penceresi gerekmez); localhost sayılmaz.
@@ -42,7 +68,7 @@ Sayfa ziyaretlerine ek olarak oyun olayları (`src/track.js`, panelde `event` sa
 | `career-open` · `career-create` | kariyer açıldı · karakter yaratıldı |
 | `career-tournament/<turnuva id>` · `career-shop-buy/<racket\|shoes\|ball\|kit\|headwear>` · `career-training/<özellik>` | turnuvaya girildi · marketten alındı · antrenman |
 | `online-click` · `online-create` · `online-join` | Online'a basıldı (menü veya kariyer) · oda kuruldu · koda katılındı |
-| `online-interest` · `online-interest/<friendly\|career\|cup>` | online'ı merak eden oturum (toplam · nereden: Online sekmesi, kariyerde Online, Friends Cup kartı), oturumda bir kez |
+| `online-interest` · `online-interest/<friendly\|career\|cup>` | online'ı merak eden oturum (toplam · nereden: Canlı lobi, kariyerde Online, Friends Cup kartı), oturumda bir kez |
 | `online-noserver` | oda kurmayı ya da katılmayı denedi ama sunucu yok, oturumda bir kez (online'ı gerçekten isteyenler) |
 | `input/<keyboard\|xbox\|playstation\|touch\|other>` | oturumda ilk kullanılan giriş aygıtı (her biri bir kez) |
 | `settings-change/<control\|speed>` | hangi ayar değişti (değeri değil) |
@@ -63,7 +89,8 @@ Sayfa ziyaretlerine ek olarak oyun olayları (`src/track.js`, panelde `event` sa
 | WASD (servis öncesi) | servis yerini kaydır (kendi yarısında, servis çizgisinin gerisinde) | sol çubuk |
 | A/D (vururken) | topun yönü | sol çubuk |
 | C | kamera: TV, oyuncu arkası, yan, tepe, top, drone, serbest | View (Back) |
-| R / Esc | son sayının tekrarı / tekrarı geç | R3 / B |
+| ✕ Exit / Esc | maçtan çıkış penceresi (Leave the match?) · tekrarı geç | Start / B |
+| R | son sayının tekrarı | R3 |
 | M | sesi aç/kapa | |
 | Enter (maç bitince) | ana menüye (kariyer maçında kariyer ekranına) dön | Start |
 
@@ -88,14 +115,14 @@ Kolun tarayıcıda nasıl göründüğünü test etmek için: http://localhost:5
 
 ## Özellikler
 
-- **Giriş ekranı** (`src/menu.js`, `src/thumbs.js`): 5 sekmeli görsel menü (Mod · Oyuncu · Mekan · Raket · Maç). Karakter portreleri, mekan ve raket görselleri oyunun kendi 3D modellerinden üretilir. Solda seçili oyuncunun dönen 3D önizlemesi var. Fare, klavye ve Xbox koluyla gezilir (LB/RB sekme, A seç, B geri, Start başla).
+- **Ana sayfa & Canlı lobi** (`src/home.js`): Canlı lobi arayüzü. PLAY NOW (tekler/çiftler, aynı takım / karşı karşıya), Invite a friend (tek dokunuşla davet linki), Play vs AI ve açık odalar listesi (Open games). Görünüm, mekan, raket ve kural seçimi için **Customize** bağlantısı 4 sekmeli görsel sihirbazı (`src/menu.js`, `src/thumbs.js`: Oyuncu · Mekan · Raket · Maç) açar; seçili oyuncunun 3D duruş önizlemesi solda yer alır. Fare, klavye ve Xbox koluyla gezilir (LB/RB sekme, A seç, B geri, Start başla).
 
 - **Kurallar** (`src/rules.js`): FIP kortu, alttan çapraz servis, let, altın sayı / avantaj / Star Point (FIP 2026), tie-break (sonraki seti ilk karşılayan açar), süper tie-break, cam ve tel kuralları, servise vole yasağı.
 - **Fizik** (`src/physics.js`, `src/court.js`): sürtünme, Magnus (topspin/slice), zemin/cam/tel ayrı sekme katsayıları, camda spin etkisi, filenin iki yanında FIP standartlarında 1 metrelik yan kapılar (`z: 0.08–1.08m, h: 2.2m`) ve beyaz koruyucu dolgu süngerleri (`door padding`). Sekmeden sonra kapıdan çıkan top vurana sayı, sekmeden önce çıkan top dışarı (`out`).
 - **Vuruş pozları** (`src/player.js`): top yaklaşırken forehand / backhand / üstten (smaç, bandeja) hazırlığı, alçak topta eğilme; her vuruş hazırlık → temas → takip. Smaç yavaş çekiminde fizik adımı senkronizasyonu ile raket hazırlık kilitlenmesi (jitter çözümü), `idleQuats` üst gövde sabitlemesi ve doğal trophy pose açıları.
 - **Vuruş koçu** (`src/main.js`): sana servis çizgisinin içinde üstten vurulabilecek bir top gelirse oyun yavaşlar, kamera oyuncunun arkasından topa bakar ve altta tuş önerisi çıkar (SMAÇ L · VÍBORA I · BANDEJA Space; kolda Y / RB / A). Gerideki yüksek toplarda, camdan dönen toplarda (bajada) ve rakipler fileyken (lob) yalnızca öneri gösterilir.
 - **His & Ses Dünyası** (`src/audio.js`, `src/main.js`): smaçta vurucunun arkasından alçak açı + yavaş çekim, dinamik odak efekti (`#smashVignette`) ve ekran pankartı (`#smashBanner`: hız `KM/H`, `PERFECT TIMING`, `SUPER SMASH!`), zaman bükülmesi bas düşüşü + D-Dorian fanfar melodisi (`sfxSmashSlowMo` & `sfxSmashImpact`); ralli içi seyirci tepkileri (smaç ve camda `'ooh'`, uzun rallide alkış ve ıslık `'cheer'`, servis hatasında mırıltı `'murmur'`); 116 BPM prosedürel WebAudio "Padel Tour" synth arka plan müziği; hızlı topta hız izi ve yanından geçerken "vuuş" sesi; dosyasız WebAudio vuruş sesleri, vuruşta kısa duraklama, smaçta kamera sarsıntısı, oyuncuların İngilizce kısa sözleri (konuşma balonu + tarayıcı sesi). `M` tuşu tüm ses ve müziği açıp kapatır.
-- **Arayüz & Dil Desteği** (Tam İngilizce): Menüler (`src/menu.js`), oyun içi HUD (`SET`, `PTS`, `GOLDEN POINT`, `ADVANTAGE`), duraklatma menüsü (`Resume`, `Restart match`, `Main menu` — DOM churn korumalı), klavye / Xbox kol yardımı (`src/helpkeys.js`: son kullanılan cihaza göre klavye ya da kol çizimi, basılan tuş yanar; `H` veya D-pad ↑ aç/kapa), 14 derslik eğitim (`src/tutorial.js`), kontroller sayfası (`kontroller.html`: klavye, Xbox ve PS kol çizimleri, tablet/telefon bölümü), gamepad test aracı (`tools/padtest.html`) ve ağ mesajları tamamen İngilizce olarak sunulur.
+- **Arayüz & Dil Desteği** (8 dil: EN, DE, ES, FR, IT, NL, PT, TR): Canlı lobi (`src/home.js`), hazırlık sihirbazı (`src/menu.js`), oyun içi HUD (`SET`, `PTS`, `GOLDEN POINT`, `ADVANTAGE`), çıkış / duraklatma penceresi (`src/main.js`: `✕ Exit` düğmesi ve Esc — "Leave the match?", "Keep playing", "Restart match", "Fullscreen", "Leave"), rakip ayrılma bildirimi ("Continue vs AI / Back to lobby"), klavye / Xbox / PlayStation kol yardımı (`src/helpkeys.js`: son kullanılan cihaza göre klavye ya da kol çizimi, basılan tuş yanar; `H` veya D-pad ↑ aç/kapa), 14 derslik eğitim (`src/tutorial.js`), kontroller sayfası (`kontroller.html`: klavye, Xbox ve PS kol çizimleri, tablet/telefon bölümü), gamepad test aracı (`tools/padtest.html`) ve ağ mesajları çok dilli olarak sunulur.
 - **AI** (`src/ai.js`): 4 seviye (çaylak → efsane), çiftlerde birlikte fileye çıkma/çekilme, top tahmini, vuruş seçimi, boşluğa nişan.
 - **Karakterler** (`src/player.js`): kadın/erkek ince-atletik tenisçi gövdesi, 6 vücut tipi (ince, atletik, kaslı, iri, uzun, minyon), ten rengi, her karaktere özel görünüm (`data/characters.json`): saç (uzun, küt, topuz, at kuyruğu, kısa, seyrek, kel, samuray topuzu) ve rengi, jöleli parlak saç, sakal (tam / hafif / keçi) ve rengi, gözlük, makyaj, yüz genişliği, omuz genişliği, saç bandı / vizör, gerçek forma ve şort (vücutla hareket eden, yuvarlak yakalı, şeritli kumaş modelleri; kumaş vücut hatlarını göstermez), padel ayakkabısı, elde raket (yüzü önde, sap avuçta), solak/sağlak.
 - **Kariyer modu** (`src/career.js`, `src/tournament.js`, `src/careerui.js`; menüde **CAREER**): 26 şablondan karakter yarat, görünümü (saç modeli ve rengi, sakal ve rengi, ten, vücut, yüz, gözlük, makyaj, saç bandı/vizör) istediğin an ücretsiz değiştir. Her özellik 4'ten başlar; kariyer maçlarında **Credits** kazan (oynadın + kazanılan oyun/sayı + galibiyet + her 10 STYLE puanı 1 Credit, AI seviyesi çarpanı), **Training**'de 6 özelliği (hız, güç, kontrol, vole, smaç, dayanıklılık) geliştir, **Shop**'ta raket (çekirdek/yüzey/şekil), ayakkabı (hız, çeviklik), top (Standard/Pro/Pro S: hız ve sekme), forma takımı ve başlık al; **Locker**'da kuşan. **Tournaments**: Club Americano'dan Premier Padel Finals'a 10 basamaklı merdiven (Americano, Mexicano, eleme, lig; ralli puanlaması 16 sayıya), giriş ücreti, dereceye göre Credits + sıralama puanı, yarıda bırakılan turnuva kaldığı turdan devam; **Ranking**: dünya sıralaması. **Play Online**: sunucudaki açık odaları listele, oda kur / katıl; karakterinin görünümü diğer oyunculara gider, online maç ×1.2 öder. İlerleme yalnız bu tarayıcıda saklanır (Profile → Export / Import ile yedekle). Denge değerleri `data/economy.json`, `data/shop.json`, `data/tournaments.json`.
@@ -154,6 +181,7 @@ docs/     re-findings.md (rea tersine mühendislik notları)
 - [x] Forma çeşitleri: polo, V yaka, kolsuz, desenli (bazı karakterlerde ve markette) — `agy-14`
 - [x] Açılış animasyonu + ana ekran (Friendly Match / Career / Friends Cup), Friendly'de Where? (bu bilgisayar / online, oda linki `?room=`), ortak Settings (kariyer maçları da okur), `#home` / `#friendly` / `#career` rotaları — `agy-15`
 - [x] Tam ekran: ⛶ düğmesi (ana ekran, menü, maç), duraklatma menüsü, menülerde F (maçta F = slice) — `agy-16`
+- [x] Ana sayfa = canlı lobi (PLAY NOW, Invite a friend, Play vs AI, Customize sihirbazı, açık odalar listesi, beklerken ısınma, ✕ Exit düğmesi ve rakip ayrılınca AI ile devam) — `agy-30`, `agy-31`, `agy-35`
 - [ ] Karar bekliyor: Friends Cup sunucusunun barındırılması — alan adı (domain) ile birlikte kararlaştırılacak
 - [x] Kariyer küçük işleri (son incelemeden): partner/sıralamada şablon karakterin AI kopyası; ödül kartı boşluğu; online odada formların gizlenmesi ve başarısız katılımda ekranın takılı kalması; uzak oyuncunun raket rengi; tek başına online (özel oda + AI) ×1.2 ödüyor; ralli puanlamasında skor tablosu `repeat(0, …)` kontrolü; lobi/profil metinlerinin `innerHTML` yerine metin olarak basılması; kariyer maçları menüdeki Kontrol/Oyun hızı ayarını kullanmıyor; markette hata metninde ham neden kodu; 16 çiftlik turnuvada aynı AI iki tarafta; turnuva maçından yarıda çıkınca maç tekrar oynanabiliyor (hükmen yenilgi yok) — `agy-19`
 - [ ] Faz 3b — giriş/hesap, rezervasyon, online turnuvalar, ücretli kestirmeler

@@ -12,6 +12,7 @@ export const TIPS = [
   { kb: N_('Ball got past you? Play it off your own glass with O'), pad: N_('Ball got past you? Play it off your own glass with RT') },
   { kb: N_('Press R to watch the last shots again'), pad: N_('Press R3 to watch the last shots again') },
   { kb: N_('Running and smashing tire you out; changeovers refill energy'), pad: N_('Running and smashing tire you out; changeovers refill energy') },
+  { kb: N_('Press ✕ Exit to leave the match.'), pad: N_('Press ✕ Exit to leave the match.') },
 ];
 
 // Walks the list from a random start so a match never repeats a tip before all were shown.

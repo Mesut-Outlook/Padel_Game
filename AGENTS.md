@@ -49,3 +49,4 @@ Read `CLAUDE.md` — it is the shared guide for every agent (Claude, Antigravity
 
 | `agy-33` | Yeni akışın telefon/tablet/masaüstü incelemesi (salt okunur) | `agents/reports/agy-33-flow-review.md` | Completed, Opus verified and fixed all four findings (invite link crash for returning visitors, list delay, card overflow, 44 px touch targets) |
 | `agy-34` | Telefonda dikey ana sayfa | `agents/reports/agy-34-portrait-home.md` | Completed, Opus checked 390×844 and 360×740 and that a match still asks to rotate |
+| `agy-35` | Belgeler ve yardım metinleri yeni akışa göre | `agents/reports/agy-35-docs-new-flow.md` | Completed, Opus reviewed (room code is 6 characters, test matches need a server link) |
