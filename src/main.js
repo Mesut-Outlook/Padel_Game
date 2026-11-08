@@ -205,7 +205,7 @@ setTimeout(() => {
 
 bindFullscreenKey(window, document, () => $('hud').hidden);  // menus only: in a match F is the slice shot
 if ($('fsBtn')) $('fsBtn').onclick = () => toggleFullscreen();
-if ($('hudBtn')) $('hudBtn').onclick = () => nextHudMode();
+if ($('hudBtn')) { $('hudBtn').onclick = () => nextHudMode(); $('hudBtn').setAttribute('aria-label', t('Scoreboard: auto / hidden / always on')); }
 if ($('exitBtn')) {
   $('exitBtn').innerHTML = `<span aria-hidden="true">✕</span> <span>${t('Exit')}</span>`;
   $('exitBtn').onclick = () => {

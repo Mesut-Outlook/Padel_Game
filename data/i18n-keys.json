@@ -2151,6 +2151,7 @@
     "kontroller.html:119"
   ],
   "Scoreboard: auto / hidden / always on": [
+    "src/main.js:208",
     "index.html:2703"
   ],
   "Scoreboard: auto → hidden → always on": [
