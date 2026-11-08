@@ -138,6 +138,14 @@ initSplash({
 
 bindFullscreenKey(window, document, () => $('hud').hidden);  // menus only: in a match F is the slice shot
 if ($('fsBtn')) $('fsBtn').onclick = () => toggleFullscreen();
+if ($('exitBtn')) {
+  $('exitBtn').innerHTML = `<span aria-hidden="true">✕</span> <span>${t('Exit')}</span>`;
+  $('exitBtn').onclick = () => {
+    if (replay.playing) endReplay();
+    if ((world?.match.winner != null || net?.winner != null) && !tut) { toMenu(); return; }
+    setPaused(!paused);
+  };
+}
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25));
@@ -227,7 +235,7 @@ async function setupScene(venue, ids, roster, rk) {
   for (const id of ids) avatars[id] = await createAvatar(scene, roster[id], rk[id].color, rk[id].shape);
   const name = (t) => ids.filter(id => (id < 2 ? 0 : 1) === t).map(id => roster[id].name.split(' ').pop()).join(' / ');
   $('t0').textContent = name(0); $('t1').textContent = name(1);
-  for (const id of ['hud', 'cam', 'help', 'fsBtn']) $(id).hidden = false;
+  for (const id of ['exitBtn', 'hud', 'cam', 'help', 'fsBtn']) $(id).hidden = false;
   clearPressed();  // a D-pad ↓ / key pressed in the menus must not act in the match
   $('touchUi').hidden = !isTouch() || document.body.classList.contains('pad');
   if (!$('touchUi').hidden) showTouchTips($('touchUi'));
@@ -271,6 +279,7 @@ export function startOnline({ url, code, create = false, players = 4, venue = 0,
       say(escapeText(t(e)), null, true);
       if (!net?.lobby?.started) { net = null; setWizardLobby(null); } else flash(t(e), 4);  // not in a match yet: START can try again
     },
+    onLeft: ({ seat, name }) => flash(t('{name} left the match. The AI plays for them.', { name: name || avatars[seat]?.ch?.name || '?' }), 4),
     onStatus: (s) => flash(s === 'back' ? t('You are back in the match.') : t('Connection lost. Getting you back into the match…'), s === 'back' ? 2.5 : 30),
     onLobby: (l) => {
       // in the match: tell the others when a player drops (the AI plays their seat) and when they come back
@@ -284,9 +293,9 @@ export function startOnline({ url, code, create = false, players = 4, venue = 0,
       setWizardLobby(view);
       say(lobbyHtml(view), l);
       if (l.started && !avatars.length) {
-        const ids = l.seats, roster = {}, rk = {};
+        const ids = l.cfg?.players === 2 ? [0, 2] : [0, 1, 2, 3], roster = {}, rk = {};  // Team up rooms seat humans in 0 and 1 only: the AI pair still needs its players
         for (const id of ids) {
-          const base = characters[l.chars[id] ?? aiSeatChar(id, characters)], { stats: _ignored, ...lk } = l.looks?.[id] || {};
+          const base = characters[l.chars[id]] || characters[aiSeatChar(id, characters)], { stats: _ignored, ...lk } = l.looks?.[id] || {};  // the server may be anyone's: an index out of range falls back
           roster[id] = { ...base, ...lk, ...(l.names?.[id] ? { name: l.names[id] } : {}) };
           const foundRk = (lk.racket && rackets.find(r => r.id === lk.racket)) || rackets[id % rackets.length];
           rk[id] = {
@@ -341,7 +350,7 @@ $('start').onclick = async () => {
     match: matchOpts(), roster, rackets: rk, venue: venues[+$('venue').value],
   });
   if (tutorial) {
-    tut = createTutorial({ world, scene, hand: roster[0].hand, camName: () => rig.name, replaying: () => replay.playing, consumePressed, onExit: () => { track('tutorial-end'); location.reload(); } });
+    tut = createTutorial({ world, scene, hand: roster[0].hand, camName: () => rig.name, replaying: () => replay.playing, consumePressed, onExit: () => { track('tutorial-end'); toMenu(); } });
   }
 };
 
@@ -396,8 +405,9 @@ function toMenu() {
       try { done(forfeitResult); } catch (err) { console.error('Forfeit onEnd failed', err); }
     }
   }
+  net?.leave();  // online: the seat goes to the AI now and the others are told, instead of waiting a minute for a rejoin
   if (isCareer) history.replaceState(history.state, '', '#career');  // replace, not push: history.state carries the career backup when storage is blocked
-  else history.replaceState(history.state, '', '#friendly');
+  else history.replaceState(history.state, '', '#home');
   location.reload();
 }
 
@@ -843,11 +853,11 @@ let lastPadNavY = 0, padRepeatTimer = 0;
 let lastPadNavA = false, lastPadNavB = false, lastPadNavStart = false;
 
 function pauseItems() {
-  const items = [[t('Resume'), () => setPaused(false)]];
+  const items = [[t('Keep playing'), () => setPaused(false)]];
   if (tut) items.push([t('Skip lesson'), () => { setPaused(false); tut.skip(); }]);
   else if (!net) items.push([t('Restart match'), () => { setPaused(false); if (replay.playing) endReplay(); lastCfg?.onEnd ? startMatch(lastCfg.bag && bagLeft ? { ...lastCfg, bag: { ...lastCfg.bag, 0: { ...bagLeft } } } : lastCfg) : $('start').click(); }]);  // career matches restart as career matches, with what is left in the bag
   items.push([isFullscreen() ? t('Exit Fullscreen') : t('Fullscreen'), async () => { await toggleFullscreen(); drawPause(); }]);
-  items.push([t('Main menu'), toMenu]);
+  items.push([t('Leave'), toMenu]);
   return items;
 }
 document.addEventListener('fullscreenchange', () => { if (paused) drawPause(); });
@@ -860,6 +870,13 @@ function updatePauseSel() {
 }
 
 function drawPause() {
+  const titleEl = document.querySelector('#pause .pz-title');
+  if (titleEl) titleEl.textContent = t('Leave the match?');
+  const lossEl = $('pzLoss');
+  if (lossEl) {
+    lossEl.hidden = !onEnd;
+    lossEl.textContent = onEnd ? t('Leaving counts as a loss.') : '';
+  }
   const box = $('pzItems');
   const items = pauseItems();
   box.innerHTML = items.map(([itemText], i) => `<button type="button" class="pz-item${i === pauseSel ? ' sel' : ''}" data-i="${i}" tabindex="-1">${itemText}</button>`).join('');

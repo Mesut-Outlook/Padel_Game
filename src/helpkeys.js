@@ -9,7 +9,7 @@ const K = {
   KeyK: ['K', 'shot', N_('lob')], KeyL: ['L', 'shot', N_('smash')], KeyU: ['U', 'shot', N_('chiq.')], KeyI: ['I', 'shot', N_('víbora')],
   KeyO: ['O', 'shot', N_('contra')], KeyF: ['F', 'shot', N_('slice')],
   KeyE: ['E', 'sys', N_('eat')], KeyB: ['B', 'sys', N_('score')], KeyC: ['C', 'sys', N_('cam')], KeyR: ['R', 'sys', N_('replay')], KeyM: ['M', 'sys', N_('sound')], KeyH: ['H', 'sys', N_('hide')],
-  Escape: ['Esc', 'sys', N_('pause')], Enter: ['Enter', 'sys', N_('menu')],
+  Escape: ['Esc', 'sys', N_('Exit menu')], Enter: ['Enter', 'sys', N_('menu')],
 };
 const ROWS = [
   ['Escape'],
@@ -28,7 +28,7 @@ const PAD = [
   [6, 'sys', 'LT', 44, 2, N_('eat (food offer)')], [7, 'shot', 'RT', 168, 2, N_('contrapared')],
   [4, 'shot', 'LB', 38, 15, N_('slice serve')], [5, 'shot', 'RB', 158, 15, N_('víbora')],
   [0, 'xa', 'A', 176, 76, N_('shot · serve')], [1, 'xb', 'B', 190, 62, N_('lob')], [2, 'xx', 'X', 162, 62, N_('chiquita')], [3, 'xy', 'Y', 176, 48, N_('smash')],
-  [8, 'sys', '', 104, 58, N_('camera (View)')], [9, 'sys', '', 136, 58, N_('pause (Start)')], [11, 'sys', 'R3', 148, 92, N_('replay (press R stick)')],
+  [8, 'sys', '', 104, 58, N_('camera (View)')], [9, 'sys', '', 136, 58, N_('Exit menu (Start)')], [11, 'sys', 'R3', 148, 92, N_('replay (press R stick)')],
   [12, 'sys', '', 92, 83, N_('hide this help (D-pad ↑)')],
   [13, 'sys', '', 92, 97, N_('scoreboard (D-pad ↓)')],
 ];
@@ -69,7 +69,7 @@ export function mountKeyHelp(el) {
         <div class="hk-arrows">${cap('ArrowUp', 'up')}${cap('ArrowLeft', 'lf')}${cap('ArrowDown', 'dn')}${cap('ArrowRight', 'rt')}</div>
       </div>
       <div class="hk-main pad-only">${padSvg('xbox')}${padLegend('xbox')}</div>
-      <div class="hk-foot"><span class="kb-only">${t('Hold <b>A</b>/<b>D</b> or <b>←</b>/<b>→</b> while hitting = aim · <b>Esc</b>: pause · ⛶ / <b>F11</b>: fullscreen · ')}</span><span class="pad-only">${t('Phone or tablet: pair an Xbox or PlayStation controller over Bluetooth, then press any button · 2 players: keyboard + a pad, or a pad each · ')}</span><a href="kontroller.html" target="_blank" rel="noopener">${t('all controls →')}</a></div>
+      <div class="hk-foot"><span class="kb-only">${t('Hold <b>A</b>/<b>D</b> or <b>←</b>/<b>→</b> while hitting = aim · <b>Esc</b>: Exit menu · ⛶ / <b>F11</b>: fullscreen · ')}</span><span class="pad-only">${t('Phone or tablet: pair an Xbox or PlayStation controller over Bluetooth, then press any button · 2 players: keyboard + a pad, or a pad each · ')}</span><a href="kontroller.html" target="_blank" rel="noopener">${t('all controls →')}</a></div>
     </div>`;
   // default corner: top-right on desktop and touch (clear of top-left scoreboard)
   const home = 'tr';

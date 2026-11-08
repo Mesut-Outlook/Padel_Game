@@ -720,7 +720,10 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
 
   /* Match HUD */
   /* broadcast-style score board: one row per team, games per set, current point, serve marker */
-  #hud { position: fixed; top: 10px; left: 10px; background: rgba(10,18,28,.9); backdrop-filter: blur(10px); border: 1px solid #ffffff1a; border-radius: 10px; padding: 6px 10px 8px; z-index: 2; min-width: 300px; }
+  #exitBtn { position: fixed; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); min-height: 44px; min-width: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid rgba(11, 21, 32, 0.2); background: #fff; color: #0b1520; font: 800 16px/1 var(--head-font); letter-spacing: 1px; text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; z-index: 4; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: transform 0.14s ease, opacity 0.14s ease; }
+  #exitBtn:hover, #exitBtn:focus-visible { transform: translateY(-1px); outline: 2px solid var(--acc); outline-offset: 2px; }
+  #exitBtn:active { transform: scale(0.96); }
+  #hud { position: fixed; top: calc(max(10px, env(safe-area-inset-top)) + 52px); left: max(10px, env(safe-area-inset-left)); background: rgba(10,18,28,.9); backdrop-filter: blur(10px); border: 1px solid #ffffff1a; border-radius: 10px; padding: 6px 10px 8px; z-index: 2; min-width: 300px; }
   #hud .hud-head { display: flex; justify-content: space-between; gap: 16px; font-size: 10px; letter-spacing: 1.5px; color: #9fb3c8; font-weight: 800; margin-bottom: 4px; }
   #hud #hudLabel { color: var(--acc); }
   #hud .hud-energy { margin-top: 5px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; }
@@ -800,7 +803,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   }
   /* in-game key help (src/helpkeys.js): colours match public/kontroller.html */
   #help { position: fixed; z-index: 2; font-size: 12px; }
-  #help[data-pos="bl"] { left: 12px; bottom: 12px; } #help[data-pos="tl"] { left: 12px; top: 125px; }
+  #help[data-pos="bl"] { left: 12px; bottom: 12px; } #help[data-pos="tl"] { left: 12px; top: 180px; }
   #help[data-pos="tr"] { right: 12px; top: 12px; } #help[data-pos="br"] { right: 12px; bottom: 52px; }  /* above the camera label */
   body:has(#tutorial:not(.final)) #help[data-pos="tl"] { top: auto; bottom: 12px; }  /* never over the lesson panel */
   body:has(#help[data-pos="tr"]:not(.collapsed):not([hidden])) #replayTag { right: auto; left: 50%; transform: translateX(-50%); }
@@ -820,7 +823,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   #help .hk.move { background: #4ea8ff; color: #0b1520; } #help .hk.hit { background: #d8f53a; color: #0b1520; }
   #help .hk.shot { background: #ff9f43; color: #0b1520; } #help .hk.sys { background: #b8c4d0; color: #0b1520; }
   #help .hk.on { transform: scale(.9); box-shadow: 0 0 0 2px #fff; }
-  #help .hk-wide { width: 40px; } #help .hk-space { width: 150px; } #help .hk-space small { max-width: none; }
+  #help .hk-wide { width: 40px; } #help .hk-wide small { max-width: 38px; } #help .hk-space { width: 150px; } #help .hk-space small { max-width: none; }
   #help .hk-arrows { display: grid; grid-template-columns: repeat(3, 26px); grid-template-rows: 26px 26px; gap: 3px; }
   #help .hk-arrows .up { grid-column: 2; grid-row: 1; } #help .hk-arrows .lf { grid-column: 1; grid-row: 2; } #help .hk-arrows .dn { grid-column: 2; grid-row: 2; } #help .hk-arrows .rt { grid-column: 3; grid-row: 2; }
   #help .hk-foot { margin-top: 6px; color: #9fb3c8; font-size: 10.5px; max-width: 390px; } #help .hk-foot a { color: var(--acc); }
@@ -851,7 +854,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   .pl-start-slot { display: flex; gap: 10px; align-items: center; }
   .pl-tutorial-btn { background: transparent; color: var(--acc, #d8f53a); border: 2px solid var(--acc, #d8f53a); border-radius: 10px; padding: 10px 16px; font: 800 15px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 1px; cursor: pointer; width: auto; }
   .pl-tutorial-btn:hover, .pl-tutorial-btn:focus-visible { background: #d8f53a22; outline: none; }
-  #tutorial { position: fixed; left: 16px; top: 125px; width: min(380px, calc(100vw - 32px)); background: rgba(10,18,28,.9); border: 1px solid #ffffff1a; border-left: 4px solid #d8f53a; border-radius: 12px; padding: 14px 16px; z-index: 3; backdrop-filter: blur(8px); }
+  #tutorial { position: fixed; left: 16px; top: 180px; width: min(380px, calc(100vw - 32px)); background: rgba(10,18,28,.9); border: 1px solid #ffffff1a; border-left: 4px solid #d8f53a; border-radius: 12px; padding: 14px 16px; z-index: 3; backdrop-filter: blur(8px); }
   #tutorial .tut-step { font-size: 11px; letter-spacing: 2px; color: #9fb3c8; font-weight: 700; }
   #tutorial .tut-title { font: 800 26px 'Barlow Condensed', 'Oswald', system-ui; text-transform: uppercase; margin: 2px 0 6px; }
   #tutorial .tut-text { line-height: 1.5; } #tutorial .tut-text b { color: #d8f53a; }
@@ -886,6 +889,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
   #pause { position: fixed; inset: 0; background: rgba(5,10,16,.55); backdrop-filter: blur(3px); display: grid; place-items: center; z-index: 6; }
   #pause .pz-card { background: rgba(10,18,28,.95); border: 1px solid #ffffff1a; border-top: 4px solid var(--acc); border-radius: 14px; padding: 22px 26px; width: min(340px, 90vw); text-align: center; }
   #pause .pz-title { font: 900 28px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 2px; margin-bottom: 14px; }
+  #pause .pz-loss { color: #ff9f43; font-size: 13px; font-weight: 700; margin: -8px 0 12px; }
   #pause .pz-item { display: block; width: 100%; margin: 8px 0; padding: 12px; border-radius: 10px; border: 1px solid #ffffff1a; background: #12202e; color: #fff; font: 800 17px 'Barlow Condensed', 'Oswald', system-ui; letter-spacing: 1px; cursor: pointer; text-transform: uppercase; }
   #pause .pz-item.sel { background: var(--acc); color: #0b1520; border-color: var(--acc); }
   #pause .pz-note { color: #ff9f43; font-size: 12px; min-height: 16px; } #pause .pz-hint { color: #9fb3c8; font-size: 11px; margin-top: 8px; }
@@ -2260,6 +2264,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
     <div class="credits">Developer: <b>Mesut</b> · Main sponsor: <b>MESUT PADEL</b></div>
   </div>
 </div>
+<button type="button" id="exitBtn" hidden><span aria-hidden="true">✕</span> <span data-i18n="Exit">Exit</span></button>
 <div id="hud" hidden>
   <div class="hud-head"><span class="tour">MESUT PADEL TOUR</span><span id="hudLabel">SET 1</span></div>
   <div class="hud-grid" id="hudGrid"></div>
@@ -2276,7 +2281,7 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
 <div id="shotHint" hidden></div>
 <div id="smashVignette" hidden></div>
 <div id="smashBanner" hidden><div class="sb-kicker" id="sbKicker"></div><div class="sb-title" id="sbTitle"></div><div class="sb-sub" id="sbSub"></div></div>
-<div id="pause" hidden><div class="pz-card"><div class="pz-title" data-i18n="PAUSED">PAUSED</div><div id="pzItems"></div><div id="pzNote" class="pz-note"></div><div class="pz-hint" data-i18n="↑ ↓ select · Enter / A (✕) confirm · Esc / Start (Options) resume">↑ ↓ select · Enter / A (✕) confirm · Esc / Start (Options) resume</div></div></div>
+<div id="pause" hidden><div class="pz-card"><div class="pz-title" data-i18n="Leave the match?">Leave the match?</div><div id="pzLoss" class="pz-loss" hidden data-i18n="Leaving counts as a loss.">Leaving counts as a loss.</div><div id="pzItems"></div><div id="pzNote" class="pz-note"></div><div class="pz-hint" data-i18n="↑ ↓ select · Enter / A (✕) confirm · Esc / Start (Options) resume">↑ ↓ select · Enter / A (✕) confirm · Esc / Start (Options) resume</div></div></div>
 <div id="replayTag" hidden data-i18n-html="● REPLAY <small style=&quot;font-weight:600;opacity:.85&quot;>· press any key to skip</small>">● REPLAY <small style="font-weight:600;opacity:.85">· press any key to skip</small></div>
 <div id="help" hidden></div>
 <div id="touchUi" hidden></div>

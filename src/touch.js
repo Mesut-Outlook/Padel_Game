@@ -23,7 +23,7 @@ const BUTTONS = [
   ['KeyU', N_('CHIQUITA'), 'tc-mini', 172, 172], ['KeyO', N_('CONTRA'), 'tc-mini', 172, 135], ['KeyF', N_('SLICE'), 'tc-mini', 172, 98],
 ];
 const SHOT_C = 50;  // px from the box's right/bottom edge to the SHOT button's centre
-const TOP = [['KeyC', '🎥', N_('Camera')], ['Escape', '⏸', N_('Pause')], ['KeyR', '🔁', N_('Replay')], ['KeyM', '🔈', N_('Sound on / off')], ['KeyB', '📊', N_('Scoreboard: auto / hidden / always on')]];
+const TOP = [['KeyC', '🎥', N_('Camera')], ['KeyR', '🔁', N_('Replay')], ['KeyM', '🔈', N_('Sound on / off')], ['KeyB', '📊', N_('Scoreboard: auto / hidden / always on')]];
 
 export function mountTouch(el) {
   el.innerHTML = `
@@ -36,7 +36,7 @@ export function mountTouch(el) {
     <div class="tc-tips" hidden>
       <div class="tc-tip tt-move">${t('👆 Put your thumb down anywhere here<br>and drag to run')}</div>
       <div class="tc-tip tt-btns">${t('SHOT: smart shot · serve<br>stick left / right while tapping = aim<br>inner ring: LOB · VÍBORA · SMASH<br>outer ring: CHIQUITA · CONTRA (off your glass) · SLICE serve')}</div>
-      <div class="tc-tip tt-top">${t('camera · pause · replay · sound · scoreboard · these tips')}</div>
+      <div class="tc-tip tt-top">${t('✕ Exit · camera · replay · sound · scoreboard · these tips')}</div>
       <button type="button" class="tc-tip tt-ok">${t('Got it ✓')}</button>
     </div>`;
   const zone = el.querySelector('.tc-zone'), base = el.querySelector('.tc-base'), knob = el.querySelector('.tc-knob');

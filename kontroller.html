@@ -112,12 +112,12 @@
       <tr><td><kbd>A</kbd> / <kbd>D</kbd> <span data-i18n="or">or</span> <kbd>←</kbd> / <kbd>→</kbd> + <span data-i18n="serve">serve</span></td><td data-i18n="Aim left or right inside the service box">Aim left or right inside the service box</td></tr>
     </table></div>
     <div class="card"><h3 data-i18n="Camera &amp; System">Camera &amp; System</h3><table>
-      <tr><td><kbd>F11</kbd> · <kbd>F</kbd> <span data-i18n="in menus">in menus</span></td><td data-i18n="Toggle fullscreen (also the ⛶ button and the pause menu; in a match F is the slice shot)">Toggle fullscreen (also the ⛶ button and the pause menu; in a match F is the slice shot)</td></tr>
+      <tr><td><kbd>F11</kbd> · <kbd>F</kbd> <span data-i18n="in menus">in menus</span></td><td data-i18n="Toggle fullscreen (also the ⛶ button and the Exit menu; in a match F is the slice shot)">Toggle fullscreen (also the ⛶ button and the Exit menu; in a match F is the slice shot)</td></tr>
       <tr><td><kbd>E</kbd></td><td data-i18n="Eat: take the food offered at a changeover (energy low)">Eat: take the food offered at a changeover (energy low)</td></tr>
       <tr><td><kbd>B</kbd></td><td data-i18n="Scoreboard: auto (hidden while a point is played) → hidden → always on">Scoreboard: auto (hidden while a point is played) → hidden → always on</td></tr>
       <tr><td><kbd>C</kbd></td><td data-i18n="Camera: TV, behind player, side, top, ball, drone, free">Camera: TV, behind player, side, top, ball, drone, free</td></tr>
       <tr><td><kbd>R</kbd></td><td data-i18n="Instant replay of the last point">Instant replay of the last point</td></tr>
-      <tr><td><kbd>Esc</kbd></td><td data-i18n="Pause menu · skip replay">Pause menu · skip replay</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td data-i18n="Exit menu · skip replay">Exit menu · skip replay</td></tr>
       <tr><td><kbd>M</kbd></td><td data-i18n="Mute / unmute sound &amp; music">Mute / unmute sound &amp; music</td></tr>
       <tr><td><kbd>H</kbd></td><td data-i18n="Show / hide on-screen key help">Show / hide on-screen key help</td></tr>
       <tr><td><kbd>Shift</kbd> + <kbd>H</kbd></td><td data-i18n="Move on-screen key help to another corner (or click ↖ ↗ ↙ ↘)">Move on-screen key help to another corner (or click ↖ ↗ ↙ ↘)</td></tr>
@@ -149,7 +149,7 @@
       <tr><td><kbd>LT</kbd></td><td data-i18n="Eat the food offered at a changeover">Eat the food offered at a changeover</td></tr>
       <tr><td><kbd>View</kbd></td><td data-i18n="Cycle camera">Cycle camera</td></tr>
       <tr><td><kbd>R3</kbd> <span data-i18n="(press right stick)">(press right stick)</span></td><td data-i18n="Instant replay">Instant replay</td></tr>
-      <tr><td><kbd>Start</kbd></td><td data-i18n="Pause menu · main menu after match · skip training lesson">Pause menu · main menu after match · skip training lesson</td></tr>
+      <tr><td><kbd>Start</kbd></td><td data-i18n="Exit menu · main menu after match · skip training lesson">Exit menu · main menu after match · skip training lesson</td></tr>
       <tr><td><kbd>D-pad ↑</kbd></td><td data-i18n="Show / hide the on-screen controller help">Show / hide the on-screen controller help</td></tr>
       <tr><td><kbd>D-pad ↓</kbd></td><td data-i18n="Scoreboard: auto → hidden → always on">Scoreboard: auto → hidden → always on</td></tr>
     </table></div>
@@ -176,7 +176,7 @@
         <tr><td><kbd>SHOT</kbd> <span data-i18n="(big button, bottom right)">(big button, bottom right)</span></td><td data-i18n="Smart shot · serve. Keep the stick left or right while you tap = aim (works for every shot)">Smart shot · serve. Keep the stick left or right while you tap = aim (works for every shot)</td></tr>
         <tr><td data-i18n="Inner ring">Inner ring</td><td data-i18n-html="<kbd>LOB</kbd> high over the opponents · <kbd>VÍBORA</kbd> slicing overhead · <kbd>SMASH</kbd> on high balls — low shot on the left, overheads on top"><kbd>LOB</kbd> high over the opponents · <kbd>VÍBORA</kbd> slicing overhead · <kbd>SMASH</kbd> on high balls — low shot on the left, overheads on top</td></tr>
         <tr><td data-i18n="Outer ring (orange)">Outer ring (orange)</td><td data-i18n-html="<kbd>CHIQUITA</kbd> soft ball just over the net · <kbd>CONTRA</kbd> contrapared, off your own glass · <kbd>SLICE</kbd> slice serve"><kbd>CHIQUITA</kbd> soft ball just over the net · <kbd>CONTRA</kbd> contrapared, off your own glass · <kbd>SLICE</kbd> slice serve</td></tr>
-        <tr><td>🎥 · ⏸ · 🔁 · 🔈 · 📊 · ❔ <span data-i18n="(top left)">(top left)</span></td><td data-i18n="Camera · pause menu · replay of the last point · sound on / off · scoreboard (auto / hidden / always on) · touch tips">Camera · pause menu · replay of the last point · sound on / off · scoreboard (auto / hidden / always on) · touch tips</td></tr>
+        <tr><td>✕ Exit · 🎥 · 🔁 · 🔈 · 📊 · ❔ <span data-i18n="(top left)">(top left)</span></td><td data-i18n="Exit menu · camera · replay of the last point · sound on / off · scoreboard (auto / hidden / always on) · touch tips">Exit menu · camera · replay of the last point · sound on / off · scoreboard (auto / hidden / always on) · touch tips</td></tr>
         <tr><td data-i18n="Food box">Food box</td><td data-i18n="At a changeover with low energy: tap it to eat">At a changeover with low energy: tap it to eat</td></tr>
       </table>
     </div>
@@ -233,7 +233,7 @@ const K = {
   KeyR: ['R', 'sys', N_('replay'), N_('Watch instant replay of the last point')],
   KeyM: ['M', 'sys', N_('sound'), N_('Mute / unmute sound & music')],
   KeyH: ['H', 'sys', N_('help'), N_('Show / hide on-screen key help · Shift+H moves corner')],
-  Escape: ['Esc', 'sys', N_('pause'), N_('Open pause menu · skip replay')],
+  Escape: ['Esc', 'sys', N_('Exit menu'), N_('Open Exit menu · skip replay')],
   Enter: ['Enter', 'sys', N_('menu'), N_('Main menu after match · skip lesson in training')],
 };
 const ROWS = [

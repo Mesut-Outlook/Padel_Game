@@ -1,8 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { offerKeyLabel } from '../src/touch.js';
+import { offerKeyLabel, mountTouch } from '../src/touch.js';
 import { keepAwake, isKeepAwakeActive } from '../src/wakelock.js';
 import { isAudioSuspended } from '../src/audio.js';
+
+test('mountTouch: top bar omits pause button and coach tips reference ✕ Exit', () => {
+  const stub = () => ({ style: {}, hidden: false, addEventListener: () => {} });
+  const el = {
+    innerHTML: '',
+    querySelector: () => stub(),
+    querySelectorAll: () => [],
+    addEventListener: () => {},
+  };
+  mountTouch(el);
+  assert.ok(!el.innerHTML.includes('data-key="Escape"'), 'Escape/pause button removed from TOP');
+  assert.ok(!el.innerHTML.includes('⏸'), 'pause icon removed from TOP');
+  assert.ok(el.innerHTML.includes('✕ Exit'), 'coach tips mention ✕ Exit');
+});
 
 test('offerKeyLabel: returns tap on touch devices only when pad is not active', () => {
   // Touch device, keyboard/touch device mode
