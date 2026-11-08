@@ -152,7 +152,7 @@ async function pollOpenGames() {
     if (!url || !trustedServer(url, location)) setOpenGames([], false);
     else { try { setOpenGames(await listRooms(url), true); } catch { setOpenGames([], false); } }
   }
-  setTimeout(pollOpenGames, 4000);
+  setTimeout(pollOpenGames, 10000);  // ponytail: fixed 10 s; the home Pi answers every open HOME, lengthen it if that shows in its status line
 }
 pollOpenGames();
 

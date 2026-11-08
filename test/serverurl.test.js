@@ -27,7 +27,8 @@ test('only our own, same-host and local servers connect without asking', () => {
   const site = loc('https://padellegends.eu/');
   assert.equal(trustedServer('wss://server.padellegends.eu', site, 'wss://server.padellegends.eu'), true);
   assert.equal(trustedServer('wss://padellegends.eu', site, null), true);
-  assert.equal(trustedServer('ws://localhost:8080', site, null), true);
+  assert.equal(trustedServer('ws://localhost:8080', site, null), false);  // the public site never trusts the visitor's own ports
+  assert.equal(trustedServer('ws://localhost:8080', { hostname: 'localhost' }, null), true);  // local dev
   assert.equal(trustedServer('wss://abc.trycloudflare.com', site, null), false);
   assert.equal(trustedServer('wss://server.padellegends.eu.evil.example', site, 'wss://server.padellegends.eu'), false);
   assert.equal(trustedServer('https://padellegends.eu', site, null), false);

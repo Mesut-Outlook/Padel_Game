@@ -362,6 +362,8 @@ export function renderHome() {
     if (!nameBadge || !nameInput) return;
     nameBadge.hidden = true;
     nameInput.hidden = false;
+    const note = homeEl.querySelector('.hm-name-note');
+    if (note) note.style.display = 'block';  // phones hide the note to save room, but this is when it matters: while a name is typed
     nameInput.value = getOnlineName();
     nameInput.focus();
     nameInput.select();

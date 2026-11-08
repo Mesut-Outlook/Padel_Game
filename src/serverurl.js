@@ -20,7 +20,9 @@ export function trustedServer(url, loc, fallback = DEFAULT_SERVER) {
   try {
     const u = new URL(url), h = u.hostname;
     if (u.protocol !== 'ws:' && u.protocol !== 'wss:') return false;
-    return h === loc.hostname || h === 'localhost' || h === '127.0.0.1' || (!!fallback && h === new URL(fallback).hostname);
+    const local = (x) => x === 'localhost' || x === '127.0.0.1';
+    // a local server only for a local page: a link to the public site must not make it talk to ports on the visitor's own machine
+    return h === loc.hostname || (local(h) && local(loc.hostname)) || (!!fallback && h === new URL(fallback).hostname);
   } catch { return false; }
 }
 
