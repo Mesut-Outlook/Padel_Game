@@ -13,6 +13,13 @@ Plan 3 (canlı lobi) ve plan 4 (açık tema) yayında:
 - **Maçtan çıkış:** her maçta beyaz ✕ Exit düğmesi var. Online maçta çıkan oyuncunun koltuğu AI'a geçer, kalan oyuncu "AI'a karşı devam et / Lobiye dön" kartını görür.
 - **Ekipte:** agy (Gemini 3.8 Flash) arayüz işlerini yaptı (agy-28…32). Her commit'ten sonra güvenlik denetçisi çalıştı ve bulguları kapatıldı.
 
+**Açık iş (2026-11-08 öğleden sonra bırakıldı):**
+- agy-36 enerji simülasyonu bitti: `tools/energy-sim.js`, rapor `agents/reports/agy-36-energy-sim.md`. Önerisi "candD" (`node tools/energy-sim.js --preset candD`): efsane seviyesi set sonunda ~0.56, pro ~0.72; kulüp hâlâ ~0.95 (yorulmuyor).
+- Opus sonuçları bağımsız olarak yeniden ölçmeye başladı, çıktı `/tmp` altındaydı ve kaybolabilir: yeniden çalıştır.
+- Karar verilmedi; `src/game.js` içindeki `ENERGY` henüz değişmedi.
+- Kulübün de yorulması için raporun 7. bölümündeki öneri değerlendirilecek: puan arası dinlenme yalnızca `dead` durumunda verilsin, servis beklerken daha az.
+- Değer değişirse bir test ekle, README yol haritasındaki enerji maddesini güncelle.
+
 **Sıradaki iş plan 5 (Pi 7/24).** Önce yerel hafızadaki "before 24/7" notunu oku: bir oda kapasitesi maddesi ve gizlilik sayfasına eklenecek bir cümle bekliyor. DNS taşıması kullanıcının kendi ekranında, adım adım yapılacak.
 
 ## Yarın buradan devam (yazıldı: 2026-11-01 akşamı)
