@@ -889,6 +889,9 @@ test('public names lose rude words', async () => {
     assert.equal(l.names[0], 'Player');
     assert.equal(l.cfg.host, 'Player');
     a.ws.close();
+    const { cleanName } = await import('../server/server.js');
+    assert.equal(cleanName('f4ck'), 'Player');  // digits for letters do not get past
+    for (const real of ['Nazim', 'Fagundes', 'Kamkar', 'Cazzaniga']) assert.equal(cleanName(real), real);
   } finally { await srv.close(); }
 });
 
@@ -907,5 +910,20 @@ test('client: quick match joins the same room; Exit tells the other player, with
     await new Promise(r => setTimeout(r, 50));
     assert.deepEqual(seen, [{ seat: 0, name: 'Ada' }]);
     b.ws.onclose = null; b.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('quick never joins a private room, and the list shows whoever holds a room now', async () => {
+  const srv = await startServer(0, { countdownMs: 60000, roomsPerIp: 5 });
+  try {
+    const a = client(srv.port), b = client(srv.port), c = client(srv.port), d = client(srv.port);
+    const priv = await create(a, { cfg: { players: 2, auto: true } });
+    assert.notEqual((await quick(b, { cfg: { players: 2 } })).code, priv.code);
+    const pub = await create(c, { public: true, name: 'Host', char: 2, cfg: { players: 4 } });
+    await join(d, pub.code, { name: 'Next', char: 5 });
+    const moved = d.next('lobby'); c.ws.close(); await moved;
+    const row = (await list(srv.port)).find(r => r.code === pub.code);
+    assert.equal(row.host, 'Next'); assert.equal(row.char, 5);
+    for (const x of [a, b, d]) x.ws.close();
   } finally { await srv.close(); }
 });

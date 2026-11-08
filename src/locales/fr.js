@@ -1020,6 +1020,7 @@ export default {
   "Connection lost. Getting you back into the match…": "Connexion perdue. On te ramène dans le match…",
   "{name} lost connection. The AI plays for them until they are back.": "{name} a perdu la connexion. L'IA joue à sa place jusqu'à son retour.",
   "{name} left the match. The AI plays for them.": "{name} a quitté le match. L’IA joue à sa place.",
+  "{name} joined! The match starts in a few seconds.": "{name} a rejoint la partie ! Le match commence dans quelques secondes.",
   "{name} is back.": "{name} est de retour.",
   "Already in a room": "Tu es déjà dans une salle",
   "Best of {n} sets": "Au meilleur de {n} sets",

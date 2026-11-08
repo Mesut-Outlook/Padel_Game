@@ -1020,6 +1020,7 @@ export default {
   "Connection lost. Getting you back into the match…": "Verbinding verbroken. We brengen je terug in de wedstrijd…",
   "{name} lost connection. The AI plays for them until they are back.": "{name} is de verbinding kwijt. De AI speelt voor hen tot ze terug zijn.",
   "{name} left the match. The AI plays for them.": "{name} heeft de wedstrijd verlaten. De AI speelt voor die speler verder.",
+  "{name} joined! The match starts in a few seconds.": "{name} doet mee! De wedstrijd begint over een paar seconden.",
   "{name} is back.": "{name} is terug.",
   "Already in a room": "Je zit al in een kamer",
   "Best of {n} sets": "Best of {n} sets",

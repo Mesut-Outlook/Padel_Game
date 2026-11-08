@@ -162,6 +162,7 @@ window.__padel = () => ({ world, avatars, scene, camera, rig, renderer, stepWorl
 const rig = createCameraRig(camera, renderer.domElement);
 const replay = createReplay(15, 60);
 let onEnd = null, pointsWon = [0, 0], lastCfg = null, bagLeft = null, tally = null;  // tally: the career player's match for XP and the coach tip  // bagLeft: the career player's bag, counted down from 'consume' events
+let pend = null;  // an online room waiting for players while a warm-up match runs offline
 let world, avatars = [], ballView, humans = [], aiLevel = 'club', venueGroup, msgTimer = 0, hypeTimer = 0, net = null, marker, loadingScene = false, control = 'auto', gameSpeed = 0.85;
 let styleStats = { pts: 0, streak: 0, maxRally: 0, smashes: 0, medals: [] };
 const MEDALS = {
@@ -254,7 +255,8 @@ async function setupScene(venue, ids, roster, rk) {
 
 // Online entry for the menu button and for Career. url defaults to serverUrl() (?server= / static build: none / :8080 / same host). look = remote-visible appearance (its stats are ignored).
 // status(text, lobby?) mirrors the #lobby line for callers that show their own panel; returns the net handle (or null if it did not connect).
-export function startOnline({ url, code, create = false, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, bag, onEnd: end, status } = {}) {
+// quick: the server finds or opens an open room of this kind (mode: Team up 'team' / Face off 'face'); warmup(): an offline match vs AI that runs until the room starts
+export function startOnline({ url, code, create = false, quick = false, mode = 'face', warmup = null, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, bag, onEnd: end, status } = {}) {
   unlockAudio();
   updateUnmuteBadge();
   keepAwake(true);
@@ -268,34 +270,46 @@ export function startOnline({ url, code, create = false, players = 4, venue = 0,
   if (!url) { trackOnce('online-noserver'); say(t(NO_SERVER), null, true); return null; }
   if (!allowServer(url)) { say(t(NOT_CONNECTED), null, true); return null; }
   code = String(code || '').trim().toUpperCase();
-  if (!code && !create) { say(t('Enter a room code first.'), null, true); return null; }  // create: the server picks the code
+  if (!code && !create && !quick) { say(t('Enter a room code first.'), null, true); return null; }  // create: the server picks the code
   onEnd = end || null; pointsWon = [0, 0]; bagLeft = bag ? { ...bag } : null; tally = end ? newTally() : null;
-  let me;
-  net = me = connect({
-    url, code, create, char, stats, racket, public: isPublic, name, look, shoes, ball, bag,
-    cfg: { players, ...match, ai, venue, outdoor: venues[venue]?.type === 'outdoor' },
+  let me, joinedSeen = false;
+  me = connect({
+    url, code, create, quick, char, stats, racket, public: isPublic, name, look, shoes, ball, bag,
+    cfg: { players, mode, ...match, ai, venue, outdoor: venues[venue]?.type === 'outdoor' },
     onError: (e) => {  // server texts are fixed English sentences (marked in net.js), so they translate
-      if (me && net !== me) return;  // a connection this page already replaced
+      if (me && net !== me && pend !== me) return;  // a connection this page already replaced
       say(escapeText(t(e)), null, true);
-      if (!net?.lobby?.started) { net = null; setWizardLobby(null); } else flash(t(e), 4);  // not in a match yet: START can try again
+      if (pend === me) { pend = null; flash(t(e), 4); return; }  // the warm-up goes on offline
+      if (!me.lobby?.started) { net = null; setWizardLobby(null); } else flash(t(e), 4);  // not in a match yet: START can try again
     },
     onLeft: ({ seat, name }) => flash(t('{name} left the match. The AI plays for them.', { name: name || avatars[seat]?.ch?.name || '?' }), 4),
     onStatus: (s) => flash(s === 'back' ? t('You are back in the match.') : t('Connection lost. Getting you back into the match…'), s === 'back' ? 2.5 : 30),
     onLobby: (l) => {
       // in the match: tell the others when a player drops (the AI plays their seat) and when they come back
       const nameOf = (id) => avatars[id]?.ch?.name || '?';
+      if (pend === me && !l.started && l.startsAt && !joinedSeen) {  // warming up: someone joined, the room starts itself
+        joinedSeen = true;
+        const other = (l.taken || []).find(s => s !== me.seat);
+        flash(t('{name} joined! The match starts in a few seconds.', { name: l.names?.[other] || characters[l.chars?.[other]]?.name || '?' }), 5);
+      }
+      if (pend === me && !l.startsAt) joinedSeen = false;
+      if (l.started && pend === me) {  // the warm-up ends here: its score counts nowhere
+        pend = null; net = me; world = null; tut = null; lastCfg = null; avatars = [];
+        if (replay.playing) endReplay();
+        if (paused) setPaused(false);
+      }
       if (l.started && avatars.length) {
-        for (const id of l.away || []) if (!awaySeats.includes(id) && id !== net.seat) flash(t('{name} lost connection. The AI plays for them until they are back.', { name: nameOf(id) }), 4);
+        for (const id of l.away || []) if (!awaySeats.includes(id) && id !== me.seat) flash(t('{name} lost connection. The AI plays for them until they are back.', { name: nameOf(id) }), 4);
         for (const id of awaySeats) if (!(l.away || []).includes(id) && l.taken?.includes(id)) flash(t('{name} is back.', { name: nameOf(id) }), 2.5);
       }
       awaySeats = l.away || [];
-      const view = lobbyView(l, net.seat, characters, venues);
+      const view = lobbyView(l, me.seat, characters, venues);
       setWizardLobby(view);
       say(lobbyHtml(view), l);
       if (l.started && !avatars.length) {
         const ids = l.cfg?.players === 2 ? [0, 2] : [0, 1, 2, 3], roster = {}, rk = {};  // Team up rooms seat humans in 0 and 1 only: the AI pair still needs its players
         for (const id of ids) {
-          const base = characters[l.chars[id]] || characters[aiSeatChar(id, characters)], { stats: _ignored, ...lk } = l.looks?.[id] || {};  // the server may be anyone's: an index out of range falls back
+          const c = l.chars?.[id], base = (Number.isInteger(c) && characters[c]) || characters[aiSeatChar(id, characters)], { stats: _ignored, ...lk } = l.looks?.[id] || {};  // the server may be anyone's: an index out of range falls back
           roster[id] = { ...base, ...lk, ...(l.names?.[id] ? { name: l.names[id] } : {}) };
           const foundRk = (lk.racket && rackets.find(r => r.id === lk.racket)) || rackets[id % rackets.length];
           rk[id] = {
@@ -304,15 +318,30 @@ export function startOnline({ url, code, create = false, players = 4, venue = 0,
             shape: lk.racketShape || foundRk.shape,
           };
         }
-        humans = [net.seat];
+        humans = [me.seat];
         setupScene(venues[l.cfg.venue] || venues[0], ids, roster, rk);
       }
     },
   });
   // the creator alone: a second START used to begin a match against AI before the friend could join
-  const start = net.start;
-  net.start = () => (net.lobby?.taken?.length || 0) < 2 ? say(t('Nobody has joined yet: send your friend the invite link first.'), null, true) : start();
-  return net;
+  const start = me.start;
+  me.start = () => (me.lobby?.taken?.length || 0) < 2 ? say(t('Nobody has joined yet: send your friend the invite link first.'), null, true) : start();
+  if (warmup) { pend = me; warmup(); } else net = me;
+  return me;
+}
+
+// PLAY NOW / Invite a friend / a Join from the open list: the player's saved picks, no menus. While the room waits, a warm-up match vs AI runs here.
+export function playNow({ players = 2, mode = 'face', invite = false, code = '', name } = {}) {
+  if (net || pend) return null;
+  hideHome();
+  const me = +$('char').value, myRk = rackets[+$('racket').value], venue = +$('venue').value || 0;
+  const roster = { 0: characters[me], 2: characters[aiSeatChar(2, characters)] }, rk = { 0: myRk, 2: rackets[1 % rackets.length] };
+  const warmup = () => startMatch({ players: 2, humans: 1, ai: 'club', match: { sets: 1, goldenPoint: true }, roster, rackets: rk, venue: venues[venue] });
+  return startOnline({
+    quick: !invite && !code, create: invite, public: false, code, mode, players, venue, warmup, match: { auto: true },  // invite rooms start themselves too: the host is busy warming up
+    char: me, stats: characters[me].stats, racket: myRk.stats, name,
+    look: { racket: myRk.id, racketColor: myRk.color, racketShape: myRk.shape },
+  });
 }
 const escapeText = (t) => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 
@@ -405,7 +434,7 @@ function toMenu() {
       try { done(forfeitResult); } catch (err) { console.error('Forfeit onEnd failed', err); }
     }
   }
-  net?.leave();  // online: the seat goes to the AI now and the others are told, instead of waiting a minute for a rejoin
+  (net || pend)?.leave();  // online: the seat goes to the AI now and the others are told, instead of waiting a minute for a rejoin
   if (isCareer) history.replaceState(history.state, '', '#career');  // replace, not push: history.state carries the career backup when storage is blocked
   else history.replaceState(history.state, '', '#home');
   location.reload();

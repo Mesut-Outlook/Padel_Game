@@ -41,8 +41,9 @@ const OUTFIT_PATTERNS = ['none', 'chest', 'sash', 'side', 'stripes', 'split'];
 const BODY_TYPES = ['slim', 'athletic', 'muscular', 'stocky', 'tall', 'petite'];
 const text = (v, n) => String(v).replace(/[^\p{L}\p{N} .'-]/gu, '').slice(0, n);
 // names show in the public room list: a few rude words make it a plain 'Player' (ponytail: short list, grow it when reports come in)
-const RUDE = /fuck|shit|cunt|bitch|nigg|fag|whore|slut|pussy|hitler|nazi|orospu|amk|siktir|sikerim|yarrak|piç|ibne|puta|mierda|cabr[oó]n|coño|merde|putain|stronz|cazz|kanker|hoer|scheiss|fotze|caralho|porra/i;
-export const cleanName = (v) => { const n = text(v, 16).trim(); return RUDE.test(n.replace(/[^\p{L}]/gu, '')) ? 'Player' : n; };
+const RUDE = /f.?ck|shit|cunt|bitch|nigg|faggot|whore|slut|pussy|hitler|orospu|siktir|sikerim|yarrak|piç|ibne|puta|mierda|cabr[oó]n|coño|merde|putain|stronz|kanker|hoer|scheiss|fotze|caralho|porra/i;
+const LEET = { 4: 'a', '@': 'a', 0: 'o', 1: 'i', 3: 'e', 5: 's', 7: 't' };
+export const cleanName = (v) => { const n = text(v, 16).trim(); return RUDE.test(n.toLowerCase().replace(/[401357@]/g, (d) => LEET[d]).replace(/[^\p{L}]/gu, '')) ? 'Player' : n; };
 function sanitizeLook(l) {
   if (!l || typeof l !== 'object' || JSON.stringify(l).length > LOOK_MAX) return null;
   const col = (v) => (typeof v === 'string' && COLOR.test(v) ? v : undefined), num = (v, lo, hi) => (typeof v === 'number' ? clamp(v, lo, hi) : undefined);
@@ -300,7 +301,7 @@ export function startServer(port, limits = {}) {
         if (Date.now() - lastList < 1000) return;
         lastList = Date.now();
         reply({ type: 'rooms', rooms: openRooms().map(r => ({ code: r.code, players: r.cfg.players, ...(r.cfg.players === 4 && { mode: r.cfg.mode }), venue: r.cfg.venue,
-          free: r.seats.length - r.clients.size, host: r.cfg.host, char: r.chars[r.seats[0]] ?? 0 })) });
+          free: r.seats.length - r.clients.size, host: r.names[r.host] ?? '', char: r.chars[r.host] ?? 0 })) });  // whoever holds the room now: a creator who left is not listed
       } else if (m.type === 'join') {
         if (room) return fail('Already in a room');  // one room per connection
         const n = (joins.get(ip) || 0) + 1; joins.set(ip, n);
@@ -391,6 +392,7 @@ export function startServer(port, limits = {}) {
         for (const c of room.clients.keys()) sendCapped(c, msg, lim);
       } else if (room.started && room.world.match.winner == null) room.away[seat] = { token: room.tokens[seat], until: Date.now() + lim.rejoinMs, name: room.names[seat], look: room.looks[seat] };
       delete room.looks[seat]; delete room.names[seat];
+      if (!room.started) delete room.chars[seat];
       if (!room.clients.size) { if (!Object.keys(room.away).length) closeRoom(room); return; }
       if (seat === room.host) room.host = room.clients.values().next().value;  // the next player may start the match
       countdown(room);
