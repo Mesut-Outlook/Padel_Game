@@ -385,7 +385,7 @@ export function initMenu() {
     const disc = new THREE.Mesh(discGeo, discMat);
     disc.position.y = -0.03;
     const ringGeo = new THREE.RingGeometry(1.16, 1.2, 32);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0xd8f53a, side: THREE.DoubleSide });
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x16a34a, side: THREE.DoubleSide });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.002;
@@ -525,7 +525,7 @@ export function initMenu() {
       <div class="pl-char-tags" style="margin-top:10px;gap:6px;flex-wrap:wrap">
         <span class="pl-meta-pill">💪 ${t(card.strengths[0][0].toUpperCase())} ${card.strengths[0][1]}</span>
         <span class="pl-meta-pill">💪 ${t(card.strengths[1][0].toUpperCase())} ${card.strengths[1][1]}</span>
-        <span class="pl-meta-pill" style="color:#ff8fa3">⚠ ${t(card.weakness[0].toUpperCase())} ${card.weakness[1]}</span>
+        <span class="pl-meta-pill" style="color:#b91c1c;border-color:#fecaca;background:#fef2f2">⚠ ${t(card.weakness[0].toUpperCase())} ${card.weakness[1]}</span>
       </div>
       <div class="pl-card-sub" style="margin-top:6px;font-size:12px;line-height:1.4">${escapeHtml(card.tip)}</div>
       <button type="button" id="pl-to-career-btn" class="pl-card-sub" style="margin-top:8px;background:none;border:none;padding:0;color:var(--acc);font-weight:700;font-size:12px;cursor:pointer;text-align:left;display:inline-block">${t('Build your own player in Career →')}</button>

@@ -103,21 +103,21 @@ async function renderPortrait(ch) {
   const shortsHex = ch.outfit?.shorts || '#0b1520';
 
   const bgGrad = ctx.createLinearGradient(0, 0, W, H);
-  bgGrad.addColorStop(0, '#0d1b2a');
+  bgGrad.addColorStop(0, '#eef2f6');
   bgGrad.addColorStop(0.55, shirtHex);
   bgGrad.addColorStop(1, shortsHex);
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, W, H);
 
   const glow = ctx.createRadialGradient(W * 0.5, H * 0.42, 12, W * 0.5, H * 0.45, W * 0.65);
-  glow.addColorStop(0, 'rgba(255,255,255,0.28)');
-  glow.addColorStop(0.6, 'rgba(11,21,32,0.18)');
-  glow.addColorStop(1, 'rgba(7,13,20,0.68)');
+  glow.addColorStop(0, 'rgba(255,255,255,0.45)');
+  glow.addColorStop(0.6, 'rgba(255,255,255,0.15)');
+  glow.addColorStop(1, 'rgba(226,232,240,0.5)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
 
   // Subtle broadcast diagonal accent line
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(0, H * 0.78);

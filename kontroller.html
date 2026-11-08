@@ -3,10 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f7f8fa">
 <title>Padel Legends · Controls</title>
 <style>
-  :root { --bg: #0b1520; --panel: #12202e; --line: #ffffff1a; --text: #fff; --mut: #9fb3c8; --acc: #d8f53a;
-          --move: #4ea8ff; --hit: #d8f53a; --shot: #ff9f43; --sys: #b8c4d0; }
+  :root { --bg: #f7f8fa; --panel: #ffffff; --line: #e2e8f0; --text: #0f172a; --mut: #475569; --acc: #16a34a;
+          --move: #2563eb; --hit: #16a34a; --shot: #ea580c; --sys: #64748b; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, sans-serif; padding: 24px 16px 48px; }
   .wrap { max-width: 1040px; margin: 0 auto; }
@@ -18,50 +19,51 @@
   .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 
   /* keyboard */
-  .kb { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; overflow-x: auto; }
+  .kb { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; overflow-x: auto; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04); }
   .kb-inner { display: flex; gap: 28px; min-width: 760px; }
   .rows { display: flex; flex-direction: column; gap: 6px; }
   .row { display: flex; gap: 6px; }
-  .key { width: 52px; height: 52px; border-radius: 8px; background: #1a2b3c; border: 1px solid #ffffff14; color: #5d7286;
+  .key { width: 52px; height: 52px; border-radius: 8px; background: #f1f5f9; border: 1px solid #cbd5e1; color: #94a3b8;
          display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;
          position: relative; transition: transform .08s, box-shadow .08s; user-select: none; }
   .key small { font-size: 9px; font-weight: 600; line-height: 1.1; margin-top: 2px; text-align: center; max-width: 48px; }
-  .key.used { color: #0b1520; cursor: pointer; }
+  .key.used { color: #ffffff; cursor: pointer; }
   .key.move { background: var(--move); } .key.hit { background: var(--hit); } .key.shot { background: var(--shot); } .key.sys { background: var(--sys); }
-  .key.on { transform: translateY(2px) scale(.96); box-shadow: 0 0 0 3px #fff, 0 0 18px #ffffffaa; }
+  .key.on { transform: translateY(2px) scale(.96); box-shadow: 0 0 0 3px var(--acc), 0 4px 12px rgba(22, 163, 74, 0.3); }
   .w15 { width: 80px; } .w2 { width: 110px; } .space { width: 340px; }
   .arrows { display: grid; grid-template-columns: repeat(3, 52px); grid-template-rows: 52px 52px; gap: 6px; align-self: flex-end; }
   .arrows .up { grid-column: 2; grid-row: 1; } .arrows .lf { grid-column: 1; grid-row: 2; } .arrows .dn { grid-column: 2; grid-row: 2; } .arrows .rt { grid-column: 3; grid-row: 2; }
-  .detail { margin-top: 14px; min-height: 52px; background: #0d1a26; border: 1px dashed var(--line); border-radius: 10px; padding: 12px 14px; color: var(--mut); }
+  .detail { margin-top: 14px; min-height: 52px; background: #ffffff; border: 1px dashed var(--line); border-radius: 10px; padding: 12px 14px; color: var(--mut); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04); }
   .detail b { color: var(--text); font-size: 17px; }
 
   /* tables */
   .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04); }
   .card h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--mut); }
   table { width: 100%; border-collapse: collapse; }
-  td { padding: 6px 0; border-top: 1px solid #ffffff0d; vertical-align: top; }
+  td { padding: 6px 0; border-top: 1px solid #f1f5f9; vertical-align: top; }
   td:first-child { width: 38%; padding-right: 10px; }
-  kbd { display: inline-block; min-width: 26px; padding: 2px 7px; border-radius: 5px; background: #23384c; border-bottom: 2px solid #0a1520;
-        font: 700 13px system-ui; text-align: center; color: #fff; margin: 1px 0; }
+  kbd { display: inline-block; min-width: 26px; padding: 2px 7px; border-radius: 5px; background: #f1f5f9; border: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8;
+        font: 700 13px system-ui; text-align: center; color: #0f172a; margin: 1px 0; }
   .tip { color: var(--mut); font-size: 13px; }
   .ways { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 18px; }
-  .ways a { padding: 6px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); text-decoration: none; font-weight: 700; font-size: 13px; }
-  .photo { display: block; width: 100%; max-width: 360px; height: auto; border-radius: 10px; border: 1px solid var(--line); margin: 4px 0 10px; }
+  .ways a { padding: 6px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); color: var(--text); text-decoration: none; font-weight: 700; font-size: 13px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04); }
+  .ways a:hover { border-color: var(--acc); color: var(--acc); }
+  .photo { display: block; width: 100%; max-width: 360px; height: auto; border-radius: 10px; border: 1px solid var(--line); margin: 4px 0 10px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08); }
   ol { margin: 4px 0 0; padding-left: 20px; } ol li { margin: 4px 0; }
   /* controller drawings: built by src/helpkeys.js (same as the in-game help), colours as there */
   .pads { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-bottom: 14px; }
   .pad-card { display: flex; flex-direction: column; align-items: center; gap: 8px; }
   .pad-card .hp-svg { width: 100%; max-width: 420px; height: auto; }
-  .hp-svg .body { fill: #1a2b3c; stroke: #ffffff26; } .hp-svg text { font: 800 8px system-ui; fill: #0b1520; text-anchor: middle; }
-  .hp-svg .off { fill: #2b3e52; }
-  .hp-svg .move circle { fill: var(--move); } .hp-svg .dot { fill: #0b1520; stroke: #ffffff40; }
+  .hp-svg .body { fill: #1e293b; stroke: #334155; } .hp-svg text { font: 800 8px system-ui; fill: #ffffff; text-anchor: middle; }
+  .hp-svg .off { fill: #334155; }
+  .hp-svg .move circle { fill: var(--move); } .hp-svg .dot { fill: #0f172a; stroke: #ffffff40; }
   .hp-svg .shot rect, .hp-svg .shot circle { fill: var(--shot); } .hp-svg .sys, .hp-svg .sys circle { fill: var(--sys); }
   .xa circle, b.xa { fill: #5dc21e; background: #5dc21e; } .xb circle, b.xb { fill: #ff4d4d; background: #ff4d4d; }
   .xx circle, b.xx { fill: #2f8cff; background: #2f8cff; } .xy circle, b.xy { fill: #ffc21a; background: #ffc21a; }
   .hp-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 14px; font-size: 13px; color: var(--mut); }
   .pk { display: flex; align-items: center; gap: 6px; }
-  .pk b { min-width: 26px; height: 18px; padding: 0 4px; border-radius: 4px; color: #0b1520; font: 800 11px/18px system-ui; text-align: center; }
+  .pk b { min-width: 26px; height: 18px; padding: 0 4px; border-radius: 4px; color: #ffffff; font: 800 11px/18px system-ui; text-align: center; }
   .pk b.move { background: var(--move); } .pk b.shot { background: var(--shot); } .pk b.sys { background: var(--sys); }
   footer { margin-top: 30px; color: var(--mut); font-size: 13px; }
   @media (prefers-reduced-motion: reduce) { .key { transition: none; } }
