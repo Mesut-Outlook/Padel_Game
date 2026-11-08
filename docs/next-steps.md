@@ -5,6 +5,16 @@ Bu not, 2026-10-19/20 tarihlerinde ev dizininden açılan bir Claude Code oturum
 ## Güncel (2026-11-07)
 Ev dışından (telefon 5G) ilk internet maçı oynandı. Kullanıcı kurulumu ve başlamayı karışık buldu: yeni tasarım `docs/superpowers/specs/2026-11-07-live-lobby-design.md` (onaylı), 5 plan sırayla `docs/superpowers/plans/2026-11-07-*.md`. Plan 1 (güvenlik) ve plan 2 (9 oyuncu, duruşlar) yayında. Sırada plan 3 (canlı lobi), 4 (açık tema), 5 (Pi 7/24). Aşağıdaki 2026-11-01 notu geçmiş kaydı olarak duruyor.
 
+## Güncel (2026-11-08)
+Plan 3 (canlı lobi) ve plan 4 (açık tema) yayında:
+- **Ana sayfa canlı lobi oldu.** İçinde Tekler/Çiftler ve Aynı takım/Karşı karşıya seçicileri, PLAY NOW, Arkadaşını davet et (telefonda paylaşım menüsü, bilgisayarda pano), AI'a karşı oyna ve 10 saniyede bir yenilenen açık maçlar listesi var. Takma ad rozeti gerçek adın kullanılmamasını hatırlatıyor.
+- **Beklerken ısınma maçı:** oyuncu oda beklerken AI'a karşı ısınma maçı oynar. Biri katılınca 5 saniye içinde online maça geçilir.
+- **Davet linki:** linke dokunan arkadaş menüsüz odaya girer.
+- **Maçtan çıkış:** her maçta beyaz ✕ Exit düğmesi var. Online maçta çıkan oyuncunun koltuğu AI'a geçer, kalan oyuncu "AI'a karşı devam et / Lobiye dön" kartını görür.
+- **Ekipte:** agy (Gemini 3.8 Flash) arayüz işlerini yaptı (agy-28…32). Her commit'ten sonra güvenlik denetçisi çalıştı ve bulguları kapatıldı.
+
+**Sıradaki iş plan 5 (Pi 7/24).** Önce yerel hafızadaki "before 24/7" notunu oku: bir oda kapasitesi maddesi ve gizlilik sayfasına eklenecek bir cümle bekliyor. DNS taşıması kullanıcının kendi ekranında, adım adım yapılacak.
+
 ## Yarın buradan devam (yazıldı: 2026-11-01 akşamı)
 **Durum:** Evdeki iki cihazla Pi üzerinden maç sorunsuz oynandı. Tam güvenlik denetimi yapıldı, Antigravity bağımsız olarak kontrol etti, bulgular düzeltildi ve yeniden başlatmadan sonra doğrulandı (commit `aa69b32`, `2d0412a`; `npm test` 245/245, Pages başarılı). Gizlilik sayfası test sunucusunu ve Cloudflare'i anlatıyor. **Oyun sunucusu ve tünel kapalı**, 30 dakikalık kontrol iptal edildi. Evin dışından gerçek tarayıcıyla oynanış henüz denenmedi.
 
