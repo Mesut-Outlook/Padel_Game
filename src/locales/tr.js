@@ -1021,6 +1021,7 @@ export default {
   "{name} lost connection. The AI plays for them until they are back.": "{name} bağlantısını kaybetti. Geri gelene kadar yerine yapay zekâ oynuyor.",
   "{name} left the match. The AI plays for them.": "{name} maçtan ayrıldı. Yerine yapay zekâ oynuyor.",
   "{name} joined! The match starts in a few seconds.": "{name} katıldı! Maç birkaç saniye içinde başlıyor.",
+  "Play padel with me!": "Benimle padel oyna!",
   "{name} is back.": "{name} geri döndü.",
   "Already in a room": "Zaten bir odadasın",
   "Best of {n} sets": "{n} set üzerinden",

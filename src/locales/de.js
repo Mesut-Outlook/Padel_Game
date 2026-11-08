@@ -1021,6 +1021,7 @@ export default {
   "{name} lost connection. The AI plays for them until they are back.": "{name} hat die Verbindung verloren. Bis zur Rückkehr spielt die KI für sie.",
   "{name} left the match. The AI plays for them.": "{name} hat das Match verlassen. Die KI spielt für sie weiter.",
   "{name} joined! The match starts in a few seconds.": "{name} ist dabei! Das Match beginnt in wenigen Sekunden.",
+  "Play padel with me!": "Spiel Padel mit mir!",
   "{name} is back.": "{name} ist zurück.",
   "Already in a room": "Bist schon in einem Raum",
   "Best of {n} sets": "Best of {n} Sätze",
