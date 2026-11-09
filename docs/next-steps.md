@@ -32,12 +32,7 @@ Plan 3 (canlı lobi) ve plan 4 (açık tema) yayında:
 1. GitHub hesabında iki adımlı doğrulama (Tailscale'e GitHub ile giriliyor, yani bu hesap sunucuyu yönetiyor).
 2. Gerçek test: telefondan WhatsApp ile bir arkadaşa davet, birlikte maç; sırada `journalctl -u padel` `status` satırlarını izle.
 
-**Planlı maçlar + Antrenman kartı — DEVAM EDİYOR (2026-11-09):**
-- Tasarım `docs/superpowers/specs/2026-11-08-scheduled-games-design.md`, plan `docs/superpowers/plans/2026-11-08-scheduled-games.md` (8 görev).
-- Kod ayrı dalda: `scheduled-games`, worktree `../Padel_Game-sched` (main'e henüz birleşmedi, canlıda yok). İlerleme defteri: `../Padel_Game-sched/.superpowers/sdd/2026-11-08-scheduled-games/progress.md` (verilen kararlar `Ruling:` satırlarında).
-- Bitti (dalda commit'li, 336 test geçiyor): 1 Antrenman kartı · 2 `server/schedule.js` (kurallar) · 3 `server/schedulestore.js` (dosya) · 4 `server.js` `schedule:*` mesajları + planlı odalar · 5 `src/schedule.js` yardımcılar + `scheduleCall` · 6 HOME Maç takvimi kodu (commit'li, **tarayıcıda elle deneme yapılmadı**).
-- Kalan: 6'nın tarayıcı denemesi (yerel sunucu `PADEL_STATE=… HOST=127.0.0.1 node server/server.js 8080` + `npx vite --port 5173`, iki tarayıcı profiliyle ilan/istek/onay) · 7 bekleme odası (`schedule:enter`, geri sayım, 3 dk sonra yapay zekâ) · 8 Pi'de `StateDirectory=padel` + `PADEL_STATE` (kullanıcının sudo'su), güvenlik denetimi, tüm dal incelemesi.
-- **Kullanıcı kuralı:** güvenlik denetimi yapılmadan main'e birleştirme / canlıya alma yok.
+**Planlı maçlar + Antrenman kartı — YAYINDA (2026-11-09):** tasarım `docs/superpowers/specs/2026-11-08-scheduled-games-design.md`, plan `docs/superpowers/plans/2026-11-08-scheduled-games.md`. Güvenlik denetiminden sonra main'e birleşti (`c24864c`), Pages başarılı. Pi'de ilanlar kalıcı dosyada; yeniden başlatmadan sonra listede kaldığı canlı sunucuda denendi.
 
 **Acil olmayanlar:** Tailscale ACL (ağa yeni cihaz eklenirse Pi'nin 22/445 portları kapatılmalı), ev interneti upload ölçümü (10 maç ≈ 6 Mbit/sn), Node 22 desteği 2027 baharında biter, Pi'de eski `padel-tunnel`/cloudflared ve dev paketleri kaldırılacak (`npm ci --omit=dev`), enerji ayarı kararı (yukarıda).
 
