@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice">
+<!-- HOME background: padel court from above, 20 x 10 m (1 m = 30 units), service lines 6.95 m from the net, glass walls hatched -->
+<g transform="translate(100 75)" fill="none" stroke="#1d4ed8" stroke-opacity=".22" stroke-width="2" vector-effect="non-scaling-stroke">
+<rect vector-effect="non-scaling-stroke" width="600" height="300"/><line vector-effect="non-scaling-stroke" x1="300" y1="-18" x2="300" y2="318" stroke-dasharray="6 6"/>
+<line vector-effect="non-scaling-stroke" x1="91.5" y1="0" x2="91.5" y2="300"/><line vector-effect="non-scaling-stroke" x1="508.5" y1="0" x2="508.5" y2="300"/>
+<line vector-effect="non-scaling-stroke" x1="91.5" y1="150" x2="508.5" y2="150"/>
+<rect x="-24" y="0" width="24" height="300" fill="#1d4ed8" fill-opacity=".04" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+<rect x="600" y="0" width="24" height="300" fill="#1d4ed8" fill-opacity=".04" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+<rect x="0" y="-24" width="120" height="24" stroke-width="1.5" vector-effect="non-scaling-stroke"/><rect x="480" y="-24" width="120" height="24" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+<rect x="0" y="300" width="120" height="24" stroke-width="1.5" vector-effect="non-scaling-stroke"/><rect x="480" y="300" width="120" height="24" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+</g>
+<g font-family="'Barlow Condensed','Arial Narrow',sans-serif" font-size="8" fill="#1d4ed8" fill-opacity=".4" letter-spacing="2">
+<text x="392" y="66">NET 0.88 M</text><text x="150" y="398">6.95 M</text><text x="720" y="228" transform="rotate(90 720 228)">10 M</text><text x="388" y="416">20 M</text></g>
+</svg>

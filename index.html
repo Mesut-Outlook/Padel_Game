@@ -1832,6 +1832,11 @@ try { const u = new URL(location.href), r = u.searchParams.get('room'), s = u.se
     z-index: 8;
     display: flex;
     flex-direction: column;
+    /* a padel court from above, faint blue lines over the panel's light gradient; turned upright in portrait */
+    background: url(home-court.svg) center / cover no-repeat, linear-gradient(160deg, #f7f8fa 0%, #edf2f7 100%);
+  }
+  @media (orientation: portrait) {
+    #home.panel { background-image: url(home-court-v.svg), linear-gradient(160deg, #f7f8fa 0%, #edf2f7 100%); }
   }
   .hm-topbar {
     position: relative;

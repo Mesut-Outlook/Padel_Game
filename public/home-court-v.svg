@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 800" preserveAspectRatio="xMidYMid slice">
+<!-- HOME background, portrait: the same court turned upright (net across the middle) -->
+<g transform="translate(75 100)" fill="none" stroke="#1d4ed8" stroke-opacity=".22" stroke-width="2" vector-effect="non-scaling-stroke">
+<rect vector-effect="non-scaling-stroke" width="300" height="600"/><line vector-effect="non-scaling-stroke" x1="-18" y1="300" x2="318" y2="300" stroke-dasharray="6 6"/>
+<line vector-effect="non-scaling-stroke" x1="0" y1="91.5" x2="300" y2="91.5"/><line vector-effect="non-scaling-stroke" x1="0" y1="508.5" x2="300" y2="508.5"/>
+<line vector-effect="non-scaling-stroke" x1="150" y1="91.5" x2="150" y2="508.5"/>
+<rect x="0" y="-24" width="300" height="24" fill="#1d4ed8" fill-opacity=".04" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+<rect x="0" y="600" width="300" height="24" fill="#1d4ed8" fill-opacity=".04" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+<rect x="-24" y="0" width="24" height="120" stroke-width="1.5" vector-effect="non-scaling-stroke"/><rect x="-24" y="480" width="24" height="120" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+<rect x="300" y="0" width="24" height="120" stroke-width="1.5" vector-effect="non-scaling-stroke"/><rect x="300" y="480" width="24" height="120" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+</g>
+<g font-family="'Barlow Condensed','Arial Narrow',sans-serif" font-size="8" fill="#1d4ed8" fill-opacity=".4" letter-spacing="2">
+<text x="330" y="292">NET 0.88 M</text><text x="388" y="150" transform="rotate(90 388 150)">6.95 M</text><text x="196" y="740">10 M</text></g>
+</svg>
