@@ -11,7 +11,8 @@ import { createCameraRig } from './camera.js';
 import { createReplay } from './replay.js';
 import { aiInput } from './ai.js';
 import { readLocal, readGamepad, consumePressed, clearPressed, localControl } from './input.js';
-import { connect, listRooms } from './net.js';
+import { connect, listRooms, scheduleCall } from './net.js';
+import { scheduleToken, clockOffset } from './schedule.js';
 import { debugFrame } from './debug.js';
 import { serverUrl, NO_SERVER, allowServer, NOT_CONNECTED, trustedServer } from './serverurl.js';
 import { track, trackOnce } from './track.js';
@@ -27,7 +28,7 @@ import { mountKeyHelp } from './helpkeys.js';
 import { parseRoute } from './route.js';
 import { loadSettings } from './settings.js';
 import { initSplash } from './splash.js';
-import { initHome, showHome, hideHome, setOpenGames, getOnlineName, getQuickPick } from './home.js';
+import { initHome, showHome, hideHome, setOpenGames, getOnlineName, getQuickPick, setSchedule, setCalendarNotice, myLevel } from './home.js';
 import { inviteUrl, shareInvite, INVITE_TEXT } from './invite.js';
 import { initSettingsModal, openSettingsModal } from './settingsmodal.js';
 import { bindFullscreenKey, toggleFullscreen, isFullscreen } from './fullscreen.js';
@@ -156,6 +157,11 @@ initHome({
     sendInviteLink(h);
   },
   onJoin: (code) => { track('online-click'); playNow({ code, name: getOnlineName() }); },
+  onPost: ({ at, players, mode, open }) => { track('schedule-post'); scheduleAct({ type: 'schedule:post', at, players, mode, open }); },
+  onAsk: (id) => { track('schedule-ask'); scheduleAct({ type: 'schedule:ask', id }); },
+  onAnswer: (id, reqId, accept) => scheduleAct({ type: 'schedule:answer', id, reqId, accept }),
+  onCancel: (id) => scheduleAct({ type: 'schedule:cancel', id }),
+  onDelete: (id) => scheduleAct({ type: 'schedule:delete', id }),
   onPlayAI: () => { hideHome(); $('start').dataset.tutorial = ''; $('start').click(); },  // the saved Friendly picks, no wizard
   onCustomize: () => {
     location.hash = '#friendly';
@@ -185,8 +191,22 @@ async function refreshOpenGames() {
   const home = $('home');
   if (!home || home.hidden || document.hidden || net || pend) return;
   const url = serverUrl(location);
-  if (!url || !trustedServer(url, location)) setOpenGames([], false);
-  else { try { setOpenGames(await listRooms(url), true); } catch { setOpenGames([], false); } }
+  if (!url || !trustedServer(url, location)) { setOpenGames([], false); setSchedule({ serverReady: false }); return; }
+  try { setOpenGames(await listRooms(url), true); } catch { setOpenGames([], false); }
+  await refreshSchedule(url);
+}
+// the Match calendar: posted games, the player count and the server clock (one short socket per poll, like the open games list)
+const showSchedule = (r) => setSchedule({ games: r.games, clients: r.clients, offset: clockOffset(r.now, Date.now()), serverReady: true });
+async function refreshSchedule(url) {
+  try { const r = await scheduleCall(url, { type: 'schedule:list', token: scheduleToken() }); if (r.type === 'schedule') showSchedule(r); } catch { setSchedule({ serverReady: false }); }
+}
+async function scheduleAct(msg) {  // post / ask / answer / cancel / delete: the answer is either the new list or a fixed sentence (translated)
+  const url = serverUrl(location);
+  if (!url || !trustedServer(url, location)) return;
+  try {
+    const r = await scheduleCall(url, { ...msg, token: scheduleToken(), name: getOnlineName(), char: +$('char').value || 0, level: myLevel() });
+    if (r.type === 'error') setCalendarNotice(t(r.msg)); else { setCalendarNotice(''); showSchedule(r); }
+  } catch (e) { setCalendarNotice(t(e.message)); }
 }
 // ponytail: fixed 10 s; the home Pi answers every open HOME, lengthen it if that shows in its status line
 const pollOpenGames = () => { refreshOpenGames(); setTimeout(pollOpenGames, 10000); };

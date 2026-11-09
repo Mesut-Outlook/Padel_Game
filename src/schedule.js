@@ -1,5 +1,7 @@
 // Match calendar helpers for the browser: the browser token, the server clock, local time slots, the week strip and the
 // calendar file. Pure except scheduleToken (localStorage). Times are ms; offsetMs = server clock − this device's clock.
+import { N_ } from './i18n.js';
+
 const M = 60000, H = 60 * M, LEAD = 15 * M;
 const TOKEN_KEY = 'padel.scheduleToken';
 const pad = (n) => String(n).padStart(2, '0');
@@ -20,10 +22,10 @@ export const clockOffset = (serverNow, clientNow) => serverNow - clientNow;
 
 export function relTime(atMs, offsetMs, nowMs) {
   const d = atMs - (nowMs + offsetMs);
-  if (d <= 0) return { key: 'started', h: 0, m: 0 };
-  if (d < M) return { key: 'now', h: 0, m: 0 };
+  if (d <= 0) return { key: N_('started'), h: 0, m: 0 };
+  if (d < M) return { key: N_('now'), h: 0, m: 0 };
   const h = Math.floor(d / H), m = Math.round((d % H) / M);
-  return h ? { key: 'in {h} h {m} min', h, m } : { key: 'in {m} min', h: 0, m };
+  return h ? { key: N_('in {h} h {m} min'), h, m } : { key: N_('in {m} min'), h: 0, m };
 }
 
 export function slotsFor(dayOffset, nowMs, offsetMs) {
