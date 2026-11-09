@@ -340,7 +340,10 @@ test('HOME shows the Training card under PLAY NOW; after the tutorial it is a pl
 });
 
 // Match calendar (plan 2026-11-08-scheduled-games, task 6)
-const HM = 3600000, NOW = Date.now();
+// The calendar lists the chosen day only, so a game "3 h from now" fell on tomorrow after 21:00 and the tests failed at night.
+// Pin the clock to 10:00 today (module code runs before any test, so the whole file sees it).
+const HM = 3600000, NOW = new Date().setHours(10, 0, 0, 0);
+Date.now = () => NOW;
 const slotAt = (h) => Math.ceil((NOW + h * HM) / 1800000) * 1800000;
 const game = (extra = {}) => ({ id: 'g1', at: slotAt(3), players: 2, mode: 'face', open: false, host: { name: 'Mesut', char: 0, level: 3 }, seats: [], free: 1, mine: null, ...extra });
 
