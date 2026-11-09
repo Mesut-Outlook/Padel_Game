@@ -200,13 +200,14 @@ async function refreshOpenGames() {
 let schedOffset = 0;  // server clock − this device's clock, from the last calendar answer (posted games' countdown)
 const showSchedule = (r) => { schedOffset = clockOffset(r.now, Date.now()); setSchedule({ games: r.games, clients: r.clients, offset: schedOffset, serverReady: true }); };
 async function refreshSchedule(url) {
-  try { const r = await scheduleCall(url, { type: 'schedule:list', token: scheduleToken() }); if (r.type === 'schedule') showSchedule(r); } catch { setSchedule({ serverReady: false }); }
+  try { const r = await scheduleCall(url, { type: 'schedule:list', token: scheduleToken(undefined, { create: false }) }); if (r.type === 'schedule') showSchedule(r); } catch { setSchedule({ serverReady: false }); }
 }
 async function scheduleAct(msg) {  // post / ask / answer / cancel / delete: the answer is either the new list or a fixed sentence (translated)
   const url = serverUrl(location);
   if (!url || !trustedServer(url, location)) return;
   try {
-    const r = await scheduleCall(url, { ...msg, token: scheduleToken(), name: getOnlineName(), char: +$('char').value || 0, level: myLevel() });
+    const who = msg.type === 'schedule:post' || msg.type === 'schedule:ask' ? { name: getOnlineName(), char: +$('char').value || 0, level: myLevel() } : {};  // only a posting or a request shows who you are
+    const r = await scheduleCall(url, { ...msg, token: scheduleToken(), ...who });
     if (r.type === 'error') setCalendarNotice(t(r.msg)); else { setCalendarNotice(''); showSchedule(r); }
   } catch (e) { setCalendarNotice(t(e.message)); }
 }

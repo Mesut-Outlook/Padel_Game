@@ -17,10 +17,12 @@ const pub = ({ name, char, level }) => ({ name, char, level });
 export function createSchedule(limits = {}, state = null) {
   const L = { ...SCHEDULE, ...limits }, newId = L.newId || shortId;
   const games = new Map();
-  for (const g of state?.games || []) games.set(g.id, { ...g, host: { ...g.host }, seats: g.seats.map(p => ({ ...p })), requests: g.requests.map(p => ({ ...p })), declined: [...g.declined] });
+  for (const g of Array.isArray(state?.games) ? state.games : []) {  // a hand-edited file of the wrong shape: skip that game, never refuse to start
+    try { if (typeof g.id === 'string' && Number.isFinite(g.at)) games.set(g.id, { ...g, host: { ...g.host }, seats: g.seats.map(p => ({ ...p })), requests: g.requests.map(p => ({ ...p })), declined: [...g.declined] }); } catch { /* skipped */ }
+  }
 
   const live = () => [...games.values()].filter(g => !g.cancelled);
-  const guestSeats = (g) => (g.players === 4 ? 3 : 1);
+  const guestSeats = (g) => (g.players === 4 && g.mode !== 'team' ? 3 : 1);  // Team up: the two humans sit together, the AI pair plays them
   const free = (g) => guestSeats(g) - g.seats.length;
   const mine = (p, th, vk) => p.th === th || (vk != null && p.vk === vk);
   const booked = (th, vk) => live().reduce((n, g) => n + g.seats.filter(p => mine(p, th, vk)).length + g.requests.filter(p => mine(p, th, vk)).length, 0);
@@ -38,7 +40,7 @@ export function createSchedule(limits = {}, state = null) {
     post({ at, players, mode, open, th, vk, name, char, level }, now) {
       if (!Number.isFinite(at) || at % (L.slotMin * M) !== 0 || at < now + L.leadMin * M || at > now + L.aheadDays * 24 * 60 * M) return { ok: false, err: ERR.time };
       if (live().some(g => mine(g.host, th, vk))) return { ok: false, err: ERR.posted };
-      if (games.size >= L.maxPosts) return { ok: false, err: ERR.schedule };
+      if (live().length >= L.maxPosts) return { ok: false, err: ERR.schedule };
       if (this.slotTaken(at) >= L.maxOverlap) return { ok: false, err: ERR.slot };
       const game = { id: newId(), at, players: players === 4 ? 4 : 2, mode: mode === 'team' ? 'team' : 'face', open: !!open, host: person({ th, vk, name, char, level }), seats: [], requests: [], declined: [], cancelled: false, started: false, createdAt: now };
       games.set(game.id, game);
@@ -47,7 +49,7 @@ export function createSchedule(limits = {}, state = null) {
 
     ask({ id, th, vk, name, char, level }, now) {
       const g = games.get(id);
-      if (!g || g.cancelled || g.host.th === th) return { ok: false, err: ERR.missing };
+      if (!g || g.cancelled || g.host.th === th || now >= g.at) return { ok: false, err: ERR.missing };
       const status = role(g, th);
       if (status === 'seat') return { ok: true, status: 'accepted' };
       if (status === 'pending' || status === 'declined') return { ok: true, status };
@@ -61,13 +63,13 @@ export function createSchedule(limits = {}, state = null) {
 
     answer({ id, reqId, accept, th }, now) {
       const g = games.get(id);
-      if (!g || g.cancelled || g.host.th !== th) return { ok: false, err: ERR.missing };
+      if (!g || g.cancelled || g.host.th !== th || now >= g.at) return { ok: false, err: ERR.missing };
       const i = g.requests.findIndex(r => r.reqId === reqId);
       if (i < 0) return { ok: false, err: ERR.missing };
       if (accept && free(g) <= 0) return { ok: false, err: ERR.full };
       const [r] = g.requests.splice(i, 1);
       if (accept) g.seats.push({ ...r, joinedAt: now });
-      else g.declined.push(r.th);
+      else { g.declined.push(r.th); if (g.declined.length > 32) g.declined.shift(); }  // repeat ask/decline must not grow the file
       return { ok: true };
     },
 
@@ -82,7 +84,8 @@ export function createSchedule(limits = {}, state = null) {
     remove({ id, th }) {
       const g = games.get(id);
       if (!g || g.host.th !== th) return { ok: false, err: ERR.missing };
-      g.cancelled = true;
+      if (!g.seats.length && !g.requests.length) games.delete(id);  // nobody to tell
+      else g.cancelled = true;
       return { ok: true };
     },
 

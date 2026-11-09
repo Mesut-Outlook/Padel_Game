@@ -1123,3 +1123,72 @@ test('schedule: net.connect({ enter }) takes the booked seat and the lobby carri
     net.leave(); a.ws.close(); b.ws.close();
   } finally { await srv.close(); }
 });
+
+const within = (p, ms = 2000) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('no reply')), ms))]);
+
+test('fix: a posted game\'s room takes nobody by its code alone, only through schedule:enter', async () => {
+  const { srv, clock } = await schedServer();
+  try {
+    const { a, b, id } = await bookedGame(srv);
+    clock.t = SAT - 5 * SM;
+    await enter(a, id, 1);
+    const code = [...srv.rooms.keys()].find(k => srv.rooms.get(k).cfg.scheduled === id);
+    const stranger = client(srv.port);
+    assert.equal((await within(call(stranger, { type: 'join', code, char: 0 }, 'error'))).msg, 'Room not found');
+    assert.equal((await within(enter(b, id, 2))).seat, 2, 'the booked guest still gets their seat');
+    for (const x of [a, b, stranger]) x.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('fix: a booking holds one seat: a second socket with the same token is refused', async () => {
+  const { srv, clock } = await schedServer();
+  try {
+    const { a, b, id } = await bookedGame(srv);
+    clock.t = SAT - 5 * SM;
+    await enter(b, id, 2);
+    const again = client(srv.port);
+    assert.equal((await within(call(again, { type: 'schedule:enter', id, ...me(2) }, 'error'))).msg, 'Room is full or match already started');
+    for (const x of [a, b, again]) x.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('fix: a seat sent by the client is never trusted', async () => {
+  const srv = await startServer(0);
+  try {
+    const host = client(srv.port);
+    const { code } = await create(host, { cfg: { players: 2 } });
+    const c = client(srv.port);
+    const seat = await within(call(c, { type: 'join', code, char: 0, forcedSeat: 0, seat: 0 }, 'seat'));
+    assert.equal(seat.seat, 2, 'the host keeps seat 0');
+    host.ws.close(); c.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('fix: a played game cannot be entered again after its room closed', async () => {
+  const { srv, clock } = await schedServer();
+  try {
+    const { a, b, id } = await bookedGame(srv);
+    clock.t = SAT - SM;
+    await enter(a, id, 1); await enter(b, id, 2);
+    clock.t = SAT; await tick();
+    const code = [...srv.rooms.keys()].find(k => srv.rooms.get(k).cfg.scheduled === id);
+    assert.equal(srv.rooms.get(code).started, true);
+    a.ws.close(); b.ws.close(); clearInterval(srv.rooms.get(code).timer); srv.rooms.delete(code);
+    const a2 = client(srv.port);
+    assert.equal((await within(call(a2, { type: 'schedule:enter', id, ...me(1) }, 'error'))).msg, 'Game not found.');
+    a2.ws.close();
+  } finally { await srv.close(); }
+});
+
+test('fix: a schedule file that cannot be written is logged once, and saves happen on the tick only', async () => {
+  const logs = [], log = console.log;
+  console.log = (...x) => logs.push(x.join(' '));
+  const { srv } = await schedServer({ statePath: '/nonexistent-padel-dir/schedule.json' });
+  try {
+    const a = client(srv.port);
+    await call(a, { type: 'schedule:post', at: SAT, players: 2, mode: 'face', open: true, ...me(1) });
+    await tick(); await tick(); await tick();
+    assert.equal(logs.filter(l => l.includes('schedule: not persistent')).length, 1);
+    a.ws.close();
+  } finally { console.log = log; await srv.close(); }
+});

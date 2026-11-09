@@ -181,8 +181,13 @@ export function startServer(port, limits = {}) {
   const clock = lim.now || Date.now;
   const statePath = lim.statePath ?? process.env.PADEL_STATE;
   const schedule = createSchedule({ windowMs: lim.matchMs }, loadSchedule(statePath, console.log));
-  let savedText = '';
-  const saveNow = () => { const text = JSON.stringify(schedule.toJSON()); if (text !== savedText && saveSchedule(statePath, schedule.toJSON())) savedText = text; };
+  let savedText = '', saveFailed = false;
+  const saveNow = () => {  // on the scheduler tick only (≤ 12 writes a minute in all, whoever sends what): the SD card
+    const data = schedule.toJSON(), text = JSON.stringify(data);
+    if (text === savedText || !statePath) return;
+    if (saveSchedule(statePath, data)) { savedText = text; saveFailed = false; }
+    else if (!saveFailed) { saveFailed = true; console.log('schedule: not persistent'); }  // once, until a save works again
+  };
   const schedWrites = new Map();  // visitor -> schedule:* writes this minute
   const schedCode = (id) => 'S' + String(id).slice(0, 5).toUpperCase();
   const humans = (room) => room.clients.size;
@@ -273,6 +278,7 @@ export function startServer(port, limits = {}) {
       if (room.cfg.auto) { room.startsAt = Date.now() + lim.countdownMs; lobby(room); }
       return false;
     }
+    if (room.cfg.scheduled) { const g = schedule.get(room.cfg.scheduled); if (g) g.played = true; }
     room.started = true; room.startsAt = null; room.startedAt = room.lastInput = Date.now(); lobby(room);
     return true;
   }
@@ -349,7 +355,6 @@ export function startServer(port, limits = {}) {
       else if (m.type === 'schedule:delete') r = schedule.remove({ id, th }, t);
       else return;
       if (!r.ok) return fail(r.err);
-      saveNow();
       reply({ type: 'schedule:ok', games: schedule.list(th, t), now: t });
     }
     // schedule:enter → the posted game's room (made on the first entry, from 10 min before): seats follow the booking order, host first
@@ -357,19 +362,20 @@ export function startServer(port, limits = {}) {
       const th = hashTok(m.token), t = clock(), id = String(m.id ?? '').slice(0, 16);
       const g = schedule.get(id), idx = th ? schedule.seatsFor(id).findIndex(p => p.th === th) : -1;
       if (!g || g.cancelled || idx < 0 || t < g.at - SCHEDULE.enterMin * 60000 || t >= g.at + SCHEDULE.expireMin * 60000) return { err: 'Game not found.' };
-      const code = schedCode(id);
-      const target = rooms.get(code) || makeRoom(code, { ...sanitizeCfg({ players: g.players, mode: g.mode }), scheduled: id, at: g.at, graceUntil: g.at + SCHEDULE.graceMin * 60000 }, 'sched:' + id);
+      const code = schedCode(id), existing = rooms.get(code);
+      if (existing ? existing.cfg.scheduled !== id : g.played) return { err: 'Game not found.' };  // a played game's room is gone: never a second match
+      const target = existing || makeRoom(code, { ...sanitizeCfg({ players: g.players, mode: g.mode }), scheduled: id, at: g.at, graceUntil: g.at + SCHEDULE.graceMin * 60000 }, 'sched:' + id);
       const taken = new Set(target.clients.values());
-      const seat = !taken.has(target.seats[idx]) ? target.seats[idx] : target.seats.find(s => !taken.has(s));
-      return seat == null ? { err: 'Room is full or match already started' } : { code, seat };
+      const seat = target.seats[idx];  // one booking, one seat: a second socket with the same token gets nothing
+      return seat == null || taken.has(seat) || target.started ? { err: 'Room is full or match already started' } : { code, seat };
     }
-    let forcedSeat = null;
     function onMessage(m) {
+      let entered = null;  // the seat schedule:enter found for this one message (never the client's word, never left on the socket)
       if (typeof m.type === 'string' && m.type.startsWith('schedule:')) {
         if (m.type !== 'schedule:enter') return onSchedule(m);
         const r = enterRoom(m);
         if (r.err) return fail(r.err);
-        forcedSeat = r.seat;
+        entered = r.seat;
         m = { ...m, type: 'join', code: r.code, quick: false, create: false, rejoin: undefined };
       }
       if (m.type === 'ping') reply({ type: 'pong', t: Number.isFinite(m.t) ? m.t : null, tick: tickAvg() });
@@ -393,7 +399,7 @@ export function startServer(port, limits = {}) {
         } else {
           if ((wrong.get(ip) || 0) >= 5) return ws.close(1008, 'too many wrong codes');  // even a right code: each new socket would be a free guess
           target = rooms.get(String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6));
-          if (!target) { fail('Room not found'); return missed(); }
+          if (!target || (target.cfg.scheduled && entered == null && m.rejoin === undefined)) { fail('Room not found'); return missed(); }  // a posted game's room: only through schedule:enter
         }
         if (typeof m.rejoin === 'string') {  // back after a dropped connection: the same seat, even in a match that has started
           const seat = Number(Object.keys(target.tokens).find(s => target.tokens[s] === m.rejoin));
@@ -413,9 +419,8 @@ export function startServer(port, limits = {}) {
           return lobby(room);
         }
         const taken = new Set(target.clients.values());
-        const seat = forcedSeat ?? target.seats.find(s => !taken.has(s));
-        forcedSeat = null;
-        if (seat == null || target.started) return fail('Room is full or match already started');
+        const seat = entered ?? target.seats.find(s => !taken.has(s));
+        if (seat == null || taken.has(seat) || target.started) return fail('Room is full or match already started');
         room = target; ws.inRoom = true;
         const fresh = !room.clients.size;
         room.clients.set(ws, seat);
@@ -480,11 +485,12 @@ export function startServer(port, limits = {}) {
   // HOST=127.0.0.1 when a tunnel is the only way in (otherwise every device on the Wi-Fi can reach the port too)
   return new Promise(resolve => httpServer.listen(port, process.env.HOST, () => resolve({
     port: httpServer.address().port, rooms, sweep, schedule,
-    close: () => new Promise(done => { clearInterval(heartbeat); clearInterval(statusTimer); clearInterval(schedTimer); for (const r of rooms.values()) clearInterval(r.timer); for (const c of wss.clients) c.terminate(); wss.close(); httpServer.close(done); }),
+    close: () => new Promise(done => { saveNow(); clearInterval(heartbeat); clearInterval(statusTimer); clearInterval(schedTimer); for (const r of rooms.values()) clearInterval(r.timer); for (const c of wss.clients) c.terminate(); wss.close(); httpServer.close(done); }),
   })));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const { port } = await startServer(+(process.argv[2] || process.env.PORT || 8080));
+  const srv = await startServer(+(process.argv[2] || process.env.PORT || 8080)), { port } = srv;
+  process.once('SIGTERM', () => srv.close().then(() => process.exit(0)));  // systemctl stop/restart: the last schedule change is saved first
   console.log(`padel server on http://${process.env.HOST || '0.0.0.0'}:${port} (game + websocket)`);
 }

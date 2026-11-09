@@ -12,7 +12,7 @@ export function loadSchedule(path, log = () => {}) {
 export function saveSchedule(path, data) {
   if (!path) return false;
   try {
-    fs.writeFileSync(path + '.tmp', JSON.stringify(data));
+    fs.writeFileSync(path + '.tmp', JSON.stringify(data), { mode: 0o600 });  // only the server's user reads it
     fs.renameSync(path + '.tmp', path);
     return true;
   } catch { return false; }

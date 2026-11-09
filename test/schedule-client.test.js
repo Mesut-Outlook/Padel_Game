@@ -73,3 +73,11 @@ test('scheduleCall: one short socket, the reply sanitised to plain fields', asyn
     assert.equal(list.games.length, 1); assert.equal(typeof list.now, 'number'); assert.ok(Number.isInteger(list.clients) && list.clients >= 0);  // earlier short sockets may still be closing
   } finally { await srv.close(); }
 });
+
+test('fix: scheduleToken({ create: false }) reads an existing token but never makes one', () => {
+  const store = {}, storage = { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = v; } };
+  assert.equal(scheduleToken(storage, { create: false }), null);
+  assert.deepEqual(store, {});
+  const tok = scheduleToken(storage);
+  assert.equal(scheduleToken(storage, { create: false }), tok);
+});

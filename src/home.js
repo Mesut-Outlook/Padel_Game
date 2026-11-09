@@ -36,7 +36,7 @@ let quickPick = { players: 2, mode: 'team' };
 let lastRows = [];
 let lastServerReady = true;
 // Match calendar state (posted games from the server, the server clock offset, the visitor's selections)
-let sched = { games: [], clients: 0, offset: 0, ready: false };
+let sched = { games: [], clients: 0, offset: 0, ready: false }, lastSchedKey = '';
 let calDay = null, calPicked = false, sheet = null, notice = '', noticeTimer = null;  // calPicked: the visitor chose a day (else it follows the first day with games)  // sheet: { day, at, open } while "Post a game" is open
 
 const flagCache = new Map();
@@ -259,7 +259,7 @@ const fmtTime = (ms) => { const d = new Date(ms); return `${String(d.getHours())
 const relText = (at) => { const r = relTime(at, sched.offset, pickNow()); return r.key === 'now' ? t('now') : r.key === 'started' ? t('started') : t(r.key, { h: r.h, m: r.m }); };
 const fmtText = (g) => (g.players === 2 ? t('Singles') : `${t('Doubles')} · ${g.mode === 'team' ? t('Team up') : t('Face off')}`);
 const dots = (g) => {
-  const total = g.players === 2 ? 2 : 4, taken = total - g.free;
+  const total = g.players === 2 || g.mode === 'team' ? 2 : 4, taken = total - g.free;  // Team up: the two humans' places (the AI pair is not bookable)
   return Array.from({ length: total }, (_, i) => `<span class="hm-sc-dot${i < taken ? ' on' : ''}"></span>`).join('');
 };
 const canEnter = (g) => { const now = pickNow() + sched.offset; return (g.mine === 'host' || g.mine === 'seat') && now >= g.at - 10 * M && now < g.at + 15 * M; };
@@ -278,7 +278,7 @@ function gameRow(g) {
   else if (g.mine === 'pending') extra = `<div class="hm-sc-links">${t('Request sent')} <button type="button" class="hm-link-btn hm-sc-cancel" data-code="${id}">${t('Cancel')}</button></div>`;
   else if (g.mine === 'declined') extra = `<div class="hm-sc-links">${t('Not accepted')}</div>`;
   else if (g.mine === 'cancelled') extra = `<div class="hm-sc-links">${t('The host cancelled this game.')}</div>`;
-  else if (!action) action = g.free > 0 ? `<button type="button" class="hm-btn hm-sc-btn hm-sc-ask" data-code="${id}">${g.open ? t('Join') : t('Ask to join')}</button>` : `<span class="hm-sc-full">${t('This game is full.')}</span>`;
+  else if (!action && g.at > pickNow() + sched.offset) action = g.free > 0 ? `<button type="button" class="hm-btn hm-sc-btn hm-sc-ask" data-code="${id}">${g.open ? t('Join') : t('Ask to join')}</button>` : `<span class="hm-sc-full">${t('This game is full.')}</span>`;
   return `<div class="hm-sc-game${g.mine === 'seat' || g.mine === 'host' ? ' mine' : ''}">
     <div class="hm-sc-time"><b>${fmtTime(g.at)}</b><small>${escapeHtml(relText(g.at))}</small></div>
     <div class="hm-sc-info"><div class="hm-sc-top">${host} <span class="hm-sc-tag">${escapeHtml(fmtText(g))}</span></div><div class="hm-sc-dots">${dots(g)}</div>${extra}</div>
@@ -370,6 +370,9 @@ export const myLevel = () => Number(safeLoadProfile()?.level) || 0;
 
 export function setSchedule({ games = [], clients = 0, offset = 0, serverReady = true } = {}) {
   sched = { games: Array.isArray(games) ? games : [], clients: clients | 0, offset: Number(offset) || 0, ready: serverReady !== false };
+  const key = JSON.stringify([sched.games, sched.clients, sched.ready, Math.floor((pickNow() + sched.offset) / M)]);  // the 10 s poll: rebuild only on a change (keeps pad/keyboard focus)
+  if (key === lastSchedKey) return;
+  lastSchedKey = key;
   renderCalendar();
 }
 

@@ -9,13 +9,14 @@ const hhmm = (ms) => { const d = new Date(ms); return `${pad(d.getHours())}:${pa
 const dayStart = (ms, plus = 0) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + plus); return d.getTime(); };
 
 let memoryToken = null;  // storage blocked: one token for this page
-export function scheduleToken(storage = globalThis.localStorage) {
+// create: false = only read (the calendar list sends a token only once this browser has posted or asked: no ID for a visitor who never used it)
+export function scheduleToken(storage = globalThis.localStorage, { create = true } = {}) {
   const fresh = () => { const b = new Uint8Array(16); globalThis.crypto.getRandomValues(b); return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
   try {
     let tok = storage.getItem(TOKEN_KEY);
-    if (!/^[A-Za-z0-9_-]{22}$/.test(tok || '')) { tok = fresh(); storage.setItem(TOKEN_KEY, tok); }
+    if (!/^[A-Za-z0-9_-]{22}$/.test(tok || '')) { if (!create) return null; tok = fresh(); storage.setItem(TOKEN_KEY, tok); }
     return tok;
-  } catch { return (memoryToken ||= fresh()); }
+  } catch { return create ? (memoryToken ||= fresh()) : memoryToken; }
 }
 
 export const clockOffset = (serverNow, clientNow) => serverNow - clientNow;

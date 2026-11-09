@@ -416,3 +416,25 @@ test('calendar: a server answer shows as a notice line at the top', () => {
   setCalendarNotice('');
   assert.doesNotMatch(homeRoot.querySelector('#hm-cal').innerHTML, /hm-sc-notice/);
 });
+
+test('fix: Team up doubles shows two places (the humans sit together), and Ask goes once the game has started', () => {
+  initHome({});
+  setSchedule({ games: [game({ players: 4, mode: 'team', free: 1 }), game({ id: 'g2', at: Date.now() - 60000, free: 1 })], clients: 0, offset: 0, serverReady: true });
+  const cal = homeRoot.querySelector('#hm-cal');
+  const rows = cal.innerHTML.split('hm-sc-game').slice(1);
+  const team = rows.find(r => r.includes('Team up'));
+  assert.equal((team.match(/hm-sc-dot[" ]/g) || []).length, 2);
+  assert.equal(cal.querySelectorAll('.hm-sc-ask').length, 1, 'only the game that has not started');
+});
+
+test('fix: the same calendar data does not rebuild the calendar (focus stays where it is)', () => {
+  initHome({});
+  const data = { games: [game()], clients: 0, offset: 0, serverReady: true };
+  setSchedule(data);
+  const cal = homeRoot.querySelector('#hm-cal');
+  cal.innerHTML = 'KEEP';
+  setSchedule({ ...data, games: [game()] });
+  assert.equal(cal.innerHTML, 'KEEP');
+  setSchedule({ ...data, games: [game({ free: 0 })] });
+  assert.notEqual(cal.innerHTML, 'KEEP');
+});

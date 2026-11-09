@@ -138,3 +138,41 @@ test('toJSON round-trip keeps games, seats, requests and createdAt, but no visit
   assert.deepEqual(r.list(who(1).th, T0), s.list(who(1).th, T0));
   assert.equal(SCHEDULE.aheadDays, 7);
 });
+
+test('fix: a Team up doubles game has one guest seat (humans sit in 0 and 1), Face off has three', () => {
+  const s = make();
+  const team = post(s, 1, at21, { players: 4, mode: 'team', open: true }).game.id;
+  const face = post(s, 2, at21, { players: 4, mode: 'face', open: true }).game.id;
+  assert.equal(s.list(null, T0).find(g => g.id === team).free, 1);
+  assert.equal(s.list(null, T0).find(g => g.id === face).free, 3);
+  assert.equal(s.ask({ id: team, ...who(3) }, T0).status, 'accepted');
+  assert.equal(s.ask({ id: team, ...who(4) }, T0).err, 'This game is full.');
+});
+
+test('fix: cancelled games do not fill the schedule; an empty one is gone at once', () => {
+  const s = make({ maxPosts: 3 });
+  for (let i = 0; i < 5; i++) { const id = post(s, 1).game.id; s.remove({ id, th: who(1).th }); }
+  assert.equal(s.get('g1'), undefined, 'nobody to tell: deleted');
+  for (let i = 0; i < 3; i++) assert.equal(post(s, 10 + i, at21 + i * 2 * H).ok, true);
+});
+
+test('fix: the declined list keeps only the newest entries', () => {
+  const s = make();
+  const id = post(s, 1).game.id;
+  for (let i = 0; i < 60; i++) { s.ask({ id, ...who(100 + i) }, T0); const r = s.list(who(1).th, T0)[0].requests[0]; s.answer({ id, reqId: r.reqId, accept: false, th: who(1).th }, T0); }
+  assert.ok(s.get(id).declined.length <= 32);
+});
+
+test('fix: no asking or answering once the game has started', () => {
+  const s = make();
+  const id = post(s, 1).game.id;
+  s.ask({ id, ...who(2) }, T0);
+  const reqId = s.list(who(1).th, T0)[0].requests[0].reqId;
+  assert.equal(s.ask({ id, ...who(3) }, at21).err, 'Game not found.');
+  assert.equal(s.answer({ id, reqId, accept: true, th: who(1).th }, at21).err, 'Game not found.');
+});
+
+test('fix: a state file of the wrong shape starts an empty schedule instead of throwing', () => {
+  assert.doesNotThrow(() => createSchedule({}, { games: [{}] }));
+  assert.equal(createSchedule({}, { games: [{}] }).list(null, T0).length, 0);
+});
