@@ -156,6 +156,20 @@ test('fix: cancelled games do not fill the schedule; an empty one is gone at onc
   for (let i = 0; i < 3; i++) assert.equal(post(s, 10 + i, at21 + i * 2 * H).ok, true);
 });
 
+test('fix: cancelled games kept for their guests are capped; the oldest gives way to a new post', () => {
+  const s = make({ maxPosts: 3 }), ids = [];
+  for (let i = 0; i < 7; i++) {  // a host asks their own game with a second token, then deletes it: a cancelled game that stays
+    const id = post(s, 1, at21 + i * 2 * H).game.id;
+    s.ask({ id, ...who(50 + i) }, T0);
+    s.remove({ id, th: who(1).th });
+    ids.push(id);
+  }
+  assert.equal(ids.filter(id => s.get(id)).length, 6, 'never more than 2 x maxPosts games');
+  assert.equal(s.get(ids[0]), undefined, 'the oldest cancelled game gave way');
+  assert.equal(s.get(ids[6]).cancelled, true);
+  assert.equal(post(s, 20, at21 + 15 * H).ok, true, 'posting still works');
+});
+
 test('fix: the declined list keeps only the newest entries', () => {
   const s = make();
   const id = post(s, 1).game.id;

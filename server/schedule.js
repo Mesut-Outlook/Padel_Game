@@ -41,6 +41,11 @@ export function createSchedule(limits = {}, state = null) {
       if (!Number.isFinite(at) || at % (L.slotMin * M) !== 0 || at < now + L.leadMin * M || at > now + L.aheadDays * 24 * 60 * M) return { ok: false, err: ERR.time };
       if (live().some(g => mine(g.host, th, vk))) return { ok: false, err: ERR.posted };
       if (live().length >= L.maxPosts) return { ok: false, err: ERR.schedule };
+      if (games.size >= 2 * L.maxPosts) {  // cancelled games kept for their seated players count too: the oldest gives way, so they never pile up
+        const old = [...games.values()].filter(g => g.cancelled).sort((x, y) => x.createdAt - y.createdAt)[0];
+        if (!old) return { ok: false, err: ERR.schedule };
+        games.delete(old.id);
+      }
       if (this.slotTaken(at) >= L.maxOverlap) return { ok: false, err: ERR.slot };
       const game = { id: newId(), at, players: players === 4 ? 4 : 2, mode: mode === 'team' ? 'team' : 'face', open: !!open, host: person({ th, vk, name, char, level }), seats: [], requests: [], declined: [], cancelled: false, started: false, createdAt: now };
       games.set(game.id, game);

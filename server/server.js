@@ -386,6 +386,7 @@ export function startServer(port, limits = {}) {
           free: r.seats.length - r.clients.size, host: r.names[r.host] ?? '', char: r.chars[r.host] ?? 0 })) });  // whoever holds the room now: a creator who left is not listed
       } else if (m.type === 'join') {
         if (room) return fail('Already in a room');  // one room per connection
+        if (typeof m.rejoin !== 'string') m = { ...m, rejoin: undefined };  // null/0/false mean "no rejoin" for every check below (a null once got past the posted-game guard)
         const n = (joins.get(ip) || 0) + 1; joins.set(ip, n);
         if (n > lim.joinsPerMin) return fail('The server is full. Try again later.');
         let target;

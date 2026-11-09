@@ -1135,6 +1135,9 @@ test('fix: a posted game\'s room takes nobody by its code alone, only through sc
     const code = [...srv.rooms.keys()].find(k => srv.rooms.get(k).cfg.scheduled === id);
     const stranger = client(srv.port);
     assert.equal((await within(call(stranger, { type: 'join', code, char: 0 }, 'error'))).msg, 'Room not found');
+    for (const rejoin of [null, 0, false]) {  // a rejoin that is not a token must not open the door either
+      assert.equal((await within(call(stranger, { type: 'join', code, char: 0, rejoin }, 'error'))).msg, 'Room not found', `rejoin: ${rejoin}`);
+    }
     assert.equal((await within(enter(b, id, 2))).seat, 2, 'the booked guest still gets their seat');
     for (const x of [a, b, stranger]) x.ws.close();
   } finally { await srv.close(); }
