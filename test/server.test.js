@@ -1106,3 +1106,20 @@ test('schedule: the state file is written on post and read by a new server', asy
     b.ws.close();
   } finally { await two.srv.close(); }
 });
+
+test('schedule: net.connect({ enter }) takes the booked seat and the lobby carries the start time', async () => {
+  const { connect } = await import('../src/net.js');
+  const { srv, clock } = await schedServer();
+  try {
+    const { a, b, id } = await bookedGame(srv);
+    clock.t = SAT - 5 * SM;
+    const errors = [], { token, name } = me(2);
+    const net = connect({ url: `ws://127.0.0.1:${srv.port}`, enter: { id, token }, char: 0, name, onError: (e) => errors.push(e) });
+    while (!net.lobby && !errors.length) await new Promise(r => setTimeout(r, 10));
+    assert.deepEqual(errors, []);
+    assert.equal(net.seat, 2);
+    assert.equal(net.lobby.cfg.at, SAT);
+    assert.equal(net.lobby.cfg.graceUntil, SAT + 3 * SM);
+    net.leave(); a.ws.close(); b.ws.close();
+  } finally { await srv.close(); }
+});

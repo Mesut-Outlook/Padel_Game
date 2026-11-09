@@ -10,7 +10,7 @@ export const NET_TEXTS = [N_('Room not found'), N_('Room is full or match alread
   N_('That time is not available.'), N_('That time slot is full. Pick another time.'), N_('You already have a game posted.'), N_('You already have two games booked.'),
   N_('This game has enough requests.'), N_('This game is full.'), N_('Game not found.'), N_('The schedule is full. Try again later.')];
 
-export function connect({ url, code, cfg, char, stats, racket, onLobby, onError, onStatus, onLeft, ...extra }) {  // extra: public, quick, name, look, shoes, ball, bag
+export function connect({ url, code, cfg, enter, char, stats, racket, onLobby, onError, onStatus, onLeft, ...extra }) {  // extra: public, quick, name, look, shoes, ball, bag; enter: { id, token } = a posted game's room
   const net = { seat: null, lobby: null, snaps: [], events: [], score: null, winner: null, ws: null, token: null };
   let tries = 0, lastSent = '';
   function open(join) {
@@ -46,7 +46,7 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError,
       }
     };
   }
-  open({ type: 'join', code, cfg, char, stats, racket, ...extra });
+  open({ ...(enter ? { type: 'schedule:enter', id: enter.id, token: enter.token } : { type: 'join', code, cfg }), char, stats, racket, ...extra });
   // debug panel only: RTT + the server's tick time
   if (debugOn()) setInterval(() => net.ws?.readyState === 1 && net.ws.send(JSON.stringify({ type: 'ping', t: performance.now() })), 2000);
   net.send = (inp) => {

@@ -1126,4 +1126,6 @@ export default {
   "started": "başladı",
   "{name} is waiting for you · start now": "{name} seni bekliyor · hemen başla",
   "{n} players on the site now": "Şu an sitede {n} oyuncu",
+  "Starts in {time}": "{time} sonra başlıyor",
+  "Waiting {time} for the others, then the AI takes empty seats": "Diğerleri için {time} bekleniyor, sonra boş yerlere yapay zekâ geçer",
 };

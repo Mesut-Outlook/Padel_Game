@@ -1126,4 +1126,6 @@ export default {
   "started": "begonnen",
   "{name} is waiting for you · start now": "{name} wacht op je · begin nu",
   "{n} players on the site now": "{n} spelers nu op de site",
+  "Starts in {time}": "Begint over {time}",
+  "Waiting {time} for the others, then the AI takes empty seats": "Nog {time} wachten op de anderen, daarna neemt de AI lege plekken over",
 };

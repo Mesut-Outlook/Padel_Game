@@ -1126,4 +1126,6 @@ export default {
   "started": "commencé",
   "{name} is waiting for you · start now": "{name} t'attend · commence maintenant",
   "{n} players on the site now": "{n} joueurs sur le site en ce moment",
+  "Starts in {time}": "Début dans {time}",
+  "Waiting {time} for the others, then the AI takes empty seats": "Encore {time} d'attente pour les autres, puis l'IA prend les places libres",
 };

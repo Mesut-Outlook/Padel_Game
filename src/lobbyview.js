@@ -7,7 +7,8 @@ const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt
 const DEUCE = { golden: N_('Golden point'), adv: N_('Advantage'), star: N_('Star point') };
 
 // l = the server's lobby message, seat = mine; characters / venues = data/*.json
-export function lobbyView(l, seat, characters = [], venues = []) {
+// now = the server's clock (Date.now() + clockOffset) for posted games' countdown
+export function lobbyView(l, seat, characters = [], venues = [], now = Date.now()) {
   const taken = l.taken || [], away = l.away || [];
   const seats = (l.seats || []).map(id => ({
     id, team: id < 2 ? 0 : 1,
@@ -17,14 +18,22 @@ export function lobbyView(l, seat, characters = [], venues = []) {
   })).sort((a, b) => a.team - b.team || a.id - b.id);
   const c = l.cfg || {};
   const host = seats.find(s => s.host);
+  const sched = c.scheduled && !l.started && Number.isFinite(c.at) && Number.isFinite(c.graceUntil);
+  const countdown = !sched ? null : now < c.at ? { phase: 'start', ms: c.at - now } : { phase: 'grace', ms: Math.max(0, c.graceUntil - now) };
   return {
     code: l.code, started: !!l.started, seats,
     rules: { venue: venues[c.venue]?.name || '', players: c.players === 2 ? 2 : 4, sets: [1, 3, 5].includes(c.sets) ? c.sets : 3, superTiebreak: !!c.superTiebreak, deuce: c.starPoint ? 'star' : c.goldenPoint === false ? 'adv' : 'golden' },
     amHost: seat != null && seat === l.host,
     hostName: host?.name || '',
-    humans: taken.length,
+    humans: taken.length, countdown,
     canStart: !l.started && seat === l.host && taken.length >= 2,
   };
+}
+
+// a posted game's countdown as one sentence (lobby and the warm-up's message line)
+export function countdownText({ phase, ms }) {
+  const sec = Math.ceil(ms / 1000), time = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+  return phase === 'start' ? t('Starts in {time}', { time }) : t('Waiting {time} for the others, then the AI takes empty seats', { time });
 }
 
 export function lobbyHtml(v) {
@@ -36,6 +45,7 @@ export function lobbyHtml(v) {
       <span class="lb-state">${s.away ? t('reconnecting… the AI plays') : s.human ? '' : t('the AI plays')}</span></li>`;
   const team = (n) => `<div class="lb-team"><div class="lb-team-name">${t('Team {n}', { n: n + 1 })}</div><ul>${v.seats.filter(s => s.team === n).map(row).join('')}</ul></div>`;
   const next = v.started ? t('The match has started.')
+    : v.countdown ? countdownText(v.countdown)
     : v.amHost ? (v.humans < 2 ? t('Send the invite link to your friends. You can start as soon as someone has joined.') : t('Everyone in? Press START MATCH.'))
     : t('You are in! Waiting for {host} to start the match.', { host: esc(v.hostName || '?') });
   return `<div class="lb">
