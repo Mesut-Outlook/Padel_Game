@@ -4,7 +4,9 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { randomInt, randomBytes, createHmac } from 'node:crypto';
+import { randomInt, randomBytes, createHmac, createHash } from 'node:crypto';
+import { createSchedule, SCHEDULE } from './schedule.js';
+import { loadSchedule, saveSchedule } from './schedulestore.js';
 import { newWorld, stepWorld, snapshot, SHOTS, BAG } from '../src/game.js';
 import { scoreText } from '../src/rules.js';
 import { aiInput } from '../src/ai.js';
@@ -175,6 +177,30 @@ export function startServer(port, limits = {}) {
   let badLines = 0, logLines = 0;  // log lines this minute ('bad message', and join/leave/rejoin): one visitor must not be able to fill the disk
   const joins = new Map();  // visitor -> join messages this minute
   const logLine = (line) => { if (logLines++ < lim.logsPerMin) console.log(line); };
+  // posted games (Match calendar): kept in schedule.js, saved to PADEL_STATE after every change, started here at their time
+  const clock = lim.now || Date.now;
+  const statePath = lim.statePath ?? process.env.PADEL_STATE;
+  const schedule = createSchedule({ windowMs: lim.matchMs }, loadSchedule(statePath, console.log));
+  let savedText = '', saveFailed = false;
+  const saveNow = () => {  // on the scheduler tick only (≤ 12 writes a minute in all, whoever sends what): the SD card
+    const data = schedule.toJSON(), text = JSON.stringify(data);
+    if (text === savedText || !statePath) return;
+    if (saveSchedule(statePath, data)) { savedText = text; saveFailed = false; }
+    else if (!saveFailed) { saveFailed = true; console.log('schedule: not persistent'); }  // once, until a save works again
+  };
+  const schedWrites = new Map();  // visitor -> schedule:* writes this minute
+  const schedCode = (id) => 'S' + String(id).slice(0, 5).toUpperCase();
+  const humans = (room) => room.clients.size;
+  const schedTimer = setInterval(() => {  // auto-accept and expiry, then start due rooms: at the time with two humans, after the grace with whoever came
+    const t = clock();
+    schedule.sweep(t);
+    saveNow();
+    for (const room of rooms.values()) {
+      const c = room.cfg;
+      if (!c.scheduled || room.started || !humans(room) || t < c.at) continue;
+      if (humans(room) >= 2 || t >= c.graceUntil) begin(room);
+    }
+  }, lim.schedTickMs || 5000);
 
   // a dead connection (phone went to sleep, network gone) never sends close: ping every 30 s, drop what did not answer
   const heartbeat = setInterval(() => {
@@ -205,7 +231,7 @@ export function startServer(port, limits = {}) {
       const cu = process.cpuUsage(lastCpu), wall = performance.now() - lastWall;
       console.log(statusLine({ rooms: rooms.size, clients, tickAvg: tickAvg(), tickMax: tMax, cpu: wall > 0 ? (cu.user + cu.system) / 1000 / wall * 100 : 0, rss: process.memoryUsage.rss() }));
     }
-    lastCpu = process.cpuUsage(); lastWall = performance.now(); tSum = tN = tMax = badLines = logLines = 0; joins.clear();
+    lastCpu = process.cpuUsage(); lastWall = performance.now(); tSum = tN = tMax = badLines = logLines = 0; joins.clear(); schedWrites.clear();
   }
   const statusTimer = setInterval(status, 60000);
 
@@ -247,10 +273,12 @@ export function startServer(port, limits = {}) {
   }
   function begin(room) {
     const playing = [...rooms.values()].filter(r => r.started);
+    if (room.cfg.scheduled && playing.filter(r => r.cfg.scheduled).length >= lim.rooms - 2) return false;  // posted games leave two slots for Play now and invites; the scheduler tries again
     if (playing.length >= lim.rooms || playing.filter(r => r.owner === room.owner).length >= lim.playingPerIp) {  // every match slot busy: an auto room tries again after another countdown
       if (room.cfg.auto) { room.startsAt = Date.now() + lim.countdownMs; lobby(room); }
       return false;
     }
+    if (room.cfg.scheduled) { const g = schedule.get(room.cfg.scheduled); if (g) g.played = true; }
     room.started = true; room.startsAt = null; room.startedAt = room.lastInput = Date.now(); lobby(room);
     return true;
   }
@@ -304,7 +332,52 @@ export function startServer(port, limits = {}) {
         ws.close(1008, 'bad message');
       }
     });
+    // schedule:* (Match calendar). Tokens are hashed at once and never stored, sent back or logged.
+    const hashTok = (v) => (typeof v === 'string' && v.length >= 8 && v.length <= 64 ? createHash('sha256').update(v).digest('hex') : null);
+    const who = (m, th) => ({ th, vk: ownerKey(ip), name: cleanName(m.name) || 'Player', char: clamp(m.char | 0, 0, CHARACTERS - 1), level: clamp(m.level, 0, 7) });
+    let lastSched = 0;
+    function onSchedule(m) {
+      const th = hashTok(m.token), t = clock(), id = String(m.id ?? '').slice(0, 16);
+      if (m.type === 'schedule:list') {  // one a second per socket, like the open games list
+        if (Date.now() - lastSched < 1000) return;
+        lastSched = Date.now();
+        return reply({ type: 'schedule', games: schedule.list(th, t), clients: wss.clients.size - 1, now: t });
+      }
+      const vk = ownerKey(ip), n = (schedWrites.get(vk) || 0) + 1;
+      schedWrites.set(vk, n);
+      if (n > (lim.schedWritesPerMin ?? 10)) return fail('The server is full. Try again later.');
+      if (!th) return fail('Game not found.');
+      let r;
+      if (m.type === 'schedule:post') r = schedule.post({ at: Number(m.at), players: m.players === 4 ? 4 : 2, mode: m.mode === 'team' ? 'team' : 'face', open: m.open === true, ...who(m, th) }, t);
+      else if (m.type === 'schedule:ask') r = schedule.ask({ id, ...who(m, th) }, t);
+      else if (m.type === 'schedule:answer') r = schedule.answer({ id, reqId: String(m.reqId ?? '').slice(0, 16), accept: m.accept === true, th }, t);
+      else if (m.type === 'schedule:cancel') r = schedule.cancel({ id, th }, t);
+      else if (m.type === 'schedule:delete') r = schedule.remove({ id, th }, t);
+      else return;
+      if (!r.ok) return fail(r.err);
+      reply({ type: 'schedule:ok', games: schedule.list(th, t), now: t });
+    }
+    // schedule:enter → the posted game's room (made on the first entry, from 10 min before): seats follow the booking order, host first
+    function enterRoom(m) {
+      const th = hashTok(m.token), t = clock(), id = String(m.id ?? '').slice(0, 16);
+      const g = schedule.get(id), idx = th ? schedule.seatsFor(id).findIndex(p => p.th === th) : -1;
+      if (!g || g.cancelled || idx < 0 || t < g.at - SCHEDULE.enterMin * 60000 || t >= g.at + SCHEDULE.expireMin * 60000) return { err: 'Game not found.' };
+      const code = schedCode(id), existing = rooms.get(code);
+      if (existing ? existing.cfg.scheduled !== id : g.played) return { err: 'Game not found.' };  // a played game's room is gone: never a second match
+      const target = existing || makeRoom(code, { ...sanitizeCfg({ players: g.players, mode: g.mode }), scheduled: id, at: g.at, graceUntil: g.at + SCHEDULE.graceMin * 60000 }, 'sched:' + id);
+      const taken = new Set(target.clients.values());
+      const seat = target.seats[idx];  // one booking, one seat: a second socket with the same token gets nothing
+      return seat == null || taken.has(seat) || target.started ? { err: 'Room is full or match already started' } : { code, seat };
+    }
     function onMessage(m) {
+      let entered = null;  // the seat schedule:enter found for this one message (never the client's word, never left on the socket)
+      if (typeof m.type === 'string' && m.type.startsWith('schedule:')) {
+        if (m.type !== 'schedule:enter') return onSchedule(m);
+        const r = enterRoom(m);
+        if (r.err) return fail(r.err);
+        entered = r.seat;
+        m = { ...m, type: 'join', code: r.code, quick: false, create: false, rejoin: undefined };
+      }
       if (m.type === 'ping') reply({ type: 'pong', t: Number.isFinite(m.t) ? m.t : null, tick: tickAvg() });
       else if (m.type === 'list') {  // public lobbies that still have a free seat; one list a second per socket
         if (Date.now() - lastList < 1000) return;
@@ -321,12 +394,12 @@ export function startServer(port, limits = {}) {
         if (target) { /* quick match: an open room of the same kind */ }
         else if ((m.create === true || want) && m.rejoin === undefined) {  // the server picks the code: never guessable, never someone else's room
           const owner = ownerKey(ip), mine = [...rooms.values()].filter(r => r.owner === owner).length;
-          if ([...rooms.values()].filter(r => !r.started).length >= lim.waiting || mine >= lim.roomsPerIp) return fail('The server is full. Try again later.');
+          if ([...rooms.values()].filter(r => !r.started && !r.cfg.scheduled).length >= lim.waiting || mine >= lim.roomsPerIp) return fail('The server is full. Try again later.');
           target = makeRoom(newCode(), want ? { ...want, public: true } : sanitizeCfg(m.cfg, m), owner);
         } else {
           if ((wrong.get(ip) || 0) >= 5) return ws.close(1008, 'too many wrong codes');  // even a right code: each new socket would be a free guess
           target = rooms.get(String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6));
-          if (!target) { fail('Room not found'); return missed(); }
+          if (!target || (target.cfg.scheduled && entered == null && m.rejoin === undefined)) { fail('Room not found'); return missed(); }  // a posted game's room: only through schedule:enter
         }
         if (typeof m.rejoin === 'string') {  // back after a dropped connection: the same seat, even in a match that has started
           const seat = Number(Object.keys(target.tokens).find(s => target.tokens[s] === m.rejoin));
@@ -346,8 +419,8 @@ export function startServer(port, limits = {}) {
           return lobby(room);
         }
         const taken = new Set(target.clients.values());
-        const seat = target.seats.find(s => !taken.has(s));
-        if (seat == null || target.started) return fail('Room is full or match already started');
+        const seat = entered ?? target.seats.find(s => !taken.has(s));
+        if (seat == null || taken.has(seat) || target.started) return fail('Room is full or match already started');
         room = target; ws.inRoom = true;
         const fresh = !room.clients.size;
         room.clients.set(ws, seat);
@@ -411,12 +484,13 @@ export function startServer(port, limits = {}) {
 
   // HOST=127.0.0.1 when a tunnel is the only way in (otherwise every device on the Wi-Fi can reach the port too)
   return new Promise(resolve => httpServer.listen(port, process.env.HOST, () => resolve({
-    port: httpServer.address().port, rooms, sweep,
-    close: () => new Promise(done => { clearInterval(heartbeat); clearInterval(statusTimer); for (const r of rooms.values()) clearInterval(r.timer); for (const c of wss.clients) c.terminate(); wss.close(); httpServer.close(done); }),
+    port: httpServer.address().port, rooms, sweep, schedule,
+    close: () => new Promise(done => { saveNow(); clearInterval(heartbeat); clearInterval(statusTimer); clearInterval(schedTimer); for (const r of rooms.values()) clearInterval(r.timer); for (const c of wss.clients) c.terminate(); wss.close(); httpServer.close(done); }),
   })));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const { port } = await startServer(+(process.argv[2] || process.env.PORT || 8080));
+  const srv = await startServer(+(process.argv[2] || process.env.PORT || 8080)), { port } = srv;
+  process.once('SIGTERM', () => srv.close().then(() => process.exit(0)));  // systemctl stop/restart: the last schedule change is saved first
   console.log(`padel server on http://${process.env.HOST || '0.0.0.0'}:${port} (game + websocket)`);
 }

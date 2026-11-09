@@ -9,6 +9,8 @@ import { padDir, spatialFocus } from './padnav.js';
 import { loadProfile } from './career.js';
 import { toggleFullscreen } from './fullscreen.js';
 import { t } from './i18n.js';
+import { tutorialFinished } from './tutorialdone.js';
+import { relTime, slotsFor, dayStrip, quickSlots, icsFor } from './schedule.js';
 import { drawFlag } from './flags.js';
 import characters from '../data/characters.json' with { type: 'json' };
 
@@ -33,6 +35,9 @@ let lastStickY = 0;
 let quickPick = { players: 2, mode: 'team' };
 let lastRows = [];
 let lastServerReady = true;
+// Match calendar state (posted games from the server, the server clock offset, the visitor's selections)
+let sched = { games: [], clients: 0, offset: 0, ready: false }, lastSchedKey = '';
+let calDay = null, calPicked = false, sheet = null, notice = '', noticeTimer = null;  // calPicked: the visitor chose a day (else it follows the first day with games)  // sheet: { day, at, open } while "Post a game" is open
 
 const flagCache = new Map();
 
@@ -204,10 +209,9 @@ function renderOpenGamesList() {
     return;
   }
 
-  if (lastRows.length === 0) {
-    listEl.innerHTML = `<div class="hm-games-empty">${t('Nobody is waiting right now — be the first.')}</div>`;
-    return;
-  }
+  const sub = homeEl.querySelector('#hm-play-sub');
+  if (sub) sub.innerHTML = lastRows.length ? escapeHtml(t('{name} is waiting for you · start now', { name: lastRows[0].host || 'Player' })) : escapeHtml(t('Warm up until someone joins'));
+  if (lastRows.length === 0) { listEl.innerHTML = ''; return; }  // nobody waiting: the calendar below says what to do instead
 
   const items = lastRows.map(row => {
     const charIdx = typeof row.char === 'number' ? row.char : -1;
@@ -245,6 +249,131 @@ function renderOpenGamesList() {
       if (code) callbacks.onJoin?.(code);
     };
   });
+}
+
+// ---- Match calendar ----
+const M = 60000;
+const pickNow = () => Date.now();
+const fmtDay = (ms, opts) => { try { return new Date(ms).toLocaleDateString(document.documentElement?.lang || undefined, opts); } catch { return new Date(ms).toDateString(); } };
+const fmtTime = (ms) => { const d = new Date(ms); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const relText = (at) => { const r = relTime(at, sched.offset, pickNow()); return r.key === 'now' ? t('now') : r.key === 'started' ? t('started') : t(r.key, { h: r.h, m: r.m }); };
+const fmtText = (g) => (g.players === 2 ? t('Singles') : `${t('Doubles')} · ${g.mode === 'team' ? t('Team up') : t('Face off')}`);
+const dots = (g) => {
+  const total = g.players === 2 || g.mode === 'team' ? 2 : 4, taken = total - g.free;  // Team up: the two humans' places (the AI pair is not bookable)
+  return Array.from({ length: total }, (_, i) => `<span class="hm-sc-dot${i < taken ? ' on' : ''}"></span>`).join('');
+};
+const canEnter = (g) => { const now = pickNow() + sched.offset; return (g.mine === 'host' || g.mine === 'seat') && now >= g.at - 10 * M && now < g.at + 15 * M; };
+
+function gameRow(g) {
+  const id = escapeHtml(g.id), host = escapeHtml(g.host?.name || 'Player');
+  let action = '', extra = '';
+  if (canEnter(g)) action = `<button type="button" class="hm-btn hm-sc-btn pri hm-sc-enter" data-code="${id}">${t('Enter')}</button>`;
+  if (g.mine === 'host') {
+    const reqs = g.requests || [];
+    extra = `<div class="hm-sc-host">
+      ${reqs.length ? `<div class="hm-sc-lab">${t('Requests')}</div>` + reqs.map(r => `<div class="hm-sc-req"><span>${escapeHtml(r.name)} <b>${(Number(r.level) || 0).toFixed(1)}</b></span><span><button type="button" class="hm-sc-no" data-code="${id}|${escapeHtml(r.reqId)}" aria-label="${t('Decline')}">✕</button><button type="button" class="hm-sc-yes" data-code="${id}|${escapeHtml(r.reqId)}" aria-label="${t('Accept')}">✓</button></span></div>`).join('') : ''}
+      ${!g.open ? `<div class="hm-sc-note">${t('Unanswered requests are accepted 1 hour before the game.')}</div>` : ''}
+      <button type="button" class="hm-link-btn hm-sc-del" data-code="${id}">${t('Delete game')}</button></div>`;
+  } else if (g.mine === 'seat') extra = `<div class="hm-sc-links"><b>${t('Your seat is ready')}</b> <button type="button" class="hm-link-btn hm-sc-ics" data-code="${id}">📅 ${t('Add to calendar')}</button> <button type="button" class="hm-link-btn hm-sc-cancel" data-code="${id}">${t('Cancel')}</button></div>`;
+  else if (g.mine === 'pending') extra = `<div class="hm-sc-links">${t('Request sent')} <button type="button" class="hm-link-btn hm-sc-cancel" data-code="${id}">${t('Cancel')}</button></div>`;
+  else if (g.mine === 'declined') extra = `<div class="hm-sc-links">${t('Not accepted')}</div>`;
+  else if (g.mine === 'cancelled') extra = `<div class="hm-sc-links">${t('The host cancelled this game.')}</div>`;
+  else if (!action && g.at > pickNow() + sched.offset) action = g.free > 0 ? `<button type="button" class="hm-btn hm-sc-btn hm-sc-ask" data-code="${id}">${g.open ? t('Join') : t('Ask to join')}</button>` : `<span class="hm-sc-full">${t('This game is full.')}</span>`;
+  return `<div class="hm-sc-game${g.mine === 'seat' || g.mine === 'host' ? ' mine' : ''}">
+    <div class="hm-sc-time"><b>${fmtTime(g.at)}</b><small>${escapeHtml(relText(g.at))}</small></div>
+    <div class="hm-sc-info"><div class="hm-sc-top">${host} <span class="hm-sc-tag">${escapeHtml(fmtText(g))}</span></div><div class="hm-sc-dots">${dots(g)}</div>${extra}</div>
+    ${action}</div>`;
+}
+
+function renderSheet() {
+  const now = pickNow(), days = dayStrip([], now, sched.offset);
+  const busy = (at) => sched.games.filter(g => Math.abs(g.at - at) < 90 * M).length >= 8;
+  return `<div class="hm-sheet" id="hm-sheet">
+    <div class="hm-sc-sheethead"><b>${t('Post a game')}</b><button type="button" class="hm-link-btn hm-sc-close" aria-label="${t('Close')}">✕</button></div>
+    <div class="hm-sc-lab">${t('Day')}</div>
+    <div class="hm-sc-days">${days.map(d => `<button type="button" class="hm-sc-sday${d.dayOffset === sheet.day ? ' on' : ''}" data-code="${d.dayOffset}"><small>${escapeHtml(fmtDay(d.date, { weekday: 'short' }))}</small><b>${new Date(d.date).getDate()}</b></button>`).join('')}</div>
+    <div class="hm-sc-lab">${t('Time')}</div>
+    <div class="hm-sc-slots">${slotsFor(sheet.day, now, sched.offset).map(sl => `<button type="button" class="hm-sc-slot${sl.at === sheet.at ? ' on' : ''}${busy(sl.at) ? ' full' : ''}" data-code="${sl.at}" ${busy(sl.at) ? 'disabled' : ''}>${sl.label}</button>`).join('') || `<span class="hm-sc-note">${t('No times left today.')}</span>`}</div>
+    <div class="hm-sc-note">${escapeHtml(quickPick.players === 2 ? t('Singles') : `${t('Doubles')} · ${quickPick.mode === 'team' ? t('Team up') : t('Face off')}`)}</div>
+    <button type="button" class="hm-sc-toggle hm-sc-open${sheet.open ? ' on' : ''}" aria-pressed="${sheet.open}"><span><b>${t('Anyone can join without approval')}</b><small>${t('If this is off, you approve requests.')}</small></span><span class="hm-sc-sw"></span></button>
+    <button type="button" class="hm-play-now hm-sc-submit" ${sheet.at ? '' : 'disabled'}>${t('Post game')}</button>
+    <div class="hm-sc-note">${t('Your nickname is shown. One game at a time.')}</div></div>`;
+}
+
+function renderCalendar() {
+  if (!homeEl) return;
+  const cal = homeEl.querySelector('#hm-cal'), count = homeEl.querySelector('#hm-online-count');
+  if (count) {
+    count.hidden = !(sched.ready && sched.clients >= 1);
+    count.innerHTML = count.hidden ? '' : escapeHtml(t('{n} players on the site now', { n: sched.clients + 1 }));
+  }
+  if (!cal) return;
+  if (!sched.ready) { cal.innerHTML = ''; return; }
+  const note = notice ? `<div class="hm-sc-notice" role="status">${escapeHtml(notice)}</div>` : '';
+  if (sheet) { cal.innerHTML = note + renderSheet(); return bindCalendar(cal); }
+  const now = pickNow(), games = sched.games, strip = dayStrip(games, now, sched.offset);
+  if (!games.length) {
+    cal.innerHTML = note + `<div class="hm-sc-empty"><div class="hm-sc-ball" aria-hidden="true"></div>
+      <b>${t('Be the first to post a game tonight')}</b><p>${t('Pick a time and your game shows here for everyone.')}</p>
+      <div class="hm-sc-quickrow">${quickSlots(now, sched.offset).map(q => `<button type="button" class="hm-sc-quick" data-code="${q.at}"><small>${escapeHtml(q.dayOffset ? fmtDay(q.at, { weekday: 'short' }) : t('Today'))}</small><b>${q.label}</b><em>${escapeHtml(quickPick.players === 2 ? t('Singles') : t('Doubles'))}</em></button>`).join('')}</div>
+      <button type="button" class="hm-link-btn hm-sc-post">${t('Pick another day or time')}</button></div>`;
+    return bindCalendar(cal);
+  }
+  if (!calPicked || calDay == null || !strip[calDay]) calDay = Math.max(0, strip.findIndex(d => d.count > 0));
+  const day = strip[calDay], list = games.filter(g => new Date(g.at).toDateString() === new Date(day.date).toDateString());
+  cal.innerHTML = note + `<div class="hm-sc-week">${strip.map(d => `<button type="button" class="hm-sc-day${d.dayOffset === calDay ? ' on' : ''}${d.count ? '' : ' empty'}" data-code="${d.dayOffset}"><small>${escapeHtml(d.dayOffset ? fmtDay(d.date, { weekday: 'short' }) : t('Today'))}</small><b>${new Date(d.date).getDate()}</b>${d.count ? `<span class="hm-sc-n">${d.count}</span>` : ''}</button>`).join('')}</div>
+    ${list.length ? list.map(gameRow).join('') : `<div class="hm-games-empty">${t('No games yet on this day.')}</div>`}
+    <button type="button" class="hm-btn-sec hm-sc-post">＋ ${t('Post a game')}</button>`;
+  bindCalendar(cal);
+}
+
+function bindCalendar(cal) {
+  const on = (cls, fn) => cal.querySelectorAll('.' + cls).forEach(b => { b.onclick = () => fn(b.dataset.code ?? ''); });
+  const pair = (code) => { const i = code.indexOf('|'); return [code.slice(0, i), code.slice(i + 1)]; };
+  on('hm-sc-quick', (at) => callbacks.onPost?.({ at: Number(at), players: quickPick.players, mode: quickPick.mode, open: false }));
+  on('hm-sc-post', () => { sheet = { day: calDay ?? 0, at: null, open: false }; renderCalendar(); });
+  on('hm-sc-day', (d) => { calDay = Number(d); calPicked = true; renderCalendar(); });
+  on('hm-sc-ask', (id) => callbacks.onAsk?.(id));
+  on('hm-sc-enter', (id) => callbacks.onEnter?.(id));
+  on('hm-sc-cancel', (id) => callbacks.onCancel?.(id));
+  on('hm-sc-del', (id) => callbacks.onDelete?.(id));
+  on('hm-sc-yes', (c) => { const [id, r] = pair(c); callbacks.onAnswer?.(id, r, true); });
+  on('hm-sc-no', (c) => { const [id, r] = pair(c); callbacks.onAnswer?.(id, r, false); });
+  on('hm-sc-ics', (id) => downloadIcs(sched.games.find(g => g.id === id)));
+  on('hm-sc-close', () => { sheet = null; renderCalendar(); });
+  on('hm-sc-sday', (d) => { sheet.day = Number(d); sheet.at = null; renderCalendar(); });
+  on('hm-sc-slot', (at) => { sheet.at = Number(at); renderCalendar(); });
+  on('hm-sc-open', () => { sheet.open = !sheet.open; renderCalendar(); });
+  on('hm-sc-submit', () => { if (!sheet?.at) return; const p = { at: sheet.at, players: quickPick.players, mode: quickPick.mode, open: sheet.open }; sheet = null; renderCalendar(); callbacks.onPost?.(p); });
+}
+
+// a calendar file made here and saved by the browser: nothing is sent anywhere
+function downloadIcs(g) {
+  if (!g || typeof Blob === 'undefined') return;
+  const url = URL.createObjectURL(new Blob([icsFor(g, t('Padel Legends match'))], { type: 'text/calendar' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'padel-legends.ics';
+  document.body?.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// a short line at the top of the calendar (a server answer such as 'That time slot is full.'), gone after 6 s
+export function setCalendarNotice(text) {
+  notice = String(text || '');
+  clearTimeout(noticeTimer);
+  if (notice) noticeTimer = setTimeout(() => { notice = ''; renderCalendar(); }, 6000);
+  renderCalendar();
+}
+
+// the visitor's career level, shown next to their name on posted games (display only)
+export const myLevel = () => Number(safeLoadProfile()?.level) || 0;
+
+export function setSchedule({ games = [], clients = 0, offset = 0, serverReady = true } = {}) {
+  sched = { games: Array.isArray(games) ? games : [], clients: clients | 0, offset: Number(offset) || 0, ready: serverReady !== false };
+  const key = JSON.stringify([sched.games, sched.clients, sched.ready, Math.floor((pickNow() + sched.offset) / M)]);  // the 10 s poll: rebuild only on a change (keeps pad/keyboard focus)
+  if (key === lastSchedKey) return;
+  lastSchedKey = key;
+  renderCalendar();
 }
 
 export function setOpenGames(rows, serverReady = true) {
@@ -307,8 +436,11 @@ export function renderHome() {
           </div>
 
           <button type="button" class="hm-play-now" id="hm-btn-play-now" tabindex="0">
-            ${t('PLAY NOW')}
+            ${t('PLAY NOW')}<small class="hm-play-sub" id="hm-play-sub"></small>
           </button>
+          ${tutorialFinished()
+            ? `<button type="button" class="hm-btn-sec" id="hm-btn-training" tabindex="0">${t('Training again')}</button>`
+            : `<button type="button" class="hm-train-card" id="hm-btn-training" tabindex="0"><span class="hm-train-ic" aria-hidden="true">🎓</span><span class="hm-train-txt"><b>${t('Training')}</b><small>${t('New here? Learn the shots in a few minutes')}</small></span><span class="hm-train-arr" aria-hidden="true">›</span></button>`}
 
           <div class="hm-sub-actions">
             ${callbacks.online === false ? '' : `<button type="button" class="hm-btn-sec" id="hm-btn-invite" tabindex="0">${t('Invite a friend')}</button>`}
@@ -324,10 +456,12 @@ export function renderHome() {
           <div class="hm-games-header">
             <h2 class="hm-games-title">
               <span class="hm-live-dot" aria-hidden="true"></span>
-              ${t('Open games')}
+              ${t('Match calendar')}
             </h2>
+            <span class="hm-online-count" id="hm-online-count" hidden></span>
           </div>
           <div class="hm-games-list" id="hm-games-list" role="list"></div>
+          <div class="hm-cal" id="hm-cal"></div>
         </section>
       </div>
 
@@ -339,7 +473,6 @@ export function renderHome() {
     <footer class="hm-bottom-bar">
       <div class="hm-actions-row">
         <button type="button" class="hm-btn" id="hm-btn-career" tabindex="0">🏆 ${t('Career')}</button>
-        <button type="button" class="hm-btn" id="hm-btn-training" tabindex="0">🎓 ${t('Training')}</button>
         <button type="button" class="hm-btn" id="hm-btn-settings" tabindex="0">⚙️ ${t('Settings')}</button>
         <button type="button" class="hm-btn" id="hm-btn-controls" tabindex="0">⌨️ ${t('Controls')}</button>
         <button type="button" class="hm-btn fs-btn-sync" id="hm-btn-fullscreen" tabindex="0" title="${t('Fullscreen')}">⛶ ${t('Fullscreen')}</button>
@@ -443,6 +576,7 @@ export function renderHome() {
 
   refreshHomeHints();
   renderOpenGamesList();
+  renderCalendar();
 }
 
 function pollHomeGamepad() {

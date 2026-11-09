@@ -88,3 +88,18 @@ test('roomEndCard: chooses which card to show on room errors', () => {
 });
 
 
+
+test('lobbyView for a scheduled room shows the start countdown, then the grace countdown', () => {
+  const at = 1_000_000_000_000, graceUntil = at + 3 * 60000;
+  const l = lobby({ cfg: { players: 2, sets: 1, venue: 0, scheduled: true, at, graceUntil }, seats: [0, 2], taken: [0] });
+  const before = lobbyView(l, 0, chars, venues, at - 125000);
+  assert.deepEqual(before.countdown, { phase: 'start', ms: 125000 });
+  assert.match(lobbyHtml(before), /Starts in 2:05/);
+  const grace = lobbyView(l, 0, chars, venues, at + 30000);
+  assert.deepEqual(grace.countdown, { phase: 'grace', ms: 150000 });
+  assert.match(lobbyHtml(grace), /Waiting 2:30 for the others, then the AI takes empty seats/);
+  assert.equal(lobbyView(l, 0, chars, venues, graceUntil + 1).countdown.ms, 0, 'never negative');
+  assert.equal(lobbyView(lobby(), 0, chars, venues, at).countdown, null, 'not for normal rooms');
+  assert.equal(lobbyView({ ...l, started: true }, 0, chars, venues, at).countdown, null, 'not once started');
+  assert.ok(!/START MATCH|Send the invite/.test(lobbyHtml(before)), 'nobody presses start in a posted game');
+});

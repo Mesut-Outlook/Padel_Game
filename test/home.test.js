@@ -175,7 +175,7 @@ if (!globalThis.navigator) {
 }
 globalThis.navigator.getGamepads = () => [];
 
-const { initHome, getQuickPick, getOnlineName, setOpenGames } = await import('../src/home.js');
+const { initHome, getQuickPick, getOnlineName, setOpenGames, setSchedule, setCalendarNotice } = await import('../src/home.js');
 
 test('getQuickPick defaults to singles when storage empty or corrupt', () => {
   mockStorage.clear();
@@ -216,12 +216,13 @@ test('setOpenGames: shows offline message when serverReady is false', () => {
   assert.match(listEl.innerHTML, /Online play is not open yet/);
 });
 
-test('setOpenGames: shows empty message when nobody is waiting', () => {
+test('setOpenGames: nobody waiting → no misleading line, PLAY NOW says you warm up until someone joins', () => {
   initHome({});
   setOpenGames([], true);
-  const listEl = homeRoot.querySelector('#hm-games-list');
-  assert.ok(listEl);
-  assert.match(listEl.innerHTML, /Nobody is waiting right now — be the first/);
+  assert.equal(homeRoot.querySelector('#hm-games-list').innerHTML.trim(), '');
+  assert.match(homeRoot.querySelector('#hm-play-sub').innerHTML, /Warm up until someone joins/);
+  setOpenGames([{ code: 'AB12CD', players: 2, free: 1, host: 'Lena', char: 0 }], true);
+  assert.match(homeRoot.querySelector('#hm-play-sub').innerHTML, /Lena is waiting for you · start now/);
 });
 
 test('setOpenGames: renders rows with escaped names, correct type strings, and triggers onJoin', () => {
@@ -320,4 +321,120 @@ test('selector toggling updates quickPick and stores in localStorage', () => {
   homeRoot.querySelector('#hm-pick-singles')?.onclick();
   assert.deepEqual(getQuickPick(), { players: 2, mode: 'face' });
   assert.equal(JSON.parse(mockStorage.getItem('padel.quick.v1')).players, 2);
+});
+
+test('HOME shows the Training card under PLAY NOW; after the tutorial it is a plain Training again button', () => {
+  mockStorage.removeItem('padel.tutorial');
+  initHome({});
+  let html = homeRoot.innerHTML;
+  assert.match(html, /id="hm-btn-play-now"[\s\S]*class="hm-train-card" id="hm-btn-training"/);
+  assert.match(html, /New here\? Learn the shots in a few minutes/);
+  assert.equal(html.split('id="hm-btn-training"').length - 1, 1);  // not in the bottom bar any more
+  const { LESSON_IDS } = { LESSON_IDS: ['move', 'serve', 'slice', 'forehand', 'backhand', 'aim', 'lob', 'chiquita', 'volley', 'smash', 'glass', 'contra', 'ui', 'match'] };
+  mockStorage.setItem('padel.tutorial', JSON.stringify(LESSON_IDS));
+  initHome({});
+  html = homeRoot.innerHTML;
+  assert.match(html, /class="hm-btn-sec" id="hm-btn-training"[^>]*>Training again</);
+  assert.doesNotMatch(html, /hm-train-card/);
+  mockStorage.removeItem('padel.tutorial');
+});
+
+// Match calendar (plan 2026-11-08-scheduled-games, task 6)
+const HM = 3600000, NOW = Date.now();
+const slotAt = (h) => Math.ceil((NOW + h * HM) / 1800000) * 1800000;
+const game = (extra = {}) => ({ id: 'g1', at: slotAt(3), players: 2, mode: 'face', open: false, host: { name: 'Mesut', char: 0, level: 3 }, seats: [], free: 1, mine: null, ...extra });
+
+test('calendar: an empty week shows three quick slots and the first-game invitation, not a list', () => {
+  let posted = null;
+  initHome({ onPost: (p) => { posted = p; } });
+  setSchedule({ games: [], clients: 0, offset: 0, serverReady: true });
+  const cal = homeRoot.querySelector('#hm-cal');
+  assert.match(cal.innerHTML, /Be the first to post a game tonight/);
+  const quick = cal.querySelectorAll('.hm-sc-quick');
+  assert.equal(quick.length, 3);
+  quick[0].onclick();
+  assert.equal(posted.at, Number(quick[0].dataset.code));
+  assert.equal(posted.players, getQuickPick().players);
+});
+
+test('calendar: the player count shows only when someone else is on the site', () => {
+  initHome({});
+  setSchedule({ games: [], clients: 0, offset: 0, serverReady: true });
+  assert.equal(homeRoot.querySelector('#hm-online-count').hidden, true);
+  setSchedule({ games: [], clients: 4, offset: 0, serverReady: true });
+  assert.match(homeRoot.querySelector('#hm-online-count').innerHTML, /5 players on the site now/);
+});
+
+test('calendar: a listed game offers Ask to join (or Join when open) with the host name escaped', () => {
+  let asked = null;
+  initHome({ onAsk: (id) => { asked = id; } });
+  setSchedule({ games: [game({ host: { name: 'Mes<b>ut', char: 0, level: 3 } }), game({ id: 'g2', at: slotAt(4), open: true })], clients: 0, offset: 0, serverReady: true });
+  const cal = homeRoot.querySelector('#hm-cal');
+  assert.ok(cal.innerHTML.includes('Mes&lt;b&gt;ut'));
+  assert.match(cal.innerHTML, /Ask to join/); assert.match(cal.innerHTML, />Join</);
+  cal.querySelector('.hm-sc-ask').onclick();
+  assert.equal(asked, 'g1');
+});
+
+test('calendar: the host row lists requests with accept and decline', () => {
+  const answers = [];
+  initHome({ onAnswer: (id, reqId, ok) => answers.push([id, reqId, ok]) });
+  setSchedule({ games: [game({ mine: 'host', requests: [{ reqId: 'ab12cd34', name: 'Tomás', char: 1, level: 3.4, ago: 60000 }] })], clients: 0, offset: 0, serverReady: true });
+  const cal = homeRoot.querySelector('#hm-cal');
+  assert.match(cal.innerHTML, /Requests/); assert.match(cal.innerHTML, /Tomás/);
+  assert.match(cal.innerHTML, /Unanswered requests are accepted 1 hour before the game\./);
+  cal.querySelector('.hm-sc-yes').onclick(); cal.querySelector('.hm-sc-no').onclick();
+  assert.deepEqual(answers, [['g1', 'ab12cd34', true], ['g1', 'ab12cd34', false]]);
+});
+
+test('calendar: a booked seat offers Add to calendar and Cancel; Enter appears from 10 minutes before', () => {
+  let cancelled = null, entered = null;
+  initHome({ onCancel: (id) => { cancelled = id; }, onEnter: (id) => { entered = id; } });
+  setSchedule({ games: [game({ mine: 'seat' })], clients: 0, offset: 0, serverReady: true });
+  let cal = homeRoot.querySelector('#hm-cal');
+  assert.match(cal.innerHTML, /Your seat is ready/); assert.match(cal.innerHTML, /Add to calendar/);
+  assert.equal(cal.querySelector('.hm-sc-enter'), null);
+  cal.querySelector('.hm-sc-cancel').onclick();
+  assert.equal(cancelled, 'g1');
+  setSchedule({ games: [game({ mine: 'seat', at: Date.now() + 5 * 60000 })], clients: 0, offset: 0, serverReady: true });
+  cal = homeRoot.querySelector('#hm-cal');
+  cal.querySelector('.hm-sc-enter').onclick();
+  assert.equal(entered, 'g1');
+});
+
+test('calendar: hidden entirely without a game server', () => {
+  initHome({});
+  setSchedule({ games: [], clients: 0, offset: 0, serverReady: false });
+  assert.equal(homeRoot.querySelector('#hm-cal').innerHTML.trim(), '');
+});
+
+test('calendar: a server answer shows as a notice line at the top', () => {
+  initHome({});
+  setSchedule({ games: [], clients: 0, offset: 0, serverReady: true });
+  setCalendarNotice('That time slot is full. Pick another time.');
+  assert.match(homeRoot.querySelector('#hm-cal').innerHTML, /class="hm-sc-notice"[^>]*>That time slot is full\. Pick another time\.</);
+  setCalendarNotice('');
+  assert.doesNotMatch(homeRoot.querySelector('#hm-cal').innerHTML, /hm-sc-notice/);
+});
+
+test('fix: Team up doubles shows two places (the humans sit together), and Ask goes once the game has started', () => {
+  initHome({});
+  setSchedule({ games: [game({ players: 4, mode: 'team', free: 1 }), game({ id: 'g2', at: Date.now() - 60000, free: 1 })], clients: 0, offset: 0, serverReady: true });
+  const cal = homeRoot.querySelector('#hm-cal');
+  const rows = cal.innerHTML.split('hm-sc-game').slice(1);
+  const team = rows.find(r => r.includes('Team up'));
+  assert.equal((team.match(/hm-sc-dot[" ]/g) || []).length, 2);
+  assert.equal(cal.querySelectorAll('.hm-sc-ask').length, 1, 'only the game that has not started');
+});
+
+test('fix: the same calendar data does not rebuild the calendar (focus stays where it is)', () => {
+  initHome({});
+  const data = { games: [game()], clients: 0, offset: 0, serverReady: true };
+  setSchedule(data);
+  const cal = homeRoot.querySelector('#hm-cal');
+  cal.innerHTML = 'KEEP';
+  setSchedule({ ...data, games: [game()] });
+  assert.equal(cal.innerHTML, 'KEEP');
+  setSchedule({ ...data, games: [game({ free: 0 })] });
+  assert.notEqual(cal.innerHTML, 'KEEP');
 });

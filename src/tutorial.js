@@ -6,6 +6,7 @@ import { newMatch, servePosition } from './rules.js';
 import { padText } from './padstyle.js';
 import { isTouch } from './touch.js';
 import { t, N_ } from './i18n.js';
+import { TUTORIAL_STORE } from './tutorialdone.js';
 
 // key names per device; the instructions follow whichever device was used last
 const KEYS = {
@@ -74,7 +75,7 @@ const LESSONS = [
     text: () => t('Win 3 points against the Rookie AI. Put everything you learned into action!') },
 ];
 
-const STORE = 'padel.tutorial';
+const STORE = TUTORIAL_STORE;
 const loadDone = () => { try { return new Set(JSON.parse(localStorage.getItem(STORE) || '[]')); } catch { return new Set(); } };
 const saveDone = (s) => { try { localStorage.setItem(STORE, JSON.stringify([...s])); } catch { /* private mode: progress just isn't kept */ } };
 

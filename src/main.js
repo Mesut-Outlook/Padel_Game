@@ -11,7 +11,8 @@ import { createCameraRig } from './camera.js';
 import { createReplay } from './replay.js';
 import { aiInput } from './ai.js';
 import { readLocal, readGamepad, consumePressed, clearPressed, localControl } from './input.js';
-import { connect, listRooms } from './net.js';
+import { connect, listRooms, scheduleCall } from './net.js';
+import { scheduleToken, clockOffset } from './schedule.js';
 import { debugFrame } from './debug.js';
 import { serverUrl, NO_SERVER, allowServer, NOT_CONNECTED, trustedServer } from './serverurl.js';
 import { track, trackOnce } from './track.js';
@@ -19,7 +20,7 @@ import { predict } from './physics.js';
 import { createFx } from './fx.js';
 import { unlockAudio, isAudioSuspended, toggleMute, setMusicDuck, sfxHit, sfxContact, sfxCrowd, sfxCrowdReact, sfxReward, sfxWhoosh, sfxSmashSlowMo, sfxSmashImpact, callout } from './audio.js';
 import { initMenu, setWizardWhere, setWizardLobby, disposeMenu } from './menu.js';
-import { lobbyView, lobbyHtml, aloneOnline, roomEndCard } from './lobbyview.js';
+import { lobbyView, lobbyHtml, aloneOnline, roomEndCard, countdownText } from './lobbyview.js';
 import { initCareer, openCareer } from './careerui.js';
 import { createTutorial } from './tutorial.js';
 import { padText, isPlayStation } from './padstyle.js';
@@ -27,7 +28,7 @@ import { mountKeyHelp } from './helpkeys.js';
 import { parseRoute } from './route.js';
 import { loadSettings } from './settings.js';
 import { initSplash } from './splash.js';
-import { initHome, showHome, hideHome, setOpenGames, getOnlineName, getQuickPick } from './home.js';
+import { initHome, showHome, hideHome, setOpenGames, getOnlineName, getQuickPick, setSchedule, setCalendarNotice, myLevel } from './home.js';
 import { inviteUrl, shareInvite, INVITE_TEXT } from './invite.js';
 import { initSettingsModal, openSettingsModal } from './settingsmodal.js';
 import { bindFullscreenKey, toggleFullscreen, isFullscreen } from './fullscreen.js';
@@ -156,6 +157,12 @@ initHome({
     sendInviteLink(h);
   },
   onJoin: (code) => { track('online-click'); playNow({ code, name: getOnlineName() }); },
+  onPost: ({ at, players, mode, open }) => { track('schedule-post'); scheduleAct({ type: 'schedule:post', at, players, mode, open }); },
+  onAsk: (id) => { track('schedule-ask'); scheduleAct({ type: 'schedule:ask', id }); },
+  onAnswer: (id, reqId, accept) => scheduleAct({ type: 'schedule:answer', id, reqId, accept }),
+  onCancel: (id) => scheduleAct({ type: 'schedule:cancel', id }),
+  onDelete: (id) => scheduleAct({ type: 'schedule:delete', id }),
+  onEnter: (id) => { track('schedule-enter'); playNow({ enter: id, name: getOnlineName() }); },  // a posted game's room: warm up until it starts
   onPlayAI: () => { hideHome(); $('start').dataset.tutorial = ''; $('start').click(); },  // the saved Friendly picks, no wizard
   onCustomize: () => {
     location.hash = '#friendly';
@@ -185,8 +192,24 @@ async function refreshOpenGames() {
   const home = $('home');
   if (!home || home.hidden || document.hidden || net || pend) return;
   const url = serverUrl(location);
-  if (!url || !trustedServer(url, location)) setOpenGames([], false);
-  else { try { setOpenGames(await listRooms(url), true); } catch { setOpenGames([], false); } }
+  if (!url || !trustedServer(url, location)) { setOpenGames([], false); setSchedule({ serverReady: false }); return; }
+  try { setOpenGames(await listRooms(url), true); } catch { setOpenGames([], false); }
+  await refreshSchedule(url);
+}
+// the Match calendar: posted games, the player count and the server clock (one short socket per poll, like the open games list)
+let schedOffset = 0;  // server clock − this device's clock, from the last calendar answer (posted games' countdown)
+const showSchedule = (r) => { schedOffset = clockOffset(r.now, Date.now()); setSchedule({ games: r.games, clients: r.clients, offset: schedOffset, serverReady: true }); };
+async function refreshSchedule(url) {
+  try { const r = await scheduleCall(url, { type: 'schedule:list', token: scheduleToken(undefined, { create: false }) }); if (r.type === 'schedule') showSchedule(r); } catch { setSchedule({ serverReady: false }); }
+}
+async function scheduleAct(msg) {  // post / ask / answer / cancel / delete: the answer is either the new list or a fixed sentence (translated)
+  const url = serverUrl(location);
+  if (!url || !trustedServer(url, location)) return;
+  try {
+    const who = msg.type === 'schedule:post' || msg.type === 'schedule:ask' ? { name: getOnlineName(), char: +$('char').value || 0, level: myLevel() } : {};  // only a posting or a request shows who you are
+    const r = await scheduleCall(url, { ...msg, token: scheduleToken(), ...who });
+    if (r.type === 'error') setCalendarNotice(t(r.msg)); else { setCalendarNotice(''); showSchedule(r); }
+  } catch (e) { setCalendarNotice(t(e.message)); }
 }
 // ponytail: fixed 10 s; the home Pi answers every open HOME, lengthen it if that shows in its status line
 const pollOpenGames = () => { refreshOpenGames(); setTimeout(pollOpenGames, 10000); };
@@ -332,7 +355,7 @@ async function setupScene(venue, ids, roster, rk) {
 // Online entry for the menu button and for Career. url defaults to serverUrl() (?server= / static build: none / :8080 / same host). look = remote-visible appearance (its stats are ignored).
 // status(text, lobby?) mirrors the #lobby line for callers that show their own panel; returns the net handle (or null if it did not connect).
 // quick: the server finds or opens an open room of this kind (mode: Team up 'team' / Face off 'face'); warmup(): an offline match vs AI that runs until the room starts
-export function startOnline({ url, code, create = false, quick = false, mode = 'face', warmup = null, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, bag, onEnd: end, status } = {}) {
+export function startOnline({ url, code, enter = null, create = false, quick = false, mode = 'face', warmup = null, players = 4, venue = 0, ai = 'club', match = {}, char = 0, stats, racket, public: isPublic, name, look, shoes, ball, bag, onEnd: end, status } = {}) {
   unlockAudio();
   updateUnmuteBadge();
   keepAwake(true);
@@ -346,11 +369,11 @@ export function startOnline({ url, code, create = false, quick = false, mode = '
   if (!url) { trackOnce('online-noserver'); say(t(NO_SERVER), null, true); return null; }
   if (!allowServer(url)) { say(t(NOT_CONNECTED), null, true); return null; }
   code = String(code || '').trim().toUpperCase();
-  if (!code && !create && !quick) { say(t('Enter a room code first.'), null, true); return null; }  // create: the server picks the code
+  if (!code && !create && !quick && !enter) { say(t('Enter a room code first.'), null, true); return null; }  // create: the server picks the code
   onEnd = end || null; pointsWon = [0, 0]; bagLeft = bag ? { ...bag } : null; tally = end ? newTally() : null;
   let me, joinedSeen = false;
   me = connect({
-    url, code, create, quick, char, stats, racket, public: isPublic, name, look, shoes, ball, bag,
+    url, code, enter, create, quick, char, stats, racket, public: isPublic, name, look, shoes, ball, bag,
     cfg: { players, mode, ...match, ai, venue, outdoor: venues[venue]?.type === 'outdoor' },
     onError: (e) => {  // server texts are fixed English sentences (marked in net.js), so they translate
       if (me && net !== me && pend !== me) return;  // a connection this page already replaced
@@ -390,7 +413,7 @@ export function startOnline({ url, code, create = false, quick = false, mode = '
         for (const id of awaySeats) if (!(l.away || []).includes(id) && l.taken?.includes(id)) flash(t('{name} is back.', { name: nameOf(id) }), 2.5);
       }
       awaySeats = l.away || [];
-      const view = lobbyView(l, me.seat, characters, venues);
+      const view = lobbyView(l, me.seat, characters, venues, Date.now() + schedOffset);
       setWizardLobby(view);
       say(lobbyHtml(view), l);
       if (l.started && !avatars.length) {
@@ -414,6 +437,15 @@ export function startOnline({ url, code, create = false, quick = false, mode = '
   const start = me.start;
   me.start = () => (me.lobby?.taken?.length || 0) < 2 ? say(t('Nobody has joined yet: send your friend the invite link first.'), null, true) : start();
   if (warmup) { pend = me; warmup(); } else net = me;
+  if (enter) {  // a posted game: the warm-up shows how long until it starts (the lobby text sits behind the match)
+    const tickCountdown = () => {
+      if (pend !== me) return;
+      const v = me.lobby && lobbyView(me.lobby, me.seat, characters, venues, Date.now() + schedOffset);
+      if (v?.countdown) flash(countdownText(v.countdown), 1.2);
+      setTimeout(tickCountdown, 1000);
+    };
+    tickCountdown();
+  }
   return me;
 }
 
@@ -433,7 +465,7 @@ function reopen(last = lastPlayNow) {
 }
 
 // PLAY NOW / Invite a friend / a Join from the open list: the player's saved picks, no menus. While the room waits, a warm-up match vs AI runs here.
-export function playNow({ players = 2, mode = 'face', invite = false, code = '', name } = {}) {
+export function playNow({ players = 2, mode = 'face', invite = false, code = '', enter = '', name } = {}) {
   if (net || pend) return null;
   lastPlayNow = { players, mode, invite, code, name };
   const me = +$('char').value, myRk = rackets[+$('racket').value], venue = +$('venue').value || 0;
@@ -445,7 +477,7 @@ export function playNow({ players = 2, mode = 'face', invite = false, code = '',
   };
   const warmup = () => { if (!world || world.match?.winner != null) vsAI(2); };
   const h = startOnline({
-    quick: !invite && !code, create: invite, public: false, code, mode, players, venue, warmup, match: { auto: true },  // invite rooms start themselves too: the host is busy warming up
+    quick: !invite && !code && !enter, create: invite, enter: enter ? { id: enter, token: scheduleToken() } : null, public: false, code, mode, players, venue, warmup, match: { auto: true },  // invite rooms start themselves too: the host is busy warming up
     char: me, stats: characters[me].stats, racket: myRk.stats, name,
     look: { racket: myRk.id, racketColor: myRk.color, racketShape: myRk.shape },
   });

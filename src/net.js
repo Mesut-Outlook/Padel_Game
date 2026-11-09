@@ -5,9 +5,12 @@ import { N_ } from './i18n.js';
 const RETRY = [1000, 2000, 4000, 8000, 15000];
 // what the server (server/server.js fail()) and this file report through onError: fixed sentences, so the UI can translate them
 export const NET_TEXTS = [N_('Room not found'), N_('Room is full or match already started'), N_('Already in a room'), N_('The server is full. Try again later.'),
-  N_('Could not get back into the match'), N_('Connection closed'), N_('The match was closed.'), N_('Could not connect to the game server.'), N_('Server did not answer')];
+  N_('Could not get back into the match'), N_('Connection closed'), N_('The match was closed.'), N_('Could not connect to the game server.'), N_('Server did not answer'),
+  // posted games (server/schedule.js)
+  N_('That time is not available.'), N_('That time slot is full. Pick another time.'), N_('You already have a game posted.'), N_('You already have two games booked.'),
+  N_('This game has enough requests.'), N_('This game is full.'), N_('Game not found.'), N_('The schedule is full. Try again later.')];
 
-export function connect({ url, code, cfg, char, stats, racket, onLobby, onError, onStatus, onLeft, ...extra }) {  // extra: public, quick, name, look, shoes, ball, bag
+export function connect({ url, code, cfg, enter, char, stats, racket, onLobby, onError, onStatus, onLeft, ...extra }) {  // extra: public, quick, name, look, shoes, ball, bag; enter: { id, token } = a posted game's room
   const net = { seat: null, lobby: null, snaps: [], events: [], score: null, winner: null, ws: null, token: null };
   let tries = 0, lastSent = '';
   function open(join) {
@@ -43,7 +46,7 @@ export function connect({ url, code, cfg, char, stats, racket, onLobby, onError,
       }
     };
   }
-  open({ type: 'join', code, cfg, char, stats, racket, ...extra });
+  open({ ...(enter ? { type: 'schedule:enter', id: enter.id, token: enter.token } : { type: 'join', code, cfg }), char, stats, racket, ...extra });
   // debug panel only: RTT + the server's tick time
   if (debugOn()) setInterval(() => net.ws?.readyState === 1 && net.ws.send(JSON.stringify({ type: 'ping', t: performance.now() })), 2000);
   net.send = (inp) => {
@@ -85,6 +88,33 @@ export function listRooms(url) {
         code: String(r?.code ?? ''), host: String(r?.host ?? ''), venue: Number(r?.venue) || 0, players: Number(r?.players) || 0, free: Number(r?.free) || 0,
         mode: r?.mode === 'team' ? 'team' : 'face', char: Math.max(0, Math.floor(Number(r?.char) || 0)),
       })));
+    };
+  });
+}
+
+// one schedule:* request on a short socket (like listRooms); the reply's fields are re-made as plain strings and numbers
+const person = (p) => ({ name: String(p?.name ?? ''), char: Math.max(0, Math.floor(Number(p?.char) || 0)), level: Number(p?.level) || 0 });
+const MINE = ['host', 'seat', 'pending', 'declined', 'cancelled'];
+export function scheduleCall(url, msg) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(url);
+    const done = (fn, v) => { clearTimeout(timer); ws.onclose = ws.onerror = null; ws.close(); fn(v); };
+    const timer = setTimeout(() => done(reject, new Error('Server did not answer')), 4000);
+    ws.onopen = () => ws.send(JSON.stringify(msg));
+    ws.onerror = () => done(reject, new Error('Could not connect to the game server.'));
+    ws.onmessage = (ev) => {
+      let m; try { m = JSON.parse(ev.data); } catch { return; }
+      if (m?.type === 'error') return done(resolve, { type: 'error', msg: String(m.msg ?? '') });
+      if (m?.type !== 'schedule' && m?.type !== 'schedule:ok') return;
+      done(resolve, {
+        type: m.type, now: Number(m.now) || Date.now(), clients: Math.max(0, Math.floor(Number(m.clients) || 0)),
+        games: (Array.isArray(m.games) ? m.games : []).map(g => ({
+          id: String(g?.id ?? ''), at: Number(g?.at) || 0, players: g?.players === 4 ? 4 : 2, mode: g?.mode === 'team' ? 'team' : 'face', open: g?.open === true,
+          host: person(g?.host), seats: (Array.isArray(g?.seats) ? g.seats : []).map(person), free: Math.max(0, Math.floor(Number(g?.free) || 0)),
+          mine: MINE.includes(g?.mine) ? g.mine : null,
+          ...(Array.isArray(g?.requests) && { requests: g.requests.map(r => ({ reqId: String(r?.reqId ?? ''), ...person(r), ago: Number(r?.ago) || 0 })) }),
+        })),
+      });
     };
   });
 }
