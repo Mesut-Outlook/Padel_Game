@@ -21,7 +21,7 @@
 <body>
 <div class="wrap">
   <h1>PADEL <b>LEGENDS</b> · Privacy</h1>
-  <p class="sub">Last updated: 8 November 2026</p>
+  <p class="sub">Last updated: 10 November 2026</p>
 
   <p class="box"><b>In short:</b> Padel Legends does not collect personal data. There are no accounts, no cookies, no ads and no cross-site tracking.</p>
 
@@ -36,6 +36,7 @@
   <p>This site is served by GitHub Pages. Like every web server, it receives your IP address in order to deliver the pages, and GitHub may keep it in its server logs for security. See the <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">GitHub Privacy Statement</a>. Fonts and all game files come from this site, not from other services.</p>
 
   <h2>Online play</h2>
+  <p><strong>Online play is switched off for now (since 10 November 2026).</strong> Our game server is not running, the game does not contact it, and Play now starts a match against the AI. The rest of this section describes what happens when online play is open, or when you use a server link.</p>
   <p>Online play (Play now, Invite a friend, open games) uses our game server. While the start page is open, the game asks that server for the list of open games every 10 seconds, so the server sees your IP address even before you play. A server link (an address with <code>?server=</code>) connects the game to a server that someone else runs instead, and the game asks you before it connects. A game server receives:</p>
   <ul>
     <li>your IP address (every server you connect to sees it),</li>
@@ -43,7 +44,6 @@
     <li>your equipment: racket, shoes, ball and the energy food in your bag,</li>
     <li>the room code, the match settings you choose and your moves during the match.</li>
   </ul>
-  <p>Our game server runs on a small computer of our own and is reached through Tailscale Funnel. Tailscale Inc. (Canada/USA) relays the connection, so it receives your IP address; the encryption ends on our own computer, so Tailscale cannot read the game traffic. See its <a href="https://tailscale.com/privacy-policy" rel="noopener">Privacy Policy</a>.</p>
   <p>The Padel Legends game server (the one in this project, which runs our online play and which anyone can run) gives each player a random rejoin code that is kept only in the open page, never saved. If your connection drops during a match, the game sends it back so you get your own seat again. That server keeps your IP address, name and look in memory only: while you are connected, and for a dropped player for up to about 90 seconds so they can come back. So that one visitor cannot fill the server with rooms, a room you create remembers a scrambled code made from your IP address (a keyed hash, not the address itself) until the room closes; the key is lost whenever the server restarts. When you start or join an open game (Play now, or a public room), the nickname you type and the player you picked are shown in the server's list of open games to anyone who opens the site, while you hold that room and until the match starts; games made with "Invite a friend" are never listed. When you post a game in the Match calendar, or ask to join or join one, our game server keeps that game with your nickname, the player you picked and your level until 15 minutes after its start time; it also saves this on its own disk so a restart does not lose next week's games. The game creates a random code in your browser (stored only there) so the server can recognise your posting or your seat when you come back; the server keeps only a scrambled form of it (a hash), never the code itself. The code is made only when you first post or ask to join, not when you just look at the calendar. While the server runs, each posting or request also remembers the scrambled IP code described above (only in memory, never on disk), so that one visitor cannot fill the calendar. If a host declines a request, the hash of that request's code stays with the game until it ends, so the same request does not come back. "Add to calendar" makes a calendar file on your own device; nothing is sent anywhere. The start page also shows how many players are on the site right now, a plain number from the server. The WhatsApp button on the invite card opens WhatsApp (Meta) with the invite link already typed in; nothing goes to WhatsApp unless you tap that button. Pick a nickname that is not your real name. Its logs contain no IP addresses, names or room codes.</p>
   <p>Padel Legends cannot see or control what such a server keeps, so only join servers of people you trust. The server address is taken out of the page address before the visit counter loads, so it is never counted.</p>
 

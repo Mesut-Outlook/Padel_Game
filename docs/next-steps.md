@@ -22,7 +22,13 @@ Plan 3 (canlı lobi) ve plan 4 (açık tema) yayında:
 
 ~~**Sıradaki iş plan 5 (Pi 7/24).**~~ Yapıldı (aşağıda).
 
-## Güncel (2026-11-08 akşam): online oyun 7/24 açık
+## Güncel (2026-11-10): online sunucu kapalı
+- Kullanıcı kararı: oyun sunucusu Pi'de durduruldu ve orada yeniden açılmayacak. Şu an hiçbir yerde online sunucu yok.
+- İstemci: `DEFAULT_SERVER = ''` (`src/serverurl.js`) → HOME'da Invite a friend ve takvim görünmez, PLAY NOW yapay zekâya karşı maç açar, sunucuya istek gitmez. `privacy.html` güncellendi.
+- Online mod yeniden istenirse başka bir yerde barındırılmalı (karar verilmedi); o zaman adres `DEFAULT_SERVER`'a yazılır, `privacy.html` yeniden düzenlenir, önce güvenlik denetimi.
+- Aşağıdaki "7/24" bölümü ve Pi ile ilgili her şey geçmiş kayıttır.
+
+## Geçmiş (2026-11-08 akşam): online oyun 7/24 açıktı
 - Pi 7/24 açık, Tailscale Funnel üzerinden (`DEFAULT_SERVER`; DNS ve e-posta değişmedi). Ayrıntılar: `docs/online-server.md` "7/24 açıldı".
 - Davet kartı: ısınma maçının üstünde link + WhatsApp / Linki kopyala / Paylaş.
 - Güvenlik denetimi yapıldı, engelleyici yok; oda kapasitesi düzeltildi.

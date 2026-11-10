@@ -1,5 +1,7 @@
 # Online sunucu planı (2026-10-20'de başladı)
 
+> **Durum (2026-11-10): sunucu şu an kapalı.** Kullanıcı kararıyla Pi'deki oyun sunucusu durduruldu ve orada yeniden açılmayacak; istemcide `DEFAULT_SERVER` boş. Bu belgedeki Pi ve 7/24 bölümleri geçmiş kayıttır. Online mod yeniden istenirse başka bir yerde barındırılır (karar yok).
+
 Kullanıcı acemi, adım adım ilerliyoruz: bir adım bitmeden sonrakine geçme, her adımın sonunda kullanıcıya ne öğrendiğimizi anlat.
 
 ## Mevcut durum
