@@ -494,7 +494,7 @@ export default {
   "Once you arm a swing, your feet plant so aiming left/right won't pull you away from the ball.": "Bir vuruşa hazırlandığında ayakların sabitlenir; sola/sağa nişan almak seni toptan uzaklaştırmaz.",
   "Online": "Çevrimiçi",
   "Online match continues in the background.": "Çevrimiçi maç arka planda devam ediyor.",
-  "Online mode requires a game server, which is not included in this static web build. You can play against the AI.": "Çevrimiçi mod bir oyun sunucusu gerektirir; bu statik web sürümünde yok. Yapay zekâya karşı oynayabilirsin.",
+  "Online play is closed for now. You can play against the AI.": "Çevrimiçi oyun şimdilik kapalı. Yapay zekâya karşı oynayabilirsin.",
   "Online play is not open yet.": "Çevrim içi oyun henüz açılmadı.",
   "Online with a friend": "Bir arkadaşınla çevrimiçi",
   "Online — play with friends": "Çevrimiçi — arkadaşlarla oyna",

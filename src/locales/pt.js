@@ -494,7 +494,7 @@ export default {
   "Once you arm a swing, your feet plant so aiming left/right won't pull you away from the ball.": "Quando armas o golpe, os pés ficam fixos, por isso apontar à esquerda/direita não te tira da bola.",
   "Online": "Online",
   "Online match continues in the background.": "O jogo online continua em segundo plano.",
-  "Online mode requires a game server, which is not included in this static web build. You can play against the AI.": "O modo online precisa de um servidor de jogo, que não está incluído nesta versão web estática. Podes jogar contra a IA.",
+  "Online play is closed for now. You can play against the AI.": "O jogo online está fechado por agora. Podes jogar contra a IA.",
   "Online play is not open yet.": "O jogo online ainda não está aberto.",
   "Online with a friend": "Online com um amigo",
   "Online — play with friends": "Online — joga com amigos",

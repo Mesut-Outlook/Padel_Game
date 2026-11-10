@@ -6,7 +6,7 @@ import { N_, t } from './i18n.js';
 
 export const DEFAULT_SERVER = '';  // no online server since 2026-11-10 (it is switched off): put a wss:// address here when one runs again
 export const STATIC_BUILD = import.meta.env?.VITE_STATIC === '1';
-export const NO_SERVER = N_('Online mode requires a game server, which is not included in this static web build. You can play against the AI.');
+export const NO_SERVER = N_('Online play is closed for now. You can play against the AI.');
 
 export function serverUrl(loc, staticBuild = STATIC_BUILD, fallback = DEFAULT_SERVER, given = globalThis.__padelServer) {
   const q = new URLSearchParams(loc.search).get('server') || given;

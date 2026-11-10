@@ -494,7 +494,7 @@ export default {
   "Once you arm a swing, your feet plant so aiming left/right won't pull you away from the ball.": "Zodra je een slag voorbereidt, blijven je voeten staan, zodat links/rechts richten je niet van de bal wegtrekt.",
   "Online": "Online",
   "Online match continues in the background.": "Online match gaat op de achtergrond door.",
-  "Online mode requires a game server, which is not included in this static web build. You can play against the AI.": "Online modus vereist een gameserver, die niet in deze statische webversie zit. Je kunt tegen de AI spelen.",
+  "Online play is closed for now. You can play against the AI.": "Online spelen is voorlopig gesloten. Je kunt tegen de AI spelen.",
   "Online play is not open yet.": "Online spelen is nog niet geopend.",
   "Online with a friend": "Online met een vriend",
   "Online — play with friends": "Online — speel met vrienden",
