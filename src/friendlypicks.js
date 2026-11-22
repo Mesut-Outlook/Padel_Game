@@ -111,3 +111,6 @@ export function savePicks(picks, storage) {
     // silently ignore errors (quota exceeded, private browsing, blocked)
   }
 }
+
+// one pick changed outside the wizard (HOME): the other saved picks stay
+export const patchPicks = (patch, storage, limits) => savePicks({ ...loadPicks(storage, limits), ...patch }, storage);

@@ -51,3 +51,11 @@ test('a refused ?server= is forgotten for the tab', () => {
   assert.equal(globalThis.__padelServer, undefined);
   delete globalThis.confirm; delete globalThis.sessionStorage;
 });
+
+test('playRoute: no server and nothing to join = straight to the AI, never the online path', async () => {
+  const { playRoute } = await import('../src/serverurl.js');
+  assert.equal(playRoute({ url: '' }), 'ai');
+  assert.equal(playRoute({ url: null }), 'ai');
+  assert.equal(playRoute({ url: 'wss://x.example' }), 'online');
+  for (const k of ['code', 'enter', 'invite']) assert.equal(playRoute({ url: null, [k]: 'X' }), 'online', k);
+});

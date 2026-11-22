@@ -70,3 +70,17 @@ test('a stance change makes a new portrait key', () => {
   assert.notEqual(portraitKey(c), portraitKey({ ...c, stance: { ...c.stance, yaw: 0 } }));
 });
 
+test('each active player has an own racket colour (neon HOME), archived ones none', () => {
+  const want = { p27: '#00E5FF', p31: '#7426FF', p25: '#FF6A00', p35: '#FFFFFF', p26: '#FFE600', p37: '#FF1F8F', p36: '#FF2020', p28: '#35F22C', p34: '#1638FF' };
+  assert.deepEqual(Object.fromEntries(chars.filter(c => c.racketColor).map(c => [c.id, c.racketColor])), want);
+  assert.equal(new Set(Object.values(want)).size, 9);
+});
+
+test('withOwnColour changes only the colour, on a copy', async () => {
+  const { withOwnColour } = await import('../src/roster.js');
+  const rk = { id: 'r03', color: '#E74C3C', shape: 'diamond', stats: { power: 8 } };
+  assert.deepEqual(withOwnColour(rk, { racketColor: '#FFE600' }), { ...rk, color: '#FFE600' });
+  assert.equal(rk.color, '#E74C3C');
+  assert.equal(withOwnColour(rk, {}), rk);
+});
+

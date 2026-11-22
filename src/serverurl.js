@@ -48,4 +48,6 @@ function forgetServer() {
   try { globalThis.sessionStorage?.removeItem('padel.server'); } catch { /* storage blocked */ }
   try { delete globalThis.__padelServer; } catch { /* not deletable */ }
 }
+// PLAY NOW without a server is an AI match: it must not go through the online path (and be counted as online interest)
+export const playRoute = ({ url, code, enter, invite }) => (url || code || enter || invite ? 'online' : 'ai');
 export const NOT_CONNECTED = N_('Not connected: you did not allow that game server.');

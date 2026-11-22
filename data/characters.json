@@ -513,6 +513,7 @@
   {
     "id": "p25",
     "name": "Matteo",
+    "racketColor": "#FF6A00",
     "gender": "m",
     "country": "Italia",
     "countryCode": "IT",
@@ -554,6 +555,7 @@
   {
     "id": "p26",
     "name": "Mesut",
+    "racketColor": "#FFE600",
     "gender": "m",
     "country": "Türkiye",
     "countryCode": "TR",
@@ -967,6 +969,7 @@
   {
     "id": "p27",
     "name": "Lucía",
+    "racketColor": "#00E5FF",
     "gender": "f",
     "country": "España",
     "countryCode": "ES",
@@ -1009,6 +1012,7 @@
   {
     "id": "p28",
     "name": "Camille",
+    "racketColor": "#35F22C",
     "gender": "f",
     "country": "France",
     "countryCode": "FR",
@@ -1129,6 +1133,7 @@
   {
     "id": "p31",
     "name": "Daan",
+    "racketColor": "#7426FF",
     "gender": "m",
     "country": "Nederland",
     "countryCode": "NL",
@@ -1211,6 +1216,7 @@
   {
     "id": "p34",
     "name": "Tomás",
+    "racketColor": "#1638FF",
     "gender": "m",
     "country": "Argentina",
     "countryCode": "AR",
@@ -1253,6 +1259,7 @@
   {
     "id": "p35",
     "name": "Lena",
+    "racketColor": "#FFFFFF",
     "gender": "f",
     "country": "Deutschland",
     "countryCode": "DE",
@@ -1296,6 +1303,7 @@
   {
     "id": "p36",
     "name": "Diogo",
+    "racketColor": "#FF2020",
     "gender": "m",
     "country": "Portugal",
     "countryCode": "PT",
@@ -1338,6 +1346,7 @@
   {
     "id": "p37",
     "name": "Elin",
+    "racketColor": "#FF1F8F",
     "gender": "f",
     "country": "Sverige",
     "countryCode": "SE",

@@ -24,3 +24,6 @@ export function aiSeatChar(id, list) {
   const act = activeIndices(list);
   return act[(id * 3 + 1) % act.length] ?? 0;
 }
+
+// Play now: the player's own racket colour (HOME draws the same) on a copy; the model, shape and stats stay
+export const withOwnColour = (racket, ch) => (ch?.racketColor ? { ...racket, color: ch.racketColor } : racket);

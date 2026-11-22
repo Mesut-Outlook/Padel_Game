@@ -108,3 +108,11 @@ test('friendlypicks: null or missing storage returns empty object safely', () =>
   assert.deepEqual(loadPicks(undefined), {});
   assert.doesNotThrow(() => savePicks({ char: 1 }, null));
 });
+
+test('patchPicks changes one pick and keeps the others; blocked storage is fine', async () => {
+  const { patchPicks } = await import('../src/friendlypicks.js');
+  const st = createMockStorage({ [STORAGE_KEY]: JSON.stringify({ char: 15, ai: 'pro' }) });
+  patchPicks({ char: 31 }, st, { charCount: 37 });
+  assert.deepEqual(loadPicks(st), { char: 31, ai: 'pro' });
+  assert.doesNotThrow(() => patchPicks({ char: 31 }, createFailingStorage()));
+});
