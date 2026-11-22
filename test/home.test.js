@@ -55,6 +55,7 @@ class MockElement {
   get textContent() { return this._text || this._extractText(this._html); }
   set textContent(val) { this._text = String(val); this._html = String(val); }
 
+  addEventListener(k, fn) { (this.handlers ||= {})[k] = fn; }
   setAttribute(k, v) { this.attributes.set(k, String(v)); }
   getAttribute(k) { return this.attributes.get(k) ?? null; }
 
@@ -260,10 +261,9 @@ test('setOpenGames: renders rows with escaped names, correct type strings, and t
   assert.equal(joinedCode, 'DEF789');
 });
 
-test('initHome action callbacks: onPlayNow, onInvite, onPlayAI, onCustomize, onCareer, onTraining', () => {
+test('initHome action callbacks: onPlayNow, onInvite, onCustomize, onCareer, onTraining', () => {
   let playNowPick = null;
   let invitePick = null;
-  let playAiCalled = false;
   let customizeCalled = false;
   let careerCalled = false;
   let trainingCalled = false;
@@ -273,7 +273,6 @@ test('initHome action callbacks: onPlayNow, onInvite, onPlayAI, onCustomize, onC
   initHome({
     onPlayNow: (pick) => { playNowPick = pick; },
     onInvite: (pick) => { invitePick = pick; },
-    onPlayAI: () => { playAiCalled = true; },
     onCustomize: () => { customizeCalled = true; },
     onCareer: () => { careerCalled = true; },
     onTraining: () => { trainingCalled = true; },
@@ -286,10 +285,6 @@ test('initHome action callbacks: onPlayNow, onInvite, onPlayAI, onCustomize, onC
   // Click Invite
   homeRoot.querySelector('#hm-btn-invite')?.onclick();
   assert.deepEqual(invitePick, { players: 4, mode: 'team' });
-
-  // Click Play vs AI
-  homeRoot.querySelector('#hm-btn-play-ai')?.onclick();
-  assert.equal(playAiCalled, true);
 
   // Click Customize
   homeRoot.querySelector('#hm-link-customize')?.onclick();
@@ -323,20 +318,46 @@ test('selector toggling updates quickPick and stores in localStorage', () => {
   assert.equal(JSON.parse(mockStorage.getItem('padel.quick.v1')).players, 2);
 });
 
-test('HOME shows the Training card under PLAY NOW; after the tutorial it is a plain Training again button', () => {
+test('HOME has one Training button, marked until the tutorial is done', () => {
   mockStorage.removeItem('padel.tutorial');
   initHome({});
   let html = homeRoot.innerHTML;
-  assert.match(html, /id="hm-btn-play-now"[\s\S]*class="hm-train-card" id="hm-btn-training"/);
-  assert.match(html, /New here\? Learn the shots in a few minutes/);
-  assert.equal(html.split('id="hm-btn-training"').length - 1, 1);  // not in the bottom bar any more
-  const { LESSON_IDS } = { LESSON_IDS: ['move', 'serve', 'slice', 'forehand', 'backhand', 'aim', 'lob', 'chiquita', 'volley', 'smash', 'glass', 'contra', 'ui', 'match'] };
+  assert.equal(html.split('id="hm-btn-training"').length - 1, 1);
+  assert.match(html, /class="hm-nav is-new" id="hm-btn-training"[^>]*>Training</);
+  const LESSON_IDS = ['move', 'serve', 'slice', 'forehand', 'backhand', 'aim', 'lob', 'chiquita', 'volley', 'smash', 'glass', 'contra', 'ui', 'match'];
   mockStorage.setItem('padel.tutorial', JSON.stringify(LESSON_IDS));
   initHome({});
-  html = homeRoot.innerHTML;
-  assert.match(html, /class="hm-btn-sec" id="hm-btn-training"[^>]*>Training again</);
-  assert.doesNotMatch(html, /hm-train-card/);
+  assert.match(homeRoot.innerHTML, /class="hm-nav" id="hm-btn-training"[^>]*>Training</);
   mockStorage.removeItem('padel.tutorial');
+});
+
+test('without a server HOME has no online parts; with one they render', () => {
+  const online = ['hm-cal', 'hm-name-badge', 'hm-mode-segment', 'hm-play-sub', 'hm-btn-invite', 'hm-games-list'];
+  initHome({ online: false });
+  for (const id of [...online, 'hm-btn-play-ai', 'hm-btn-profile']) assert.ok(!homeRoot.innerHTML.includes(`id="${id}"`), id);
+  assert.doesNotThrow(() => { setOpenGames([], false); homeRoot.querySelector('#hm-pick-doubles').onclick(); });
+  assert.match(homeRoot.innerHTML, /id="hm-btn-play-now"/);
+  initHome({ online: true });
+  for (const id of online) assert.ok(homeRoot.innerHTML.includes(`id="${id}"`), id);
+});
+
+test('HOME opens on the picked player', () => {
+  initHome({ online: false, getPick: () => 31 });
+  assert.match(homeRoot.innerHTML, /data-idx="31" aria-pressed="true"/);
+});
+
+test('PLAY NOW during a swipe saves the centred player before the match starts', () => {
+  globalThis.matchMedia = () => ({ matches: true });
+  const log = [];
+  initHome({ online: false, getPick: () => 15, onPick: (i) => log.push(['pick', i]), onPlayNow: () => log.push(['play']) });
+  const box = homeRoot.querySelector('.hm-lanes'), lanes = homeRoot.querySelectorAll('.hm-lane');
+  box.clientWidth = 390;
+  box.getBoundingClientRect = () => ({ left: 0, width: 390 });
+  lanes.forEach((l, n) => { l.dataset.idx = String(100 + n); l.getBoundingClientRect = () => ({ left: 45 + (n - 2) * 300, width: 300 }); });
+  box.handlers.pointerdown();
+  homeRoot.querySelector('#hm-btn-play-now').onclick();
+  assert.deepEqual(log, [['pick', 102], ['play']]);
+  delete globalThis.matchMedia;
 });
 
 // Match calendar (plan 2026-11-08-scheduled-games, task 6)

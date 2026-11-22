@@ -1128,4 +1128,6 @@ export default {
   "{n} players on the site now": "Şu an sitede {n} oyuncu",
   "Starts in {time}": "{time} sonra başlıyor",
   "Waiting {time} for the others, then the AI takes empty seats": "Diğerleri için {time} bekleniyor, sonra boş yerlere yapay zekâ geçer",
+  "Pick your legend, hit the court": "Efsaneni seç, sahaya çık",
+  "Privacy": "Gizlilik",
 };

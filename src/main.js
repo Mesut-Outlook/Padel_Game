@@ -191,9 +191,6 @@ initHome({
   onOpenControls: () => {
     window.open('kontroller.html', '_blank', 'noopener');
   },
-  onOpenProfile: () => {
-    location.hash = '#career';
-  },
 });
 
 // the open games list on HOME: refreshed while HOME is on screen; only our own (or a local) server is asked without a click

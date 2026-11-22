@@ -1128,4 +1128,6 @@ export default {
   "{n} players on the site now": "{n} joueurs sur le site en ce moment",
   "Starts in {time}": "Début dans {time}",
   "Waiting {time} for the others, then the AI takes empty seats": "Encore {time} d'attente pour les autres, puis l'IA prend les places libres",
+  "Pick your legend, hit the court": "Choisis ta légende, entre sur le court",
+  "Privacy": "Confidentialité",
 };

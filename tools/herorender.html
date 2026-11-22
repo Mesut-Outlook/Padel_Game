@@ -1,0 +1,66 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>HOME player pictures</title>
+<!-- Draws public/assets/home/<id>-{open,closed}.webp (npm run dev, open /tools/herorender.html, save each link). Not a build entry. -->
+<body style="background:#16052f;color:#fff;font:14px system-ui">
+<script type="module">
+  import * as THREE from 'three';
+  import { createAvatar } from '../src/player.js';
+  import chars from '../data/characters.json';
+
+  // player.js loads 'assets/…' relative to the page: point it at the site root
+  document.head.append(Object.assign(document.createElement('base'), { href: '/' }));
+
+  const W = 900, H = 1000;
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.setSize(W, H, false);
+  renderer.setClearColor(0, 0);
+  const cut = document.createElement('canvas');
+
+  // closed = side-on with the racket in front (fits a narrow lane), open = facing the visitor
+  window.shot = async (id, open) => {
+    const ch = chars.find(c => c.id === id), scene = new THREE.Scene();
+    scene.add(new THREE.HemisphereLight('#ffffff', '#30205a', 1.15));
+    for (const [c, n, p] of [['#fff3e0', 1.5, [0.5, 3, 4]], ['#ffffff', 5, [-3, 1.5, -1]], ['#00e5ff', 5, [3, 1.5, -1]], ['#ffffff', 0.7, [-2, 0, 2]], ['#00e5ff', 0.7, [2, 0, 2]]]) {
+      const d = new THREE.DirectionalLight(c, n); d.position.set(...p); scene.add(d);
+    }
+    const a = await createAvatar(scene, ch, ch.racketColor, 'round');
+    const state = [0, 0, open ? (ch.hand === 'left' ? 0.75 : 0.12) : -0.6, 'idle', null, 0, false];
+    a.update(0, state); a.update(0, state);
+    a.holder.traverse(o => {
+      if (o.isSprite) o.visible = false;
+      if (!o.isMesh || o.isSkinnedMesh) return;
+      if (o.geometry.type === 'CircleGeometry') o.visible = false;  // the blob shadow
+      const m = o.material;
+      if (o.geometry.type === 'CylinderGeometry' && m.map) {  // the face keeps its colour under the coloured rim light
+        m.color.set(ch.racketColor).multiplyScalar(0.35);
+        m.emissive.set(ch.racketColor); m.emissiveMap = m.map; m.emissiveIntensity = 0.85;
+      }
+    });
+    a.holder.updateMatrixWorld(true);
+    const cam = new THREE.PerspectiveCamera(26, W / H, 0.1, 30);
+    cam.position.set(0, 1.35, 6.3); cam.lookAt(0, 1.12, 0);
+    renderer.render(scene, cam);
+
+    cut.width = W; cut.height = H;
+    const x = cut.getContext('2d', { willReadFrequently: true });
+    x.drawImage(renderer.domElement, 0, 0);
+    const px = x.getImageData(0, 0, W, H).data;
+    let l = W, t = H, r = 0, b = 0;
+    for (let y = 0; y < H; y++) for (let i = 0; i < W; i++) {
+      if (px[(y * W + i) * 4 + 3] > 0) { l = Math.min(l, i); r = Math.max(r, i); t = Math.min(t, y); b = Math.max(b, y); }
+    }
+    cut.width = r - l + 1; cut.height = b - t + 1;
+    cut.getContext('2d').drawImage(renderer.domElement, l, t, cut.width, cut.height, 0, 0, cut.width, cut.height);
+    a.dispose();
+    return cut.toDataURL('image/webp', 0.82);
+  };
+
+  for (const c of chars.filter(x => !x.archived)) for (const open of [false, true]) {
+    const name = `${c.id}-${open ? 'open' : 'closed'}.webp`;
+    const link = Object.assign(document.createElement('a'), { download: name, href: await window.shot(c.id, open) });
+    link.append(Object.assign(document.createElement('img'), { src: link.href, alt: name, height: 200 }));
+    document.body.append(link);
+  }
+  window.done = true;
+</script>

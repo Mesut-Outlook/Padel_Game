@@ -1,31 +1,21 @@
-// HOME Screen for Padel Legends — Live Lobby
-// Left column: Match type selectors, big PLAY NOW button, Invite a friend, Play vs AI + Customize
-// Right column: Open games list with live dot, or empty / offline state
-// Header: Name badge with inline editing, controller status
-// Footer: Career, Training, Settings, Controls, Fullscreen, Profile, Privacy, Contact
+// HOME Screen for Padel Legends: "Pick your legend" (src/homehero.js: lanes, swipe cards in portrait)
+// Bar: Singles / Doubles, Career, Training, Customize, PLAY NOW. Corner: Settings, Controls, Fullscreen.
+// Only with a game server (callbacks.online): name, Team up / Face off, Invite a friend, open games, Match calendar.
 
-import { padText } from './padstyle.js';
 import { padDir, spatialFocus } from './padnav.js';
 import { loadProfile } from './career.js';
 import { toggleFullscreen } from './fullscreen.js';
-import { t } from './i18n.js';
+import { t, lang } from './i18n.js';
 import { tutorialFinished } from './tutorialdone.js';
 import { relTime, slotsFor, dayStrip, quickSlots, icsFor } from './schedule.js';
 import { drawFlag } from './flags.js';
+import { heroHtml, wireHero } from './homehero.js';
 import characters from '../data/characters.json' with { type: 'json' };
-
-// ways to play, pictured on HOME (public/assets/howto/), each linking to its part of kontroller.html; ready = shown.
-const HOWTO = [
-  { img: 'pc-keyboard', to: 'keyboard', label: () => t('Computer + keyboard'), ready: true },
-  { img: 'pc-controller', to: 'controller', label: () => t('Computer + Xbox / PlayStation controller'), ready: true },
-  { img: 'tablet-touch', to: 'touch', label: () => t('Tablet touch screen'), ready: true },
-  { img: 'phone-touch', to: 'touch', label: () => t('Phone touch screen'), ready: true },
-  { img: 'tablet-controller', to: 'touch', label: () => t('Tablet + controller'), ready: true },
-  { img: 'phone-controller', to: 'touch', label: () => t('Phone + controller'), ready: true },
-];
 
 let homeEl = null;
 let callbacks = {};
+let hero = null;
+let lastWidth = 0;
 let pollTimer = null;
 let lastPadA = false;
 let lastPadStart = false;
@@ -144,24 +134,21 @@ export function initHome(cbs = {}) {
   quickPick = loadQuickPick();
   renderHome();
 
-  window.addEventListener('gamepadconnected', refreshHomeHints);
-  window.addEventListener('gamepaddisconnected', refreshHomeHints);
+  homeEl.onkeydown = onHomeKey;
+  lastWidth = window.innerWidth;
+  window.addEventListener('resize', () => {  // a phone's URL bar changes only the height: that must not cancel a swipe
+    if (window.innerWidth === lastWidth) return;
+    lastWidth = window.innerWidth;
+    hero?.recentre();
+  });
 }
 
-export function refreshHomeHints() {
-  if (!homeEl) return;
-  const hints = homeEl.querySelectorAll('[data-pad-hint]');
-  hints.forEach(el => {
-    const raw = el.dataset.padHint || el.textContent;
-    el.textContent = padText(raw);
-  });
-  const statusEl = homeEl.querySelector('#hm-pad-status');
-  if (statusEl) {
-    const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
-    statusEl.textContent = gps.length > 0
-      ? t('🎮 {n} controller(s) connected', { n: gps.length })
-      : t('🎮 No controller detected');
-  }
+const ARROWS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+function onHomeKey(e) {
+  const d = ARROWS[e.key];
+  if (!d || e.target?.tagName === 'INPUT' || e.altKey || e.ctrlKey || e.metaKey) return;
+  e.preventDefault();
+  spatialFocus(homeEl, d[0], d[1]);
 }
 
 function updatePickUi() {
@@ -176,6 +163,8 @@ function updatePickUi() {
   if (btnSingles && btnDoubles) {
     btnSingles.classList.toggle('is-active', quickPick.players === 2);
     btnDoubles.classList.toggle('is-active', quickPick.players === 4);
+    btnSingles.setAttribute('aria-pressed', String(quickPick.players === 2));
+    btnDoubles.setAttribute('aria-pressed', String(quickPick.players === 4));
   }
   if (modeSeg) {
     modeSeg.hidden = quickPick.players !== 4;
@@ -382,28 +371,10 @@ export function setOpenGames(rows, serverReady = true) {
   renderOpenGamesList();
 }
 
-export function renderHome() {
-  if (!homeEl) return;
-  const profile = safeLoadProfile();
+function onlineHtml() {
   const onlineName = getOnlineName();
-
-  homeEl.innerHTML = `
-    <!-- Top-down court lines decoration -->
-    <svg class="pl-bg-court" viewBox="0 0 100 200" preserveAspectRatio="none">
-      <rect x="2" y="2" width="96" height="196" fill="none" stroke="rgba(15,23,42,0.035)" stroke-width="1"/>
-      <line x1="2" y1="100" x2="98" y2="100" stroke="rgba(15,23,42,0.06)" stroke-width="1.5"/>
-      <line x1="2" y1="30.5" x2="98" y2="30.5" stroke="rgba(15,23,42,0.04)" stroke-width="1"/>
-      <line x1="2" y1="169.5" x2="98" y2="169.5" stroke="rgba(15,23,42,0.04)" stroke-width="1"/>
-      <line x1="50" y1="30.5" x2="50" y2="169.5" stroke="rgba(15,23,42,0.04)" stroke-width="1"/>
-    </svg>
-
-    <header class="hm-topbar">
-      <div class="hm-brand">
-        <div class="hm-logo">PADEL <span>LEGENDS</span></div>
-        <div class="hm-tour-tag">MESUT PADEL TOUR</div>
-      </div>
-      <div class="hm-top-right">
-        <span class="hm-pad-hint" id="hm-pad-status">${t('🎮 Checking controller…')}</span>
+  return `<div class="hm-cols">
+      <section class="hm-col hm-col-left" aria-label="${t('Match')}">
         <div class="hm-name-box">
           <div class="hm-name-row">
             <button type="button" class="hm-name-badge" id="hm-name-badge" tabindex="0" title="${t('Edit name')}">
@@ -414,77 +385,63 @@ export function renderHome() {
           </div>
           <span class="hm-name-note">${t("Visible to other players — don't use your real name.")}</span>
         </div>
+        <div class="hm-segment hm-mode-segment" id="hm-mode-segment" role="group" aria-label="${t('Team up')} / ${t('Face off')}" ${quickPick.players === 4 ? '' : 'hidden'}>
+          <button type="button" class="hm-seg-btn ${quickPick.mode === 'team' ? 'is-active' : ''}" id="hm-pick-team" tabindex="0">${t('Team up')}</button>
+          <button type="button" class="hm-seg-btn ${quickPick.mode === 'face' ? 'is-active' : ''}" id="hm-pick-face" tabindex="0">${t('Face off')}</button>
+        </div>
+        <div class="hm-pick-desc" id="hm-pick-desc" ${quickPick.players === 4 ? '' : 'hidden'}>
+          ${quickPick.players === 4 ? `${quickPick.mode === 'face' ? t('You against another player, each with an AI partner.') : t('You and another player vs two AI players.')} ${t('Empty seats are played by the AI.')}` : ''}
+        </div>
+        <button type="button" class="hm-btn-sec" id="hm-btn-invite" tabindex="0">${t('Invite a friend')}</button>
+      </section>
+      <section class="hm-col hm-col-right" aria-label="${t('Open games')}">
+        <div class="hm-games-header">
+          <h2 class="hm-games-title"><span class="hm-live-dot" aria-hidden="true"></span>${t('Match calendar')}</h2>
+          <span class="hm-online-count" id="hm-online-count" hidden></span>
+        </div>
+        <div class="hm-games-list" id="hm-games-list" role="list"></div>
+        <div class="hm-cal" id="hm-cal"></div>
+      </section>
+    </div>`;
+}
+
+export function renderHome() {
+  if (!homeEl) return;
+  const online = callbacks.online !== false;
+  const picked = callbacks.getPick?.();
+
+  hero?.dispose();
+  homeEl.classList.toggle('is-online', online);
+  homeEl.innerHTML = `
+    <div class="hm-screen">
+      <header class="hm-top">
+        <h1 class="hm-logo" lang="en">PADEL LEGENDS</h1>
+        <p class="hm-tagline">${t('Pick your legend, hit the court')}</p>
+        <nav class="hm-util">
+          <button type="button" id="hm-btn-settings">${t('Settings')}</button>
+          <button type="button" id="hm-btn-controls">${t('Controls')}</button>
+          <button type="button" class="hm-fs fs-btn-sync" id="hm-btn-fullscreen">${t('Fullscreen')}</button>
+        </nav>
+      </header>
+      ${heroHtml(characters, picked, lang())}
+      <div class="hm-bar">
+        <div class="hm-players" role="group" aria-label="${t('Singles')} / ${t('Doubles')}">
+          <button type="button" class="hm-pill ${quickPick.players === 2 ? 'is-active' : ''}" id="hm-pick-singles" aria-pressed="${quickPick.players === 2}">${t('Singles')}</button>
+          <button type="button" class="hm-pill ${quickPick.players === 4 ? 'is-active' : ''}" id="hm-pick-doubles" aria-pressed="${quickPick.players === 4}">${t('Doubles')}</button>
+        </div>
+        <button type="button" class="hm-nav" id="hm-btn-career">${t('Career')}</button>
+        <button type="button" class="hm-nav${tutorialFinished() ? '' : ' is-new'}" id="hm-btn-training">${t('Training')}</button>
+        <button type="button" class="hm-nav" id="hm-link-customize">${t('Customize')}</button>
+        <button type="button" class="hm-go" id="hm-btn-play-now">${t('PLAY NOW')}${online ? '<small class="hm-play-sub" id="hm-play-sub"></small>' : ''}</button>
       </div>
-    </header>
-
-    <main class="hm-main">
-      <div class="hm-cols">
-        <!-- Left Column: Match configuration & Play Now -->
-        <section class="hm-col hm-col-left" aria-label="${t('Match')}">
-          <div class="hm-pick-section">
-            <div class="hm-segment" role="group" aria-label="${t('Singles')} / ${t('Doubles')}">
-              <button type="button" class="hm-seg-btn ${quickPick.players === 2 ? 'is-active' : ''}" id="hm-pick-singles" tabindex="0">${t('Singles')}</button>
-              <button type="button" class="hm-seg-btn ${quickPick.players === 4 ? 'is-active' : ''}" id="hm-pick-doubles" tabindex="0">${t('Doubles')}</button>
-            </div>
-            <div class="hm-segment hm-mode-segment" id="hm-mode-segment" role="group" aria-label="${t('Team up')} / ${t('Face off')}" ${quickPick.players === 4 ? '' : 'hidden'}>
-              <button type="button" class="hm-seg-btn ${quickPick.mode === 'team' ? 'is-active' : ''}" id="hm-pick-team" tabindex="0">${t('Team up')}</button>
-              <button type="button" class="hm-seg-btn ${quickPick.mode === 'face' ? 'is-active' : ''}" id="hm-pick-face" tabindex="0">${t('Face off')}</button>
-            </div>
-            <div class="hm-pick-desc" id="hm-pick-desc" ${quickPick.players === 4 ? '' : 'hidden'}>
-              ${quickPick.players === 4 ? `${quickPick.mode === 'face' ? t('You against another player, each with an AI partner.') : t('You and another player vs two AI players.')} ${t('Empty seats are played by the AI.')}` : ''}
-            </div>
-          </div>
-
-          <button type="button" class="hm-play-now" id="hm-btn-play-now" tabindex="0">
-            ${t('PLAY NOW')}<small class="hm-play-sub" id="hm-play-sub"></small>
-          </button>
-          ${tutorialFinished()
-            ? `<button type="button" class="hm-btn-sec" id="hm-btn-training" tabindex="0">${t('Training again')}</button>`
-            : `<button type="button" class="hm-train-card" id="hm-btn-training" tabindex="0"><span class="hm-train-ic" aria-hidden="true">🎓</span><span class="hm-train-txt"><b>${t('Training')}</b><small>${t('New here? Learn the shots in a few minutes')}</small></span><span class="hm-train-arr" aria-hidden="true">›</span></button>`}
-
-          <div class="hm-sub-actions">
-            ${callbacks.online === false ? '' : `<button type="button" class="hm-btn-sec" id="hm-btn-invite" tabindex="0">${t('Invite a friend')}</button>`}
-            <div class="hm-ai-row">
-              <button type="button" class="hm-btn-sec" id="hm-btn-play-ai" tabindex="0">${t('Play vs AI')}</button>
-              <button type="button" class="hm-link-btn" id="hm-link-customize" tabindex="0">${t('Customize')}</button>
-            </div>
-          </div>
-        </section>
-
-        <!-- Right Column: Open Games -->
-        <section class="hm-col hm-col-right" aria-label="${t('Open games')}">
-          <div class="hm-games-header">
-            <h2 class="hm-games-title">
-              <span class="hm-live-dot" aria-hidden="true"></span>
-              ${t('Match calendar')}
-            </h2>
-            <span class="hm-online-count" id="hm-online-count" hidden></span>
-          </div>
-          <div class="hm-games-list" id="hm-games-list" role="list"></div>
-          <div class="hm-cal" id="hm-cal"></div>
-        </section>
-      </div>
-
-      <div class="hm-howto" aria-label="${t('Ways to play')}">
-        ${HOWTO.filter(h => h.ready).map(h => `<a class="hm-howto-item" href="kontroller.html#${h.to}" target="_blank" rel="noopener"><img src="assets/howto/${h.img}.webp" alt="${h.label()}" width="640" height="482" loading="lazy"><span>${h.label()}</span></a>`).join('')}
-      </div>
-    </main>
-
-    <footer class="hm-bottom-bar">
-      <div class="hm-actions-row">
-        <button type="button" class="hm-btn" id="hm-btn-career" tabindex="0">🏆 ${t('Career')}</button>
-        <button type="button" class="hm-btn" id="hm-btn-settings" tabindex="0">⚙️ ${t('Settings')}</button>
-        <button type="button" class="hm-btn" id="hm-btn-controls" tabindex="0">⌨️ ${t('Controls')}</button>
-        <button type="button" class="hm-btn fs-btn-sync" id="hm-btn-fullscreen" tabindex="0" title="${t('Fullscreen')}">⛶ ${t('Fullscreen')}</button>
-        ${profile ? `<button type="button" class="hm-btn" id="hm-btn-profile" tabindex="0">👤 ${t('Profile')}</button>` : ''}
-        <a class="hm-privacy" href="privacy.html" target="_blank" rel="noopener">Privacy</a>
-        <a class="hm-privacy" href="mailto:contact@padellegends.eu">✉ contact@padellegends.eu</a>
-      </div>
-      <div class="hm-footer-hint" data-pad-hint="${t('←/→ Move · A Select · Start Settings')}">
-        ${padText(t('←/→ Move · A Select · Start Settings'))}
-      </div>
-    </footer>
+      <footer class="hm-legal">
+        <a href="privacy.html" target="_blank" rel="noopener">${t('Privacy')}</a>
+        <a href="mailto:contact@padellegends.eu">contact@padellegends.eu</a>
+      </footer>
+    </div>
+    ${online ? onlineHtml() : ''}
   `;
+  hero = wireHero(homeEl, { picked, onPick: (i) => callbacks.onPick?.(i) });
 
   // Wire inline name edit
   const nameBadge = homeEl.querySelector('#hm-name-badge');
@@ -539,42 +496,32 @@ export function renderHome() {
     saveQuickPick(quickPick);
     updatePickUi();
   };
-  homeEl.querySelector('#hm-pick-team').onclick = () => {
+  const teamBtn = homeEl.querySelector('#hm-pick-team'), faceBtn = homeEl.querySelector('#hm-pick-face');  // absent without a game server
+  if (teamBtn) teamBtn.onclick = () => {
     quickPick.mode = 'team';
     saveQuickPick(quickPick);
     updatePickUi();
   };
-  homeEl.querySelector('#hm-pick-face').onclick = () => {
+  if (faceBtn) faceBtn.onclick = () => {
     quickPick.mode = 'face';
     saveQuickPick(quickPick);
     updatePickUi();
   };
 
-  // Wire action buttons
-  homeEl.querySelector('#hm-btn-play-now').onclick = () => {
-    callbacks.onPlayNow?.(getQuickPick());
+  // whatever leaves HOME first takes the card in the middle, even while it still glides
+  const go = (id, fn) => {
+    const btn = homeEl.querySelector(id);
+    if (btn) btn.onclick = () => { hero.flush(); fn(); };
   };
-  const invite = homeEl.querySelector('#hm-btn-invite');  // absent without a game server (static build)
-  if (invite) invite.onclick = () => {
-    callbacks.onInvite?.(getQuickPick());
-  };
-  homeEl.querySelector('#hm-btn-play-ai').onclick = () => {
-    callbacks.onPlayAI?.();
-  };
-  homeEl.querySelector('#hm-link-customize').onclick = () => {
-    callbacks.onCustomize?.();
-  };
-
-  // Wire footer actions
-  homeEl.querySelector('#hm-btn-career').onclick = () => callbacks.onCareer?.();
-  homeEl.querySelector('#hm-btn-training').onclick = () => callbacks.onTraining?.();
+  go('#hm-btn-play-now', () => callbacks.onPlayNow?.(getQuickPick()));
+  go('#hm-btn-invite', () => callbacks.onInvite?.(getQuickPick()));
+  go('#hm-link-customize', () => callbacks.onCustomize?.());
+  go('#hm-btn-career', () => callbacks.onCareer?.());
+  go('#hm-btn-training', () => callbacks.onTraining?.());
   homeEl.querySelector('#hm-btn-settings').onclick = () => callbacks.onOpenSettings?.();
   homeEl.querySelector('#hm-btn-controls').onclick = () => callbacks.onOpenControls?.();
   homeEl.querySelector('#hm-btn-fullscreen').onclick = () => toggleFullscreen();
-  const profBtn = homeEl.querySelector('#hm-btn-profile');
-  if (profBtn) profBtn.onclick = () => callbacks.onOpenProfile?.();
 
-  refreshHomeHints();
   renderOpenGamesList();
   renderCalendar();
 }
@@ -621,14 +568,16 @@ export function showHome() {
   if (!homeEl) return;
   renderHome();
   homeEl.hidden = false;
+  hero?.recentre();
   const first = homeEl.querySelector('#hm-btn-play-now') || homeEl.querySelector('button');
-  first?.focus();
+  first?.focus({ preventScroll: true });
   if (pollTimer) cancelAnimationFrame(pollTimer);
   pollTimer = requestAnimationFrame(pollHomeGamepad);
 }
 
 export function hideHome() {
   if (!homeEl) return;
+  hero?.flush();  // while it still has a size
   homeEl.hidden = true;
   if (pollTimer) {
     cancelAnimationFrame(pollTimer);
