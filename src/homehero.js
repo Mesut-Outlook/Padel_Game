@@ -21,7 +21,7 @@ export function heroHtml(list, picked, lang = 'en') {
     const c = list[i], [bg, ink] = LANES[c.id];
     return `<button type="button" class="hm-lane${i === on ? ' is-on' : ''}" data-idx="${i}" aria-pressed="${i === on}" style="--lane:${bg};--ink:${ink}">
       <img class="hm-shut" src="assets/home/${c.id}-closed.webp" alt="" loading="lazy" draggable="false">
-      <img class="hm-open" src="assets/home/${c.id}-open.webp" alt="" loading="lazy" draggable="false">
+      <img class="hm-open" src="assets/home/${c.id}-open.webp" alt="" draggable="false">
       <span class="hm-who"><b lang="en">${c.name}</b><i>${countryName(c, lang)}</i></span></button>`;
   }).join('')}</div>`;
 }
@@ -76,6 +76,15 @@ export function wireHero(root, { picked, onPick, media = globalThis.matchMedia?.
 
   return {
     flush() { settle(); swiped = false; },
+    // left / right between lanes by order: their skewed boxes overlap, so spatialFocus skips the neighbour
+    step(from, dx) {
+      const i = lanes.indexOf(from);
+      if (i < 0 || !dx) return false;
+      const to = lanes[Math.max(0, Math.min(lanes.length - 1, i + dx))];
+      to.focus({ focusVisible: true, preventScroll: true });
+      to.scrollIntoView({ block: 'nearest', inline: cards() ? 'center' : 'nearest' });
+      return true;
+    },
     recentre() {
       swiped = false;
       clearTimeout(timer);

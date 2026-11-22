@@ -148,7 +148,11 @@ function onHomeKey(e) {
   const d = ARROWS[e.key];
   if (!d || e.target?.tagName === 'INPUT' || e.altKey || e.ctrlKey || e.metaKey) return;
   e.preventDefault();
-  spatialFocus(homeEl, d[0], d[1]);
+  moveFocus(d[0], d[1]);
+}
+
+function moveFocus(dx, dy) {
+  if (!hero?.step(document.activeElement, dx)) spatialFocus(homeEl, dx, dy);
 }
 
 function updatePickUi() {
@@ -536,10 +540,10 @@ function pollHomeGamepad() {
     const [sx, sy] = padDir(pad);
 
     if (Math.abs(sx) > 0.6 && Math.abs(lastStickX) <= 0.6) {
-      spatialFocus(homeEl, Math.sign(sx), 0);
+      moveFocus(Math.sign(sx), 0);
     }
     if (Math.abs(sy) > 0.6 && Math.abs(lastStickY) <= 0.6) {
-      spatialFocus(homeEl, 0, Math.sign(sy));
+      moveFocus(0, Math.sign(sy));
     }
 
     if (a && !lastPadA) {

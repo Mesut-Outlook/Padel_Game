@@ -42,6 +42,8 @@ Plan 3 (canlı lobi) ve plan 4 (açık tema) yayında:
 
 **Acil olmayanlar:** Tailscale ACL (ağa yeni cihaz eklenirse Pi'nin 22/445 portları kapatılmalı), ev interneti upload ölçümü (10 maç ≈ 6 Mbit/sn), Node 22 desteği 2027 baharında biter, Pi'de eski `padel-tunnel`/cloudflared ve dev paketleri kaldırılacak (`npm ci --omit=dev`), enerji ayarı kararı (yukarıda).
 
+**Neon giriş sayfası "Efsaneni seç" (2026-11-22):** tasarım `docs/superpowers/specs/2026-11-22-neon-home-design.md`, plan `docs/superpowers/plans/2026-11-22-neon-home.md`. Splash, sihirbaz, kariyer ve HUD hâlâ açık tema (istenirse sonraki iş). `online-click` / `online-noserver` sayıları 10–22.11.2026 arasında şişik (README'de not).
+
 ## Yarın buradan devam (yazıldı: 2026-11-01 akşamı)
 **Durum:** Evdeki iki cihazla Pi üzerinden maç sorunsuz oynandı. Tam güvenlik denetimi yapıldı, Antigravity bağımsız olarak kontrol etti, bulgular düzeltildi ve yeniden başlatmadan sonra doğrulandı (commit `aa69b32`, `2d0412a`; `npm test` 245/245, Pages başarılı). Gizlilik sayfası test sunucusunu ve Cloudflare'i anlatıyor. **Oyun sunucusu ve tünel kapalı**, 30 dakikalık kontrol iptal edildi. Evin dışından gerçek tarayıcıyla oynanış henüz denenmedi.
 

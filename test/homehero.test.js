@@ -87,6 +87,20 @@ test('re-centring (rotation, showing HOME) and a scroll nobody made never pick',
   assert.deepEqual(picks, []);
 });
 
+test('left / right step to the next lane (skewed boxes overlap, spatialFocus would skip it) and stay at the ends', () => {
+  const { lanes, hero, picks } = stage({ portrait: false });
+  const focused = [];
+  lanes.forEach((l, n) => { l.focus = () => focused.push(n); l.scrollIntoView = () => {}; });
+  assert.equal(hero.step(lanes[0], 1), true);
+  assert.equal(hero.step(lanes[1], 1), true);
+  assert.equal(hero.step(lanes[2], 1), true);
+  assert.equal(hero.step(lanes[2], -1), true);
+  assert.deepEqual(focused, [1, 2, 2, 1]);
+  assert.equal(hero.step({}, 1), false);
+  assert.equal(hero.step(lanes[0], 0), false);
+  assert.deepEqual(picks, []);
+});
+
 test('a tap picks and centres; lanes in landscape pick without scrolling', () => {
   const a = stage();
   a.lanes[0].onclick();

@@ -32,16 +32,11 @@ Kalıcı online sunucu henüz yok: plan ayrı bir sunucu (VPS / Fly.io vb.) + `s
 
 Oyun açıldığında doğrudan canlı lobi ana sayfası (`src/home.js`) karşılar:
 
-- **PLAY NOW (Hemen Oyna):** Menü gezintisine gerek kalmadan kayıtlı tercihlerinizle hemen açık bir odaya katılır veya yeni bir oda açar.
-  - **Tekler (Singles) / Çiftler (Doubles):** 1'e 1 tekler veya 2'ye 2 çiftler maçı.
-  - **Aynı Takım (Team up) / Karşı Karşıya (Face off):** Çiftlerde iki insan oyuncu aynı takımda 2 AI'ya karşı (**Takım ol**) veya karşılıklı takımlarda yanlarında birer AI partnerle (**Karşı karşıya**) oynayabilir. Boş kalan koltukları yapay zekâ doldurur.
-  - **Beklerken Isınma (Warm-up):** Odaya katıldığınızda başka bir oyuncu beklenirken bekletilmezsiniz; hemen AI'ya karşı çevrimdışı bir ısınma maçı başlar.
-  - **5 Saniye Geri Sayım:** İkinci bir oyuncu odaya katıldığı anda 5 saniyelik geri sayım başlar ve gerçek online maç kesintisiz biçimde sahneyi devralır.
-- **Invite a friend (Arkadaşını Davet Et):** Tercih ettiğiniz modda yeni bir oda açar ve doğrudan arkadaşınıza gönderebileceğiniz davet linkini üretir.
-- **Play vs AI (Yapay Zekâya Karşı):** Tercih ettiğiniz modda doğrudan yapay zekâya karşı çevrimdışı maç başlatır.
+- **Efsaneni seç (2026-11-22):** Giriş ekranı dokuz oyuncunun renkli şeritleridir; dik ekranda kaydırmalı kartlar olur. Seçim kaydedilir, Customize sihirbazında da seçili gelir.
+- **PLAY NOW (Hemen Oyna):** Seçtiğin oyuncuyla yapay zekâya karşı tek setlik maç (Tekler ya da Çiftler). Sahadaki herkes giriş ekranındaki kendi raket rengiyle oynar, raketin özellikleri değişmez.
+- **Oyun sunucusu varsa** (`serverUrl`; canlı sitede şu an yok) girişin altında takma ad, Team up / Face off, **Invite a friend**, açık maçlar ve maç takvimi de görünür; PLAY NOW o zaman açık odaya katılır, beklerken ısınma maçı oynatır ve ikinci oyuncu gelince 5 saniye geri sayar.
 - **Customize (Özelleştir):** Karakter, raket, mekan ve maç kurallarını (set sayısı, altın sayı / star point) değiştirmek için 4 sekmeli hazırlık sihirbazını (`src/menu.js`) açar.
-- **Open Games (Açık Maçlar):** Sağ sütunda sunucudaki açık maçlar canlı olarak listelenir; bekleyen oyuncuların yanına tek tıkla katılabilirsiniz.
-- **Alt Çubuk:** 🏆 **Career** (Kariyer modu), 🎓 **Training** (14 derslik eğitim), ⚙️ **Settings** (Global ayarlar), ⌨️ **Controls** (Kontroller sayfası) ve ⛶ **Fullscreen** (Tam ekran).
+- **Career** ve **Training** alt çubukta; **Settings**, **Controls** ve **Fullscreen** sağ üstte.
 
 ## Online ve Arkadaşınla Oyna
 
@@ -118,7 +113,7 @@ Kolun tarayıcıda nasıl göründüğünü test etmek için: http://localhost:5
 
 ## Özellikler
 
-- **Ana sayfa & Canlı lobi** (`src/home.js`): Canlı lobi arayüzü. PLAY NOW (tekler/çiftler, aynı takım / karşı karşıya), Invite a friend (tek dokunuşla davet linki), Play vs AI ve açık odalar listesi (Open games). Görünüm, mekan, raket ve kural seçimi için **Customize** bağlantısı 4 sekmeli görsel sihirbazı (`src/menu.js`, `src/thumbs.js`: Oyuncu · Mekan · Raket · Maç) açar; seçili oyuncunun 3D duruş önizlemesi solda yer alır. Fare, klavye ve Xbox koluyla gezilir (LB/RB sekme, A seç, B geri, Start başla).
+- **Ana sayfa & Canlı lobi** (`src/home.js`): Canlı lobi arayüzü. PLAY NOW (tekler/çiftler, aynı takım / karşı karşıya), Invite a friend (tek dokunuşla davet linki) ve açık odalar listesi (Open games); bunlar yalnız sunucu varken görünür. Görünüm, mekan, raket ve kural seçimi için **Customize** bağlantısı 4 sekmeli görsel sihirbazı (`src/menu.js`, `src/thumbs.js`: Oyuncu · Mekan · Raket · Maç) açar; seçili oyuncunun 3D duruş önizlemesi solda yer alır. Fare, klavye ve Xbox koluyla gezilir (LB/RB sekme, A seç, B geri, Start başla).
 
 - **Kurallar** (`src/rules.js`): FIP kortu, alttan çapraz servis, let, altın sayı / avantaj / Star Point (FIP 2026), tie-break (sonraki seti ilk karşılayan açar), süper tie-break, cam ve tel kuralları, servise vole yasağı.
 - **Fizik** (`src/physics.js`, `src/court.js`): sürtünme, Magnus (topspin/slice), zemin/cam/tel ayrı sekme katsayıları, camda spin etkisi, filenin iki yanında FIP standartlarında 1 metrelik yan kapılar (`z: 0.08–1.08m, h: 2.2m`) ve beyaz koruyucu dolgu süngerleri (`door padding`). Sekmeden sonra kapıdan çıkan top vurana sayı, sekmeden önce çıkan top dışarı (`out`).
