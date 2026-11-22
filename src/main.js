@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import venues from '../data/venues.json';
 import characters from '../data/characters.json';
-import { isActive, resolvePick, aiSeatChar } from './roster.js';
+import { isActive, resolvePick, aiSeatChar, withOwnColour } from './roster.js';
+import { patchPicks } from './friendlypicks.js';
 import rackets from '../data/rackets.json';
 import { newWorld, stepWorld, snapshot, serveX, REPLAY } from './game.js';
 import { scoreText, serverId } from './rules.js';
@@ -14,7 +15,7 @@ import { readLocal, readGamepad, consumePressed, clearPressed, localControl } fr
 import { connect, listRooms, scheduleCall } from './net.js';
 import { scheduleToken, clockOffset } from './schedule.js';
 import { debugFrame } from './debug.js';
-import { serverUrl, NO_SERVER, allowServer, NOT_CONNECTED, trustedServer } from './serverurl.js';
+import { serverUrl, NO_SERVER, allowServer, NOT_CONNECTED, trustedServer, playRoute } from './serverurl.js';
 import { track, trackOnce } from './track.js';
 import { predict } from './physics.js';
 import { createFx } from './fx.js';
@@ -150,7 +151,16 @@ function sendInviteLink(h, tries = 0) {
 initSettingsModal();
 initHome({
   online: !!serverUrl(location),  // no game server (static build): HOME leaves out Invite a friend
-  onPlayNow: ({ players, mode }) => { track('online-click'); playNow({ players, mode, name: getOnlineName() }); },
+  getPick: () => +$('char').value,
+  onPick: (i) => {  // HOME's lanes / cards are the Friendly pick
+    $('char').value = i;
+    $('char').dispatchEvent(new Event('change'));
+    try { patchPicks({ char: i }, localStorage, { charCount: characters.length, venueCount: venues.length, racketCount: rackets.length }); } catch { /* storage blocked: this visit only */ }
+  },
+  onPlayNow: ({ players, mode }) => {
+    if (playRoute({ url: serverUrl(location) }) === 'online') track('online-click');
+    playNow({ players, mode, name: getOnlineName() });
+  },
   onInvite: ({ players, mode }) => {  // the room opens, the link goes out (share sheet / clipboard) while the warm-up starts
     track('online-click');
     const h = playNow({ players, mode, invite: true, name: getOnlineName() });
@@ -163,7 +173,6 @@ initHome({
   onCancel: (id) => scheduleAct({ type: 'schedule:cancel', id }),
   onDelete: (id) => scheduleAct({ type: 'schedule:delete', id }),
   onEnter: (id) => { track('schedule-enter'); playNow({ enter: id, name: getOnlineName() }); },  // a posted game's room: warm up until it starts
-  onPlayAI: () => { hideHome(); $('start').dataset.tutorial = ''; $('start').click(); },  // the saved Friendly picks, no wizard
   onCustomize: () => {
     location.hash = '#friendly';
   },
@@ -472,14 +481,18 @@ export function playNow({ players = 2, mode = 'face', invite = false, code = '',
   const vsAI = (n) => {  // you in seat 0, other active players (never your own character) in the AI seats
     const ids = n === 2 ? [0, 2] : [0, 2, 1, 3], others = characters.filter(c => c !== characters[me] && isActive(c)).sort(() => Math.random() - 0.5);
     const roster = {}, rk = {};
-    ids.forEach((id, i) => { roster[id] = i ? others[i - 1] : characters[me]; rk[id] = i ? rackets[Math.floor(Math.random() * rackets.length)] : myRk; });
+    ids.forEach((id, i) => {
+      roster[id] = i ? others[i - 1] : characters[me];
+      rk[id] = withOwnColour(i ? rackets[Math.floor(Math.random() * rackets.length)] : myRk, roster[id]);
+    });
     startMatch({ players: n, humans: 1, ai: 'club', match: { sets: 1, goldenPoint: true }, roster, rackets: rk, venue: venues[venue] });
   };
+  if (playRoute({ url: serverUrl(location), code, enter, invite }) === 'ai') { hideHome(); vsAI(players); return null; }
   const warmup = () => { if (!world || world.match?.winner != null) vsAI(2); };
   const h = startOnline({
     quick: !invite && !code && !enter, create: invite, enter: enter ? { id: enter, token: scheduleToken() } : null, public: false, code, mode, players, venue, warmup, match: { auto: true },  // invite rooms start themselves too: the host is busy warming up
     char: me, stats: characters[me].stats, racket: myRk.stats, name,
-    look: { racket: myRk.id, racketColor: myRk.color, racketShape: myRk.shape },
+    look: { racket: myRk.id, racketColor: withOwnColour(myRk, characters[me]).color, racketShape: myRk.shape },
   });
   if (h || !code) hideHome();
   if (!h && !code) { vsAI(players); flash(t(NO_SERVER), 6); }  // no server (static build): play the AI instead of a blank page; a room code stays on HOME / the wizard explains

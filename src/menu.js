@@ -924,6 +924,18 @@ export function initMenu() {
   }
   syncSettingsFromStore();
 
+  // HOME picks a player through #char: follow it, or the wizard would save its old player back
+  let previewStale = false;
+  const onCharChange = () => {
+    const idx = parseInt($('char').value, 10);
+    if (idx === selectedCharIdx) return;
+    selectedCharIdx = idx;
+    shell.querySelectorAll('.pl-char-card').forEach(c => c.classList.toggle('is-selected', +c.dataset.idx === idx));
+    updateSummary();
+    previewStale = true;  // the 3D preview loads when the wizard shows, not on every swipe on HOME
+  };
+  $('char')?.addEventListener('change', onCharChange);
+
   const onSettingsChange = () => syncSettingsFromStore();
   window.addEventListener('padel-settings-changed', onSettingsChange);
 
@@ -1022,6 +1034,10 @@ export function initMenu() {
       gpTimer = requestAnimationFrame(pollGamepads);
       return;
     }
+    if (previewStale) {
+      previewStale = false;
+      if (!previewCanvas.parentElement.dataset.custom) updateAvatarPreview(selectedCharIdx, selectedRacketIdx);
+    }
     const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
     const statusText = gps.length > 0
       ? t('🎮 {n} controller(s): {id}… · {hints}', { n: gps.length, id: gps[0].id.slice(0, 20), hints: padText(t('A Select · LB/RB Tabs · Start Play · B / Esc: HOME')) })
@@ -1097,6 +1113,7 @@ export function initMenu() {
     if (gpTimer) cancelAnimationFrame(gpTimer);
     window.removeEventListener('keydown', onKeyDown);
     window.removeEventListener('padel-settings-changed', onSettingsChange);
+    $('char')?.removeEventListener('change', onCharChange);
     window.removeEventListener('gamepadconnected', onGamepadEvent);
     window.removeEventListener('gamepaddisconnected', onGamepadEvent);
     if (previewRenderer) {

@@ -74,6 +74,9 @@ Sayfa ziyaretlerine ek olarak oyun olayları (`src/track.js`, panelde `event` sa
 | `settings-change/<control\|speed>` | hangi ayar değişti (değeri değil) |
 | `fullscreen-on` | tam ekrana geçildi |
 
+Not: 10.11.2026 ile 22.11.2026 arasında `online-click` ve `online-noserver` şişiktir: sunucu yokken Hemen Oyna'ya
+her basış da sayılıyordu (22.11.2026'da düzeltildi). Bu aralığı online talebi olarak okuma.
+
 ## Kontroller
 
 | Tuş | Eylem | Gamepad (Xbox) |
